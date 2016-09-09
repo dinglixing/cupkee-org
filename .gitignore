@@ -1,0 +1,10 @@
+# ignore files
+
+*.[ado]
+*.bin
+*.elf
+*.map
+*.list
+
+out/
+openocd
