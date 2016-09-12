@@ -5,7 +5,9 @@
 ##
 ##
 
-OBJS = main.o
+#OBJS = systick.o
+#OBJS = usbserial.o
+OBJS = cdcacm.o
 BINARY = open107v
 
 OPENCM3_DIR = ../libopencm3
