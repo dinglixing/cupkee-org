@@ -1,18 +1,10 @@
-##
-## This file is part of the cupkee project.
-##
-## Copyright (C) 2016 Lixing Ding <ding.lixing@gmail.com>
-##
-##
+elf_NAMES = open107v
 
-#OBJS = systick.o
-#OBJS = usbserial.o
-OBJS = cdcacm.o
-BINARY = open107v
+open107v_SRCS = systick.c
 
-OPENCM3_DIR = ../libopencm3
-LDSCRIPT = ../ld/waveshare_open107v.ld
+open107v_CPPFLAGS =
+open107v_CFLAGS   =
+open107v_LDFLAGS  =
 
-include ../mk/libopencm3.stm32f1x.mk
-include ../mk/libopencm3.ruls.mk
-
+include ../mk/stm32f1x.libopencm3.mk
+include ../mk/cupkee.ruls.mk
