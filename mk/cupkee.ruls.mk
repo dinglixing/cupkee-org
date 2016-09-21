@@ -140,7 +140,7 @@ ${1}: ${1}.elf
 
 ${1}.elf: $${${1}_OBJS}
 	@printf "[LD]\t$$@\n"
-	$(Q)${LD} -o $$@ $${${1}_OBJS} ${TGT_LDFLAGS} -Wl,-Map=${1}.map $${${1}_LDFLAGS}
+	$(Q)${LD} -o $$@ $${${1}_OBJS} $${${1}_LDFLAGS} ${TGT_LDFLAGS} -Wl,-Map=${1}.map
 
 ${1}.clean:
 	$(Q)${RM} $${${1}_OBJS} $${${1}_DEPS} ${1}.elf ${1}.map

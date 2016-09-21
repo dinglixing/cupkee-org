@@ -23,6 +23,8 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
+#include "hal.h"
+
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
 	.bDescriptorType = USB_DT_DEVICE,
@@ -234,27 +236,8 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 				cdcacm_control_request);
 }
 
-static int my_callback(usbd_device *usbd_dev, struct usb_setup_data *req, uint8_t **buf, uint16_t *len, usbd_control_complete_callback *complete)
+static void hal_gpio_init(void)
 {
-    (void) usbd_dev;
-    (void) req;
-    (void) buf;
-    (void) len;
-    (void) complete;
-
-	gpio_toggle(GPIOB, GPIO5);
-
-    return USBD_REQ_NEXT_CALLBACK;
-}
-
-int main(void)
-{
-	int i;
-
-	usbd_device *usbd_dev;
-
-	rcc_clock_setup_in_hse_8mhz_out_72mhz();
-
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOE);
 
@@ -263,17 +246,27 @@ int main(void)
 	gpio_set_mode(GPIOE, GPIO_MODE_OUTPUT_2_MHZ,
 		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
 	gpio_clear(GPIOB, GPIO5);
+}
 
+static usbd_device *usbd_dev;
+static void hal_usb_init(void)
+{
 	usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
+}
 
-    usbd_register_control_callback(usbd_dev, 6, 0xf, my_callback);
+int hal_init(void)
+{
+	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
-	while (1) {
-	    //gpio_toggle(GPIOB, GPIO5);
-		usbd_poll(usbd_dev);
-    }
-        for (i = 0; i < 0x100000; i++)
-            __asm__("nop");
+    hal_gpio_init();
+    hal_usb_init();
+
+    return 0;
+}
+
+void hal_loop(void)
+{
+    usbd_poll(usbd_dev);
 }
 

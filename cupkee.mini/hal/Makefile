@@ -1,7 +1,7 @@
 lib_NAMES = hal
 
-hal_SRCS = source/cdcacm.c
-hal_CPPFLAGS =
+hal_SRCS = source/hal.c
+hal_CPPFLAGS = -I./include
 hal_CFLAGS   =
 hal_LDFLAGS  =
 
