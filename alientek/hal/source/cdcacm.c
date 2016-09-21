@@ -158,9 +158,9 @@ static const struct usb_config_descriptor config = {
 };
 
 static const char *usb_strings[] = {
-	"Black Sphere Technologies",
-	"CDC-ACM Demo",
-	"DEMO",
+	"Cupkee",
+	"CDC-ACM Cupkee",
+	"CUPKEE",
 };
 
 /* Buffer to be used for control requests. */
@@ -180,10 +180,11 @@ static int cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *
 		 * even though it's optional in the CDC spec, and we don't
 		 * advertise it in the ACM functional descriptor.
 		 */
+        /*
 		char local_buf[10];
 		struct usb_cdc_notification *notif = (void*)local_buf;
 
-		/* We echo signals back to host as notification. */
+		// We echo signals back to host as notification.
 		notif->bmRequestType = 0xA1;
 		notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
 		notif->wValue = 0;
@@ -191,16 +192,16 @@ static int cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *
 		notif->wLength = 2;
 		local_buf[8] = req->wValue & 3;
 		local_buf[9] = 0;
+        */
 		// usbd_ep_write_packet(0x83, buf, 10);
-		return 1;
 		}
+		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
 		if (*len < sizeof(struct usb_cdc_line_coding))
-			return 0;
-
-		return 1;
+            return USBD_REQ_NOTSUPP;
+		return USBD_REQ_HANDLED;
 	}
-	return 0;
+    return USBD_REQ_NOTSUPP;
 }
 
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
@@ -215,8 +216,6 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 			;
 		buf[len] = 0;
 	}
-
-	gpio_toggle(GPIOC, GPIO5);
 }
 
 static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
@@ -227,11 +226,25 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 	usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
 	usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
+	gpio_clear(GPIOB, GPIO0);
 	usbd_register_control_callback(
 				usbd_dev,
 				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				cdcacm_control_request);
+}
+
+static int my_callback(usbd_device *usbd_dev, struct usb_setup_data *req, uint8_t **buf, uint16_t *len, usbd_control_complete_callback *complete)
+{
+    (void) usbd_dev;
+    (void) req;
+    (void) buf;
+    (void) len;
+    (void) complete;
+
+	gpio_toggle(GPIOB, GPIO5);
+
+    return USBD_REQ_NEXT_CALLBACK;
 }
 
 int main(void)
@@ -240,26 +253,27 @@ int main(void)
 
 	usbd_device *usbd_dev;
 
-	rcc_clock_setup_in_hsi_out_48mhz();
+	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
 	rcc_periph_clock_enable(RCC_GPIOB);
-	rcc_periph_clock_enable(RCC_OTGFS);
+	rcc_periph_clock_enable(RCC_GPIOE);
 
-	gpio_set(GPIOB, GPIO0);
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO0);
-	gpio_set(GPIOC, GPIO1);
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO1);
+		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
+	gpio_set_mode(GPIOE, GPIO_MODE_OUTPUT_2_MHZ,
+		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
+	gpio_clear(GPIOB, GPIO5);
 
-	usbd_dev = usbd_init(&stm32f107_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
+	usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
 
-	for (i = 0; i < 0x800000; i++)
-		__asm__("nop");
-	gpio_set(GPIOB, GPIO0);
-	gpio_set(GPIOB, GPIO1);
+    usbd_register_control_callback(usbd_dev, 6, 0xf, my_callback);
 
-	while (1)
+	while (1) {
+	    //gpio_toggle(GPIOB, GPIO5);
 		usbd_poll(usbd_dev);
+    }
+        for (i = 0; i < 0x100000; i++)
+            __asm__("nop");
 }
+

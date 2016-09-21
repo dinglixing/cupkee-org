@@ -36,12 +36,21 @@ CSTD    ?= -std=c99
 ###############################################################################
 # Depend files
 
-ifeq ($(strip $(LDSCRIPT)),)
-$(error "Miss ld script path")
+ifeq ($(strip $(MCU)),)
+$(error "Miss target mcu")
 endif
+LDSCRIPT    = ../../ld/$(MCU).ld
 
-ifeq ($(strip $(OPENCM3_DIR)),)
-$(error "Miss libopencm3 path")
+ifeq ($(findstring stm32f1,${MCU}),stm32f1)
+LIBNAME		= opencm3_stm32f1
+DEFS		+= -DSTM32F1
+
+FP_FLAGS	?= -msoft-float
+ARCH_FLAGS	= -mthumb -mcpu=cortex-m3 $(FP_FLAGS) -mfix-cortex-m3-ldrd
+
+OPENCM3_DIR = ../../libopencm3
+else
+	$(error "mcu ${MCU}: not support now!")
 endif
 
 DEFS		+= -I$(OPENCM3_DIR)/include
@@ -84,7 +93,6 @@ TGT_CPPFLAGS	+= $(DEFS)
 TGT_LDFLAGS		+= --static -nostartfiles
 TGT_LDFLAGS		+= -T$(LDSCRIPT)
 TGT_LDFLAGS		+= $(ARCH_FLAGS)
-TGT_LDFLAGS		+= -Wl,-Map=$(*).map
 TGT_LDFLAGS		+= -Wl,--gc-sections
 ifeq ($(V),99)
 TGT_LDFLAGS		+= -Wl,--print-gc-sections
@@ -132,7 +140,7 @@ ${1}: ${1}.elf
 
 ${1}.elf: $${${1}_OBJS}
 	@printf "[LD]\t$$@\n"
-	$(Q)${LD} -o $$@ $${${1}_OBJS} ${TGT_LDFLAGS} $${${1}_LDFLAGS}
+	$(Q)${LD} -o $$@ $${${1}_OBJS} ${TGT_LDFLAGS} -Wl,-Map=${1}.map $${${1}_LDFLAGS}
 
 ${1}.clean:
 	$(Q)${RM} $${${1}_OBJS} $${${1}_DEPS} ${1}.elf ${1}.map
