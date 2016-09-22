@@ -19,20 +19,37 @@
 
 #include "hal.h"
 #include "sal.h"
-#include "panda.h"
+#include "lang.h"
 
-static void lang_loop(void)
-{
-}
+//static const char *logo = "CUPKEE\r\n> ";
+
+static const char *logo = "\
+ _________               __                  \r\n\
+ \\_   ___ \\ __ ________ |  | __ ____   ____  \r\n\
+ /    \\  \\/|  |  \\____ \\|  |/ // __ \\_/ __ \\ \r\n\
+ \\     \\___|  |  /  |_> >    <\\  ___/\\  ___/ \r\n\
+  \\______  /____/|   __/|__|_ \\___  >\\___  >\r\n\
+         \\/      |__|        \\/    \\/     \\/  V0.0.1\r\n\
+ cupkee.cn\r\n";
 
 int main(void)
 {
     hal_init();
     sal_init();
 
-	while (1) {
+    if (0 != lang_init()) {
+        hal_halt();
+    }
+
+	while (!sal_console_ready()) {
         hal_loop();
         sal_loop();
+    }
+
+    sal_console_output(logo);
+
+    while (1) {
+        hal_loop();
         lang_loop();
     }
 }

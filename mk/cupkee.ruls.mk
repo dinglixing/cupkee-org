@@ -32,7 +32,6 @@ MAKE 	:= make
 OPT		:= -Os
 CSTD    ?= -std=c99
 
-
 ###############################################################################
 # Depend files
 
@@ -48,7 +47,7 @@ DEFS		+= -DSTM32F1
 FP_FLAGS	?= -msoft-float
 ARCH_FLAGS	= -mthumb -mcpu=cortex-m3 $(FP_FLAGS) -mfix-cortex-m3-ldrd
 
-OPENCM3_DIR = ../../libopencm3
+OPENCM3_DIR = ${PWD}/../libopencm3
 else
 	$(error "mcu ${MCU}: not support now!")
 endif
@@ -61,6 +60,10 @@ ifeq ($(V),1)
 $(info Using $(OPENCM3_DIR) path to library)
 endif
 
+###############################################################################
+# Assembler flags
+ASFLAGS     += -D__ASSEMBLY__
+ASFLAGS     += -D__NEWLIB__
 
 ###############################################################################
 # C flags
@@ -122,13 +125,22 @@ TGT_LDFLAGS     += ${SYSTEM_LIBS} ${OPENCM3_LIBS}
 	$(Q)$(OBJDUMP) -S $(*).elf > $(*).list
 
 
-# Marco build_obj_rule
+# Marco build_obj_rule [C file]
 # param ${1}: source file
 # param ${2}: program or library name
 define build_obj_rule
 ${1:%.c=%.o}: ${1}
 	@printf "[CC]\t$$@\n"
 	$(Q)${CC} ${TGT_CPPFLAGS} ${${2}_CPPFLAGS} ${TGT_CFLAGS} ${${2}_CFLAGS} -MD -c $$< -o $$@
+endef
+
+# Marco build_obj_rule [S file]
+# param ${1}: source file
+# param ${2}: program or library name
+define build_obj_rule_s
+${1:%.S=%.o}: ${1}
+	@printf "[AS]\t$$@\n"
+	$(Q)${CC} ${ASFLAGS} ${TGT_CPPFLAGS} ${${2}_CPPFLAGS} ${TGT_CFLAGS} ${${2}_CFLAGS} -MD -c $$< -o $$@
 endef
 
 # Marco build_elf_rule

@@ -177,25 +177,6 @@ static int cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *
 
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE: {
-		/*
-		 * This Linux cdc_acm driver requires this to be implemented
-		 * even though it's optional in the CDC spec, and we don't
-		 * advertise it in the ACM functional descriptor.
-		 */
-        /*
-		char local_buf[10];
-		struct usb_cdc_notification *notif = (void*)local_buf;
-
-		// We echo signals back to host as notification.
-		notif->bmRequestType = 0xA1;
-		notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
-		notif->wValue = 0;
-		notif->wIndex = 0;
-		notif->wLength = 2;
-		local_buf[8] = req->wValue & 3;
-		local_buf[9] = 0;
-        */
-		// usbd_ep_write_packet(0x83, buf, 10);
 		}
 		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
@@ -206,6 +187,9 @@ static int cdcacm_control_request(usbd_device *usbd_dev, struct usb_setup_data *
     return USBD_REQ_NOTSUPP;
 }
 
+static void (*console_input_cb)(void *, int) = NULL;
+static void (*console_drain_cb)(void) = NULL;
+
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 {
 	(void)ep;
@@ -214,6 +198,8 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 	int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
 
 	if (len) {
+        if (console_input_cb)
+            console_input_cb(buf, len);
 		while (usbd_ep_write_packet(usbd_dev, 0x82, buf, len) == 0)
 			;
 		buf[len] = 0;
@@ -228,7 +214,6 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 	usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
 	usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
-	gpio_clear(GPIOB, GPIO0);
 	usbd_register_control_callback(
 				usbd_dev,
 				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
@@ -245,7 +230,9 @@ static void hal_gpio_init(void)
 		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
 	gpio_set_mode(GPIOE, GPIO_MODE_OUTPUT_2_MHZ,
 		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
+
 	gpio_clear(GPIOB, GPIO5);
+	gpio_clear(GPIOE, GPIO5);
 }
 
 static usbd_device *usbd_dev;
@@ -262,11 +249,73 @@ int hal_init(void)
     hal_gpio_init();
     hal_usb_init();
 
+    hal_led_off(HAL_LED_0);
+    hal_led_off(HAL_LED_1);
+
     return 0;
 }
 
 void hal_loop(void)
 {
     usbd_poll(usbd_dev);
+
+    if (console_drain_cb)
+        console_drain_cb();
+}
+
+int hal_console_out(const char *data, int len)
+{
+    while (usbd_ep_write_packet(usbd_dev, 0x82, data, len) == 0)
+        ;
+    return len;
+}
+
+int hal_console_set_cb(void (*input)(void *, int), void (*drain)(void))
+{
+    console_input_cb = input;
+    console_drain_cb = drain;
+
+    return 0;
+}
+
+void hal_led_on(HAL_LED sel)
+{
+    if (sel & HAL_LED_0) {
+	    gpio_clear(GPIOB, GPIO5);
+    }
+    if (sel & HAL_LED_1) {
+	    gpio_clear(GPIOE, GPIO5);
+    }
+}
+
+void hal_led_off(HAL_LED sel)
+{
+    if (sel & HAL_LED_0) {
+	    gpio_set(GPIOB, GPIO5);
+    }
+    if (sel & HAL_LED_1) {
+	    gpio_set(GPIOE, GPIO5);
+    }
+}
+
+void hal_led_toggle(HAL_LED sel)
+{
+    if (sel & HAL_LED_0) {
+	    gpio_toggle(GPIOB, GPIO5);
+    }
+    if (sel & HAL_LED_1) {
+	    gpio_toggle(GPIOE, GPIO5);
+    }
+}
+
+void hal_halt(void)
+{
+    while (1) {
+        int i;
+        for (i = 0; i < 0x1000000; i++)
+            __asm__("nop");
+        hal_led_toggle(HAL_LED_0);
+
+    }
 }
 

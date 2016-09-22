@@ -14,8 +14,11 @@ sal:
 lang:
 	@make -C lang
 
-main:
+main: hal sal lang
 	@make -C main
+
+bin: main
+	@make -C main bin
 
 clean:
 	@make -C hal clean
@@ -23,4 +26,8 @@ clean:
 	@make -C lang clean
 	@make -C main clean
 
-.PHONY: hal sal lang main clean
+load: main
+	openocd -f../openocd/interface/jlink.cfg -f../openocd/target/stm32f1x.cfg \
+		-c "program main/out.elf verify reset exit"
+
+.PHONY: bin hal sal lang main clean load
