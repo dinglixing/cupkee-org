@@ -10,7 +10,9 @@
 
 #define HEAP_SIZE     (1024 * 8)
 #define STACK_SIZE    (256)
-#define MEM_SIZE      (STACK_SIZE * sizeof(val_t) + HEAP_SIZE + EXE_MEM_SPACE + SYMBAL_MEM_SPACE)
+#define EXE_MEM_SPACE (1024 * 8)
+#define SYM_MEM_SPACE (1024 * 2)
+#define MEM_SIZE      (STACK_SIZE * sizeof(val_t) + HEAP_SIZE + EXE_MEM_SPACE + SYM_MEM_SPACE)
 
 static uint8_t memory[MEM_SIZE];
 static env_t lang_env;

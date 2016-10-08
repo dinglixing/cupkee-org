@@ -7,4 +7,5 @@
 *.list
 
 out/
+doc/
 openocd

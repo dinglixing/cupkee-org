@@ -4,7 +4,6 @@ export MCU = stm32f103ze
 all: hal sal lang main
 	@printf "build ok\n"
 
-
 hal:
 	@make -C hal
 
