@@ -19,7 +19,7 @@
 
 #include "hal.h"
 #include "sal.h"
-#include "lang.h"
+#include "shell.h"
 
 //static const char *logo = "CUPKEE\r\n> ";
 
@@ -28,7 +28,7 @@ static const char *logo = "\
  \\_   ___ \\ __ ________ |  | __ ____   ____  \r\n\
  /    \\  \\/|  |  \\____ \\|  |/ // __ \\_/ __ \\ \r\n\
  \\     \\___|  |  /  |_> >    <\\  ___/\\  ___/ \r\n\
-  \\______  /____/|   __/|__|_ \\___  >\\___  >\r\n\
+  \\______  /____/|   __/|__|_ \\\\___  >\\___  >\r\n\
          \\/      |__|        \\/    \\/     \\/  V0.0.1\r\n";
 
 int main(void)
@@ -36,7 +36,7 @@ int main(void)
     hal_init();
     sal_init();
 
-    if (0 != lang_init()) {
+    if (0 != shell_init()) {
         hal_halt();
     }
 
@@ -49,7 +49,7 @@ int main(void)
 
     while (1) {
         hal_loop();
-        lang_loop();
+        shell_loop();
     }
 }
 

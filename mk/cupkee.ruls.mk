@@ -177,14 +177,11 @@ ${1}_DEPS = ${${1}_SRCS:%.c=%.d}
 ${1}_OBJS += ${${1}_ASRCS:%.S=%.o}
 ${1}_DEPS += ${${1}_ASRCS:%.S=%.d}
 
-${1}: ${1}.info lib${1}.a
+${1}: lib${1}.a
 
 lib${1}.a: $${${1}_OBJS}
 	@printf "[AR]\t$$@\n\n"
 	$(Q)${AR} rcs lib${1}.a $${${1}_OBJS}
-
-${1}.info:
-	@printf "build lib${1}.a\n"
 
 ${1}.clean:
 	$(Q)${RM} $${${1}_OBJS} $${${1}_DEPS} lib${1}.a
@@ -217,7 +214,6 @@ clean: ${elf_NAMES:%=%.clean} ${lib_NAMES:%=%.clean}
 	@${RM} ${elf_NAMES:%=%.list}
 
 $(foreach elf,${elf_NAMES},$(eval $(call build_elf_rule,${elf})))
-
 $(foreach lib,${lib_NAMES},$(eval $(call build_lib_rule,${lib})))
 
 

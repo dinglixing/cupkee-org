@@ -82,7 +82,6 @@ const char *sal_console_getline(void)
         console_in_bgn = 0;
         console_in_end = 0;
 
-        hal_led_toggle(HAL_LED_1);
         return line;
     }
     return NULL;

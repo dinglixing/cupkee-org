@@ -1,23 +1,8 @@
-/*
- * This file is part of the cupkee project.
- *
- * Copyright (C) 2016 Lixing ding <ding.lixing@gmail.conz>
- *
- */
-
 #include "sal.h"
-#include "lang.h"
+#include "panda.h"
+#include "native.h"
 
-#define HEAP_SIZE     (1024 * 8)
-#define STACK_SIZE    (256)
-#define EXE_MEM_SPACE (1024 * 8)
-#define SYM_MEM_SPACE (1024 * 2)
-#define MEM_SIZE      (STACK_SIZE * sizeof(val_t) + HEAP_SIZE + EXE_MEM_SPACE + SYM_MEM_SPACE)
-
-static uint8_t memory[MEM_SIZE];
-static env_t lang_env;
-
-static void print_error(int error)
+void print_error(int error)
 {
     switch (error) {
     case ERR_SysError:          sal_console_output("Error: System error\r\n"); break;
@@ -43,7 +28,7 @@ static void print_error(int error)
     }
 }
 
-static void print_value(val_t *v)
+void print_value(val_t *v)
 {
     if (val_is_number(v)) {
         char buf[32];
@@ -73,6 +58,26 @@ static void print_value(val_t *v)
     }
 }
 
+static val_t native_led_on(env_t *env, int ac, val_t *av)
+{
+    (void) env;
+    (void) ac;
+    (void) av;
+
+    hal_led_on(HAL_LED_1);
+    return val_mk_undefined();
+}
+
+static val_t native_led_off(env_t *env, int ac, val_t *av)
+{
+    (void) env;
+    (void) ac;
+    (void) av;
+
+    hal_led_off(HAL_LED_1);
+    return val_mk_undefined();
+}
+
 static val_t print(env_t *env, int ac, val_t *av)
 {
     int i;
@@ -90,45 +95,13 @@ static val_t print(env_t *env, int ac, val_t *av)
 }
 
 static native_t native_entry[] = {
-    {"print", print}
+    {"print", print},
+    {"on",    native_led_on},
+    {"off",   native_led_off},
 };
 
-static int native_init(env_t *env)
+int native_init(env_t *env)
 {
-    return env_native_add(env, 1, native_entry);
-}
-
-int lang_init(void)
-{
-    if(0 != interp_env_init_interactive(&lang_env, memory, MEM_SIZE, NULL, HEAP_SIZE, NULL, STACK_SIZE)) {
-        //sal_console_output("env_init fail\n");
-        return -1;
-    }
-
-    native_init(&lang_env);
-    //sal_console_output("> ");
-
-    return 0;
-}
-
-void lang_loop(void)
-{
-    const char  *line = sal_console_getline();
-    val_t *res;
-    int    err;
-
-    if (!line) {
-        return;
-    }
-
-    err = interp_execute_interactive(&lang_env, line, NULL, &res);
-    if (err < 0) {
-        print_error(-err);
-        hal_led_on(HAL_LED_0);
-    } else
-    if (err > 0) {
-        print_value(res);
-    }
-    sal_console_output("> ");
+    return env_native_add(env, 3, native_entry);
 }
 
