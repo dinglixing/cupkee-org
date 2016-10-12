@@ -30,7 +30,7 @@ RM 		:= rm -rf
 MAKE 	:= make
 
 OPT		:= -Os
-CSTD    ?= -std=c99
+#CSTD    ?= -std=c99
 
 ###############################################################################
 # Depend files
@@ -148,16 +148,23 @@ endef
 define build_elf_rule
 ${1}_OBJS = ${${1}_SRCS:%.c=%.o}
 ${1}_DEPS = ${${1}_SRCS:%.c=%.d}
-${1}: ${1}.elf
+${1}_OBJS += ${${1}_ASRCS:%.S=%.o}
+${1}_DEPS += ${${1}_ASRCS:%.S=%.d}
+
+${1}: ${1}.info ${1}.elf
 
 ${1}.elf: $${${1}_OBJS}
-	@printf "[LD]\t$$@\n"
+	@printf "[LD]\t$$@\n\n"
 	$(Q)${LD} -o $$@ $${${1}_OBJS} $${${1}_LDFLAGS} ${TGT_LDFLAGS} -Wl,-Map=${1}.map
 
+${1}.info:
+	@printf "build ${1}.elf\n"
+
 ${1}.clean:
-	$(Q)${RM} $${${1}_OBJS} $${${1}_DEPS} ${1}.elf ${1}.map
+	$(Q)${RM} $${${1}_OBJS} $${${1}_DEPS} ${1}.*
 
 $(foreach src,${${1}_SRCS},$(eval $(call build_obj_rule,${src},${1})))
+$(foreach asm,${${1}_ASRCS},$(eval $(call build_obj_rule_s,${asm},${1})))
 
 -include $${${1}_DEPS}
 endef
@@ -167,16 +174,23 @@ endef
 define build_lib_rule
 ${1}_OBJS = ${${1}_SRCS:%.c=%.o}
 ${1}_DEPS = ${${1}_SRCS:%.c=%.d}
-${1}: lib${1}.a
+${1}_OBJS += ${${1}_ASRCS:%.S=%.o}
+${1}_DEPS += ${${1}_ASRCS:%.S=%.d}
+
+${1}: ${1}.info lib${1}.a
 
 lib${1}.a: $${${1}_OBJS}
-	@printf "[AR]\t$$@\n"
+	@printf "[AR]\t$$@\n\n"
 	$(Q)${AR} rcs lib${1}.a $${${1}_OBJS}
+
+${1}.info:
+	@printf "build lib${1}.a\n"
 
 ${1}.clean:
 	$(Q)${RM} $${${1}_OBJS} $${${1}_DEPS} lib${1}.a
 
 $(foreach src,${${1}_SRCS},$(eval $(call build_obj_rule,${src},${1})))
+$(foreach asm,${${1}_ASRCS},$(eval $(call build_obj_rule_s,${asm},${1})))
 
 -include $${${1}_DEPS}
 endef

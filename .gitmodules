@@ -4,6 +4,3 @@
 [submodule "panda"]
 	path = panda
 	url = https://github.com/dinglixing/panda.git
-[submodule "rtos"]
-	path = rtos
-	url = https://github.com/dinglixing/rtos.git
