@@ -4,6 +4,7 @@
 #include "panda.h"
 
 int  shell_init(void);
+void shell_execute(void);
 void shell_loop(void);
 
 #endif /* __SHELL_INC__ */

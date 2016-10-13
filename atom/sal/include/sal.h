@@ -2,15 +2,24 @@
 #ifndef __SAL_INC__
 #define __SAL_INC__
 
-#include <hal.h>
 #include <stdint.h>
+#include <hal.h>
+
+enum {
+    EVENT_IDLE = 0,
+    EVENT_CONSOLE_READY,
+    EVENT_CONSOLE_INPUT,
+};
+
+#define EVENTQ_SIZE 16
 
 int sal_init(void);
 void sal_loop(void);
 
-int  sal_console_ready(void);
-void sal_console_output(const char *s);
-const char *sal_console_getline(void);
+int event_put(int e);
+int event_get(void);
+
+#include "console.h"
 
 #endif /* __SAL_INC__ */
 

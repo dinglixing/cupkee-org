@@ -200,10 +200,16 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 	if (len) {
         if (console_input_cb)
             console_input_cb(buf, len);
-		while (usbd_ep_write_packet(usbd_dev, 0x82, buf, len) == 0)
-			;
-		buf[len] = 0;
 	}
+}
+
+static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep)
+{
+    (void)usbd_dev;
+	(void)ep;
+
+    if (console_drain_cb)
+        console_drain_cb();
 }
 
 static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
@@ -211,7 +217,7 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 	(void)wValue;
 
 	usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
-	usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+	usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_tx_cb);
 	usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	usbd_register_control_callback(
@@ -263,11 +269,35 @@ void hal_loop(void)
         console_drain_cb();
 }
 
-int hal_console_out(const char *data, int len)
+int hal_console_write_byte(char c)
 {
-    while (usbd_ep_write_packet(usbd_dev, 0x82, data, len) == 0)
+    return usbd_ep_write_packet(usbd_dev, 0x82, &c, 1);
+}
+
+int hal_console_puts(const char *s)
+{
+    const char *p = s;
+    while (*p && hal_console_write_byte(*p)) {
+        p++;
+    }
+    return p - s;
+}
+
+int hal_console_write_sync_byte(char c)
+{
+    while(!usbd_ep_write_packet(usbd_dev, 0x82, &c, 1))
         ;
-    return len;
+    return 1;
+}
+
+int hal_console_sync_puts(const char *s)
+{
+    const char *p = s;
+    while (*p) {
+        hal_console_write_sync_byte(*p);
+        p++;
+    }
+    return p - s;
 }
 
 int hal_console_set_cb(void (*input)(void *, int), void (*drain)(void))

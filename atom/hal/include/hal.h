@@ -6,8 +6,11 @@
 int hal_init(void);
 void hal_loop(void);
 
-int hal_console_out(const char *str, int len);
 int hal_console_set_cb(void (*input)(void *, int), void (*drain)(void));
+int hal_console_write_byte(char c);
+int hal_console_puts(const char *s);
+int hal_console_write_sync_byte(char c);
+int hal_console_sync_puts(const char *s);
 
 typedef enum HAL_LED{
     HAL_LED_0 = 1,

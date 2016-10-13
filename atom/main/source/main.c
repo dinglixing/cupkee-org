@@ -28,8 +28,8 @@ static const char *logo = "\
  \\_   ___ \\ __ ________ |  | __ ____   ____  \r\n\
  /    \\  \\/|  |  \\____ \\|  |/ // __ \\_/ __ \\ \r\n\
  \\     \\___|  |  /  |_> >    <\\  ___/\\  ___/ \r\n\
-  \\______  /____/|   __/|__|_ \\\\___  >\\___  >\r\n\
-         \\/      |__|        \\/    \\/     \\/  V0.0.1\r\n";
+  \\______  /____/|   __/|__|_ \\\\____> \\____>\r\n\
+         \\/      |__|        \\/    ATOM:V0.0.1\r\n";
 
 int main(void)
 {
@@ -40,16 +40,22 @@ int main(void)
         hal_halt();
     }
 
-	while (!sal_console_ready()) {
-        hal_loop();
-        sal_loop();
-    }
-
-    sal_console_output(logo);
-
     while (1) {
-        hal_loop();
-        shell_loop();
+        int e;
+
+        while (EVENT_IDLE != (e = event_get())) {
+            switch (e) {
+            case EVENT_CONSOLE_READY:
+                hal_console_sync_puts(logo);
+                break;
+            case EVENT_CONSOLE_INPUT:
+                shell_execute();
+                break;
+            default:
+                break;
+            }
+        }
+        sal_loop();
     }
 }
 

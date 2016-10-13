@@ -31,24 +31,22 @@ int shell_init(void)
     return 0;
 }
 
-void shell_loop(void)
+void shell_execute(void)
 {
-    const char  *line = sal_console_getline();
+    char buf[80];
     val_t *res;
     int    err;
 
-    if (!line) {
-        return;
-    }
+    console_gets(buf, 80);
 
-    err = interp_execute_interactive(&shell_env, line, NULL, &res);
+    err = interp_execute_interactive(&shell_env, buf, NULL, &res);
     if (err < 0) {
         print_error(-err);
-        hal_led_on(HAL_LED_0);
     } else
     if (err > 0) {
         print_value(res);
     }
-    sal_console_output("> ");
+    console_puts("> ");
+
 }
 
