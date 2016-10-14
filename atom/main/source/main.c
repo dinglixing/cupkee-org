@@ -42,7 +42,6 @@ int main(void)
 
     while (1) {
         int e;
-
         while (EVENT_IDLE != (e = event_get())) {
             switch (e) {
             case EVENT_CONSOLE_READY:
@@ -50,6 +49,9 @@ int main(void)
                 break;
             case EVENT_CONSOLE_INPUT:
                 shell_execute();
+                break;
+            case EVENT_SYSTICK_OCCUR:
+                shell_timeout_execute();
                 break;
             default:
                 break;

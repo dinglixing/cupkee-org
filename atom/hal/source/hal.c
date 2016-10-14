@@ -18,6 +18,9 @@
  */
 
 #include <stdlib.h>
+#include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/cortex.h>
+#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/usb/usbd.h>
@@ -227,7 +230,7 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 				cdcacm_control_request);
 }
 
-static void hal_gpio_init(void)
+static void hal_led_setup(void)
 {
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOE);
@@ -241,8 +244,24 @@ static void hal_gpio_init(void)
 	gpio_clear(GPIOE, GPIO5);
 }
 
+uint32_t system_ticks_count = 0;
+
+/* systick interrupt handle routing  */
+void sys_tick_handler(void)
+{
+    system_ticks_count++;
+}
+
+static void hal_systick_setup(void)
+{
+    systick_set_frequency(SYSTEM_TICKS_PRE_SEC, 72000000);
+
+    systick_interrupt_enable();
+    systick_counter_enable();
+}
+
 static usbd_device *usbd_dev;
-static void hal_usb_init(void)
+static void hal_console_setup(void)
 {
 	usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
@@ -252,11 +271,12 @@ int hal_init(void)
 {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
-    hal_gpio_init();
-    hal_usb_init();
+    hal_led_setup();
+    hal_led_off(HAL_LED_ALL);
 
-    hal_led_off(HAL_LED_0);
-    hal_led_off(HAL_LED_1);
+    hal_console_setup();
+
+    hal_systick_setup();
 
     return 0;
 }

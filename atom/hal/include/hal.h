@@ -3,6 +3,12 @@
 #ifndef __HAL_INC__
 #define __HAL_INC__
 
+#include <stdint.h>
+
+#define SYSTEM_TICKS_PRE_SEC     1000
+
+extern uint32_t system_ticks_count;
+
 int hal_init(void);
 void hal_loop(void);
 

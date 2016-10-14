@@ -36,6 +36,7 @@ int event_get(void)
     return *RBUFF_ELEM_PTR(&eventq, int, pos);
 }
 
+static uint32_t system_ticks_count_pre = 0;
 int sal_init(void)
 {
     event_queue_init();
@@ -44,11 +45,18 @@ int sal_init(void)
         return -1;
     }
 
+    system_ticks_count_pre = system_ticks_count;
+
     return 0;
 }
 
 void sal_loop(void)
 {
+    if (system_ticks_count_pre != system_ticks_count) {
+        system_ticks_count_pre = system_ticks_count;
+        event_put(EVENT_SYSTICK_OCCUR);
+    }
+
     hal_loop();
 }
 
