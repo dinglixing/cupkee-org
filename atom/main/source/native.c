@@ -204,6 +204,6 @@ static const native_t native_entry[] = {
 
 int native_init(env_t *env)
 {
-    return env_native_add(env, sizeof(native_entry)/sizeof(native_t), native_entry);
+    return env_native_set(env, native_entry, sizeof(native_entry)/sizeof(native_t));
 }
 
