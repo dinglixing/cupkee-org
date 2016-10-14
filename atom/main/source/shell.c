@@ -54,7 +54,7 @@ static void timeout_init(env_t *env)
         val_set_undefined(&timeout_handles[i]);
     }
 
-    //interp_env_external_refence(&timeout_handle, TIMEOUT_MAX);
+    env_reference_set(env, timeout_handles, TIMEOUT_MAX);
 }
 
 static void timeout_release(timeout_t *to)
