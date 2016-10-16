@@ -25,7 +25,10 @@ clean:
 	@make -C lang clean
 	@make -C main clean
 
-load: main
+do:
+	rm -rf main/out.elf
+
+load: do main
 	openocd -f../openocd/interface/jlink.cfg -f../openocd/target/stm32f1x.cfg \
 		-c "program main/out.elf verify reset exit"
 

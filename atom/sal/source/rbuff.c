@@ -1,3 +1,4 @@
+#include <string.h>
 #include "rbuff.h"
 
 void rbuff_init(rbuff_t *rb, int size, void *buf)
@@ -6,6 +7,18 @@ void rbuff_init(rbuff_t *rb, int size, void *buf)
     rb->head = 0;
     rb->cnt = 0;
     rb->ptr = buf;
+}
+
+int rbuff_get(rbuff_t *rb, int pos)
+{
+    if (pos < 0 || pos >= rb->cnt) {
+        return -1;
+    }
+    pos = rb->head + pos;
+    if (pos >= rb->size) {
+        pos = pos % rb->size;
+    }
+    return pos;
 }
 
 int rbuff_shift(rbuff_t *rb)
@@ -64,3 +77,4 @@ int rbuff_pop(rbuff_t *rb)
     }
     return pos;
 }
+

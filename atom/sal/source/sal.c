@@ -22,7 +22,7 @@ int event_put(int e)
         return 0;
     }
 
-    *RBUFF_ELEM_PTR(&eventq, int, pos) = e;
+    eventq_mem[pos] = e;
     return 1;
 }
 
@@ -33,7 +33,7 @@ int event_get(void)
         return EVENT_IDLE;
     }
 
-    return *RBUFF_ELEM_PTR(&eventq, int, pos);
+    return eventq_mem[pos];
 }
 
 static uint32_t system_ticks_count_pre = 0;

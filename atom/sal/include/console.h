@@ -2,8 +2,8 @@
 #ifndef __CONSOLE_INC__
 #define __CONSOLE_INC__
 
-#define CON_RECV        0
-#define CON_SEND        1
+#define CON_IN          0
+#define CON_OUT         1
 #define CON_BUFF_MAX    2
 #define CON_BUFF_SIZE 128
 
