@@ -4,19 +4,6 @@
 
 #include "rbuff.h"
 
-enum {
-    CON_IDLE = 0,
-    CON_CHAR = 1,
-    CON_BACKSPACE,
-    CON_DELETE,
-    CON_TABLE,
-    CON_ENTER,
-    CON_ESCAPE,
-    CON_UP,
-    CON_DOWN,
-    CON_RIGHT,
-    CON_LEFT
-};
 
 #define BELL    "\007"
 #define CRLF    "\r\n"
@@ -29,6 +16,7 @@ static rbuff_t console_buff[CON_BUFF_MAX];
 static char console_buff_mem[CON_BUFF_MAX][CON_BUFF_SIZE];
 static unsigned console_recv_bytes = 0;
 //static unsigned console_send_bytes = 0;
+static int (*console_handle)(int ctrl) = NULL;
 
 static int console_buf_write_byte(int x, char c)
 {
@@ -82,45 +70,70 @@ static void parse_input(void *data, int len)
 }
 #endif
 
+int console_input_curr_tok(char *buf, int size)
+{
+    if (console_in_pos == 0) {
+        return 0;
+    }
+
+    rbuff_t *rb = &console_buff[CON_IN];
+    char *ptr = console_buff_mem[CON_IN];
+    int start = console_in_pos;
+    int pos = 0;
+
+    while ((pos = rbuff_get(rb, start - 1)) >= 0) {
+        if (ptr[pos] == ' ')
+            break;
+        start--;
+    }
+
+    for (pos = 0; pos < size && start < console_in_pos; pos++, start++) {
+        buf[pos] = ptr[rbuff_get(rb, start)];
+    }
+    buf[pos] = 0;
+
+    return pos;
+}
+
 static int console_input_parse(char *input, int end, int *ppos, char *pkey)
 {
-    int  type = CON_IDLE;
+    int  type = CON_CTRL_IDLE;
     int  pos = *ppos;
     char key = input[pos++];
 
     if (key >= 32 && key < 127) {
         *pkey = key;
-        type = CON_CHAR;
+        type = CON_CTRL_CHAR;
     } else {
         if (key == 8) {
-            type = CON_BACKSPACE;
+            type = CON_CTRL_BACKSPACE;
         } else
         if (key == 9) {
-            type = CON_TABLE;
+            type = CON_CTRL_TABLE;
         } else
         if (key == 13) {
-            type = CON_ENTER;
+            type = CON_CTRL_ENTER;
         } else
         if (key == 127) {
-            type = CON_DELETE;
+            type = CON_CTRL_DELETE;
         } else
         if (key == 27) {
             if (pos == end) {
-                type = CON_ESCAPE;
+                type = CON_CTRL_ESCAPE;
             } else
             if (input[pos] == 91) {
                 key = input[pos + 1];
                 if (key == 65) {
-                    type = CON_UP;
+                    type = CON_CTRL_UP;
                 } else
                 if (key == 66) {
-                    type = CON_DOWN;
+                    type = CON_CTRL_DOWN;
                 } else
                 if (key == 67) {
-                    type = CON_RIGHT;
+                    type = CON_CTRL_RIGHT;
                 } else
                 if (key == 68) {
-                    type = CON_LEFT;
+                    type = CON_CTRL_LEFT;
                 }
             }
             pos = end; // Skip all left input
@@ -131,7 +144,31 @@ static int console_input_parse(char *input, int end, int *ppos, char *pkey)
     return type;
 }
 
-void console_input_str(char *s)
+void console_input_clear(void)
+{
+    rbuff_t *rb = &console_buff[CON_IN];
+    int n = rbuff_end(rb);
+    int i;
+
+    if (n <= 0) {
+        return;
+    }
+
+    rbuff_reset(rb);
+    while (console_in_pos) {
+        console_put(8);
+        console_in_pos--;
+    }
+
+    for (i = 0; i < n; i++) {
+        console_put(' ');
+    }
+    for (i = 0; i < n; i++) {
+        console_put(8);
+    }
+}
+
+void console_input_string(char *s)
 {
     int len = strlen(s);
     rbuff_t *rb = &console_buff[CON_IN];
@@ -148,14 +185,14 @@ void console_input_str(char *s)
         }
         console_in_pos += len;
     } else {
-        int pos = console_in_pos;
         char *ptr = console_buff_mem[CON_IN];
+        int pos = console_in_pos;
         int i, n = rbuff_end(rb) - pos;
 
         console_puts(s);
         rbuff_append(rb, len);
         for (i = n - 1; i >= 0; i--) {
-            ptr[rbuff_get(rb, pos + i)] = ptr[rbuff_get(rb, pos + i + len)];
+            ptr[rbuff_get(rb, pos + i + len)] = ptr[rbuff_get(rb, pos + i)];
         }
         for (i = 0; i < n; i++) {
             console_put(ptr[rbuff_get(rb, pos + i + len)]);
@@ -201,7 +238,6 @@ static void console_input_enter(void)
 {
     console_puts(CRLF);
     console_buf_write_byte(CON_IN, '\n');
-    event_put(EVENT_CONSOLE_INPUT);
     console_in_pos = 0;
 }
 
@@ -257,27 +293,27 @@ static void console_input_seek(int n)
 
 static void console_input_proc(int type, char c)
 {
+    if (console_handle && console_handle(type)) {
+        return;
+    }
+
     switch (type) {
-    case CON_IDLE: break;
-    case CON_CHAR: console_input_char(c); break;
-    case CON_BACKSPACE: console_input_delete(); break;
-    case CON_DELETE:    console_input_delete(); break;
-    case CON_TABLE:
-        console_puts(BELL);
-        break;
-    case CON_ENTER: console_input_enter(); break;
-    case CON_ESCAPE:
-        console_puts(BELL);
-        break;
-    case CON_UP:    console_puts(BELL); break;
-    case CON_DOWN:  console_puts(BELL); break;
-    case CON_RIGHT: console_input_seek(1);  break;
-    case CON_LEFT:  console_input_seek(-1); break;
+    case CON_CTRL_IDLE:         break;
+    case CON_CTRL_CHAR:         console_input_char(c); break;
+    case CON_CTRL_BACKSPACE:    console_input_delete(); break;
+    case CON_CTRL_DELETE:       console_input_delete(); break;
+    case CON_CTRL_TABLE:        console_puts(BELL); break;
+    case CON_CTRL_ENTER:        console_input_enter(); break;
+    case CON_CTRL_ESCAPE:       console_puts(BELL); break;
+    case CON_CTRL_UP:           console_puts(BELL); break;
+    case CON_CTRL_DOWN:         console_puts(BELL); break;
+    case CON_CTRL_RIGHT:        console_input_seek(1);  break;
+    case CON_CTRL_LEFT:         console_input_seek(-1); break;
     default: break;
     }
 }
 
-static void console_input_handle(void *data, int end)
+static void console_input_handle(void *data, int n)
 {
     if (!console_ready) {
         console_ready = 1;
@@ -285,14 +321,12 @@ static void console_input_handle(void *data, int end)
     }
 
     int pos = 0;
-    console_recv_bytes += end;
-
-    while (pos < end) {
-        char c;
-        int  type = console_input_parse(data, end, &pos, &c);
-
+    char c = '.';
+    while (pos < n) {
+        int type = console_input_parse(data, n, &pos, &c);
         console_input_proc(type, c);
     }
+    console_recv_bytes += n;
 }
 
 static void console_drain_handle(void)
@@ -312,6 +346,12 @@ int console_init(void)
     rbuff_init(&console_buff[CON_OUT], CON_BUFF_SIZE, console_buff_mem[CON_OUT]);
 
     return hal_console_set_cb(console_input_handle, console_drain_handle);
+}
+
+int console_handle_register(int (*handle)(int))
+{
+    console_handle = handle;
+    return 0;
 }
 
 int console_put(char c)

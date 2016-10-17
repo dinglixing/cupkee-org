@@ -11,12 +11,29 @@ typedef struct rbuff_t {
 
 void rbuff_init(rbuff_t *rb, int size, void *buf);
 
-int rbuff_get(rbuff_t *rb, int pos);
 int rbuff_shift(rbuff_t *rb);
 int rbuff_unshift(rbuff_t *rb);
 int rbuff_push(rbuff_t *rb);
 int rbuff_pop(rbuff_t *rb);
 int rbuff_insert(rbuff_t *rb, int pos);
+
+static inline int rbuff_get(rbuff_t *rb, int pos)
+{
+    if (pos < 0 || pos >= rb->cnt) {
+        return -1;
+    }
+    pos = rb->head + pos;
+    if (pos >= rb->size) {
+        pos = pos % rb->size;
+    }
+    return pos;
+}
+
+
+static inline void rbuff_reset(rbuff_t *rb) {
+    rb->head = 0;
+    rb->cnt = 0;
+}
 
 static inline int rbuff_remove(rbuff_t *rb, int n) {
     if (rb->cnt >= n) {
