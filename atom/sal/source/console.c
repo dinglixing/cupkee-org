@@ -4,10 +4,24 @@
 
 #include "rbuff.h"
 
+enum {
+    CON_IDLE = 0,
+    CON_CHAR = 1,
+    CON_BACKSPACE,
+    CON_DELETE,
+    CON_TABLE,
+    CON_ENTER,
+    CON_ESCAPE,
+    CON_UP,
+    CON_DOWN,
+    CON_RIGHT,
+    CON_LEFT
+};
+
 #define BELL    "\007"
 #define CRLF    "\r\n"
-#define LEFT    "\033[D"
 #define RIGHT   "\033[C"
+#define LEFT    "\010"
 
 static int console_ready = 0;
 static int console_in_pos = 0;
@@ -49,6 +63,7 @@ static int console_buf_unread_byte(int x, char c)
     return 1;
 }
 
+#if 0
 #include <stdio.h>
 static void parse_input(void *data, int len)
 {
@@ -65,20 +80,7 @@ static void parse_input(void *data, int len)
 
     hal_console_sync_puts(buf);
 }
-
-enum {
-    CON_IDLE = 0,
-    CON_CHAR = 1,
-    CON_BACKSPACE,
-    CON_DELETE,
-    CON_TABLE,
-    CON_ENTER,
-    CON_ESCAPE,
-    CON_UP,
-    CON_DOWN,
-    CON_RIGHT,
-    CON_LEFT
-};
+#endif
 
 static int console_input_parse(char *input, int end, int *ppos, char *pkey)
 {
@@ -129,14 +131,6 @@ static int console_input_parse(char *input, int end, int *ppos, char *pkey)
     return type;
 }
 
-static void show_num(int n)
-{
-    char buf[32];
-
-    snprintf(buf, 32, "[%d]", n);
-    console_puts(buf);
-}
-
 void console_input_str(char *s)
 {
     int len = strlen(s);
@@ -173,7 +167,6 @@ void console_input_str(char *s)
             ptr[rbuff_get(rb, console_in_pos++)] = s[i];
     }
 }
-
 
 static void console_input_char(char c)
 {
@@ -286,20 +279,14 @@ static void console_input_proc(int type, char c)
 
 static void console_input_handle(void *data, int end)
 {
-    int pos;
-
-    if (0) {
-        parse_input(data, end);
-        return;
-    }
-
     if (!console_ready) {
         console_ready = 1;
         event_put(EVENT_CONSOLE_READY);
     }
+
+    int pos = 0;
     console_recv_bytes += end;
 
-    pos = 0;
     while (pos < end) {
         char c;
         int  type = console_input_parse(data, end, &pos, &c);

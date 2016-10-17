@@ -9,7 +9,8 @@
 
 extern uint32_t system_ticks_count;
 
-int hal_init(void);
+int board_setup(void);
+
 void hal_loop(void);
 
 int hal_console_set_cb(void (*input)(void *, int), void (*drain)(void));

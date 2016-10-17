@@ -15,5 +15,7 @@ int console_get(void);
 int console_puts(const char *s);
 int console_gets(char *buf, int max);
 
+void console_input_str(char *s);
+
 #endif /* __CONSOLE_INC__ */
 

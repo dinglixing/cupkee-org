@@ -39,6 +39,8 @@ int event_get(void)
 static uint32_t system_ticks_count_pre = 0;
 int sal_init(void)
 {
+    board_setup();
+
     event_queue_init();
 
     if (console_init()) {

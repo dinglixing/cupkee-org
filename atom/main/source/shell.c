@@ -104,7 +104,7 @@ int shell_init(void)
     return 0;
 }
 
-void shell_execute(void)
+void shell_input_execute(void)
 {
     char buf[80];
     val_t *res;

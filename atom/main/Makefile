@@ -6,7 +6,7 @@ out_SRCS = source/main.c \
 
 out_CPPFLAGS = -I../hal/include -I../sal/include -I../../panda/include
 out_CFLAGS   =
-out_LDFLAGS  = -L../hal -L../sal -L../lang -lhal -lsal -llang
+out_LDFLAGS  = -L../sal -L../hal -L../lang -lsal -lhal -llang
 
 include ../../mk/cupkee.ruls.mk
 

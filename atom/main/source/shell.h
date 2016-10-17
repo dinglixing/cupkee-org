@@ -5,7 +5,7 @@
 
 int  shell_init(void);
 
-void shell_execute(void);
+void shell_input_execute(void);
 void shell_timeout_execute(void);
 
 int shell_timeout_regiseter(uint32_t wait, val_t *handle, int repeat);

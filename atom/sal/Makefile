@@ -1,6 +1,6 @@
 lib_NAMES = sal
 
-sal_SRCS = source/sal.c \
+sal_SRCS = source/init.c \
 		   source/rbuff.c \
 		   source/console.c
 

@@ -267,7 +267,7 @@ static void hal_console_setup(void)
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
 }
 
-int hal_init(void)
+int board_setup(void)
 {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 

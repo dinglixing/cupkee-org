@@ -1,6 +1,8 @@
 # ignore files
 
+~*
 *.[ado]
+*.swp
 *.bin
 *.elf
 *.map

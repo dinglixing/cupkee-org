@@ -33,7 +33,7 @@ static const char *logo = "\
 
 int main(void)
 {
-    hal_init();
+    //hal_init();
     sal_init();
 
     if (0 != shell_init()) {
@@ -48,7 +48,7 @@ int main(void)
                 hal_console_sync_puts(logo);
                 break;
             case EVENT_CONSOLE_INPUT:
-                shell_execute();
+                shell_input_execute();
                 break;
             case EVENT_SYSTICK_OCCUR:
                 shell_timeout_execute();
