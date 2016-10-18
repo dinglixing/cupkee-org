@@ -172,6 +172,7 @@ static int auto_complete(void)
         ac.prefix = has;
         ac.supply = 0;
         ac.same = 0;
+
         env_symbal_foreach(&shell_env, do_complete, &ac);
         if (ac.same) {
             if (ac.same > 1) {
@@ -181,7 +182,10 @@ static int auto_complete(void)
                     console_put(ch);
                 }
             }
+        }
+        if (ac.supply) {
             console_input_string(ac.buf + has);
+            return CON_PREVENT_DEFAULT;
         }
     } else {
         console_input_string("    ");
@@ -268,11 +272,27 @@ static int console_ctrl_handle(int ctrl)
     }
 }
 
+static int shell_execute_start_script(void)
+{
+    const char *script;
+    int    ctx = 0;
+    int    err = 0;
+    val_t *res;
+
+    while (NULL != (script = storage_script_next(&ctx))) {
+        err = interp_execute_string(&shell_env, script, &res);
+        if (err < 0) {
+            break;
+        }
+    }
+
+    return err;
+}
+
 int shell_init(void)
 {
     /* Initialise shell evn */
     if(0 != interp_env_init_interactive(&shell_env, memory, MEM_SIZE, NULL, HEAP_SIZE, NULL, STACK_SIZE)) {
-        //sal_console_output("env_init fail\n");
         return -1;
     }
 
@@ -288,6 +308,8 @@ int shell_init(void)
     /* Register console ctrl handle, to support: auto complete, history .etc */
     console_handle_register(console_ctrl_handle);
 
+    /* Execute user restored scripts */
+    //shell_execute_start_script();
 
     return 0;
 }

@@ -187,6 +187,36 @@ static val_t native_clear_interval(env_t *env, int ac, val_t *av)
     return n < 0 ? val_mk_boolean(0) : val_mk_number(n);
 }
 
+static val_t native_script_show(env_t *env, int ac, val_t *av)
+{
+    const char *script;
+    int ctx = 0, n = 0;
+
+    (void) env;
+
+    if (ac > 0) {
+        if (val_is_string(av)) {
+            return storage_script_append(val_2_cstring(av)) ?
+                val_mk_boolean(0) : val_mk_boolean(1);
+        }
+        if (val_is_number(av)) {
+            return storage_script_del(val_2_double(av)) ? 
+                val_mk_boolean(0) : val_mk_boolean(1);
+        }
+    }
+
+    while (NULL != (script = storage_script_next(&ctx))) {
+        char id[16];
+        snprintf(id, 16, "[%4d: %d]\r\n", n, ctx);
+        console_puts(id);
+        console_puts(script);
+        console_puts("\r\n");
+        n++;
+    }
+
+    return val_mk_number(n);
+}
+
 static const native_t native_entry[] = {
     {"systick",         native_systick},
 
@@ -197,6 +227,7 @@ static const native_t native_entry[] = {
 
     {"print",       print},
 
+    {"script",          native_script_show},
     {"ledOn",      native_led_on},
     {"ledOff",     native_led_off},
     {"ledToggle",  native_led_toggle},

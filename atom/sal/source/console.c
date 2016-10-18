@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <string.h>
 #include "hal.h"
 #include "sal.h"
@@ -82,8 +83,11 @@ int console_input_curr_tok(char *buf, int size)
     int pos = 0;
 
     while ((pos = rbuff_get(rb, start - 1)) >= 0) {
-        if (ptr[pos] == ' ')
+        int c = ptr[pos];
+
+        if (!isalnum(c) && c != '_') {
             break;
+        }
         start--;
     }
 

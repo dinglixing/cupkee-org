@@ -43,6 +43,10 @@ int sal_init(void)
 
     event_queue_init();
 
+    if (storage_init()) {
+        return -1;
+    }
+
     if (console_init()) {
         return -1;
     }
