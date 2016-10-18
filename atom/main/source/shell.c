@@ -30,6 +30,9 @@ typedef struct timeout_t {
 static uint8_t memory[MEM_SIZE];
 static env_t shell_env;
 
+static int execute_mode = 0;
+static int input_cached = 0;
+
 static char input_buf[INPUT_BUF_SIZE];
 static char history_buf[HISTORY_MAX][HISTORY_SIZE];
 static char history_start, history_count, history_pos;
@@ -98,17 +101,87 @@ static timeout_t *timeout_alloc(void)
     return to;
 }
 
-static char auto_buf[TOKEN_MAX_SIZE]; // panda/config.h
+typedef struct auto_complete_t {
+    uint8_t prefix;
+    uint8_t supply;
+    uint8_t same;
+    uint8_t pos;
+    char buf[TOKEN_MAX_SIZE];
+} auto_complete_t;
+
+static int do_complete(const char *sym, void *param)
+{
+    auto_complete_t *ac = (auto_complete_t *)param;
+    char *prefix = ac->buf;
+    char *supply = ac->buf + ac->prefix;
+
+    if (strncmp(sym, prefix, ac->prefix)) {
+        return 0;
+    }
+
+    ac->same++;
+    if (ac->same == 1) {
+        char *p = strncpy(supply, sym + ac->prefix, TOKEN_MAX_SIZE - ac->prefix - 1);
+        if (p == supply) {
+            ac->supply = strlen(supply);
+        } else {
+            *p = 0;
+            ac->supply = p - supply;
+        }
+        return 0;
+    }
+
+    /* show suggist */
+    if (ac->same == 2) {
+        console_puts("\r\n");
+        console_puts(ac->buf);
+        ac->pos += strlen(ac->buf);
+    }
+
+    // padding spaces, align 4
+    do {
+        console_put(' ');
+        ac->pos++;
+    } while (ac->pos % 4);
+    console_puts(sym);
+    ac->pos += strlen(sym);
+
+    if (ac->pos > 80) {
+        console_puts("\r\n");
+    }
+
+    /* update supply */
+    int n = 0;
+    while (n < ac->supply && sym[ac->prefix + n] == supply[n]) {
+        n++;
+    }
+    supply[n] = 0;
+    ac->supply = n;
+
+    return 0;
+}
+
 static int auto_complete(void)
 {
     int has;
+    auto_complete_t ac;
 
-    has = console_input_curr_tok(auto_buf, TOKEN_MAX_SIZE - 1);
+    has = console_input_curr_tok(ac.buf, TOKEN_MAX_SIZE - 1);
     if (has) {
-        int supplement = env_symbal_complete(&shell_env, auto_buf, has, TOKEN_MAX_SIZE, NULL);
-        if (supplement > 0) {
-            console_input_string(auto_buf + has);
-            return CON_PREVENT_DEFAULT;
+        ac.pos = 0;
+        ac.prefix = has;
+        ac.supply = 0;
+        ac.same = 0;
+        env_symbal_foreach(&shell_env, do_complete, &ac);
+        if (ac.same) {
+            if (ac.same > 1) {
+                int i = 0, ch;
+                console_puts(execute_mode == 0 ? "\r\n> " : "\r\n. ");
+                while ((ch = console_input_peek(i++)) > 0) {
+                    console_put(ch);
+                }
+            }
+            console_input_string(ac.buf + has);
         }
     } else {
         console_input_string("    ");
@@ -218,8 +291,7 @@ int shell_init(void)
 
     return 0;
 }
-static int execute_mode = 0;
-static int input_cached = 0;
+
 static char *more_handle(void)
 {
     execute_mode = 1;

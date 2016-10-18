@@ -95,6 +95,18 @@ int console_input_curr_tok(char *buf, int size)
     return pos;
 }
 
+int  console_input_peek(int pos)
+{
+    rbuff_t *rb = &console_buff[CON_IN];
+    char *ptr = console_buff_mem[CON_IN];
+
+    if (pos < rb->cnt) {
+        return ptr[rbuff_get(rb, pos)];
+    } else {
+        return 0;
+    }
+}
+
 static int console_input_parse(char *input, int end, int *ppos, char *pkey)
 {
     int  type = CON_CTRL_IDLE;

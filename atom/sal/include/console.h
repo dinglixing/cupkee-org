@@ -18,6 +18,7 @@ int console_puts(const char *s);
 int console_gets(char *buf, int max);
 
 int  console_input_curr_tok(char *buf, int size);
+int  console_input_peek(int pos);
 void console_input_clear(void);
 void console_input_string(char *s);
 
