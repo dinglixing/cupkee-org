@@ -386,7 +386,6 @@ static void shell_input_execute_multi(void)
         //history_append(input_buf);
     }
     console_puts("> ");
-
 }
 
 void shell_input_execute(void)
