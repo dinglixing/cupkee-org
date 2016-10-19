@@ -367,14 +367,15 @@ static void shell_input_execute_multi(void)
 
     console_gets(input_buf + input_cached, INPUT_BUF_SIZE - input_cached);
     len = strlen(input_buf + input_cached);
-    if (len > 1) {
-        // Not empty line, continue read to buffer
+    if (len <= 2) {
+        //empty line: "\r\n" only
+        // exit multi input mode, and execute
+        input_cached = 0;
+        execute_mode = 0;
+    } else {
         console_puts(". ");
         input_cached += len;
         return;
-    } else {
-        input_cached = 0;
-        execute_mode = 0;
     }
 
     err = interp_execute_string(&shell_env, input_buf, &res);
