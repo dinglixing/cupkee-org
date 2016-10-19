@@ -10,12 +10,11 @@
 
 int storage_init(void);
 
-const char *storage_script_next(int *ctx);
-const char *storage_script_prev(int *ctx);
-const char *storage_script_get(int i);
-int storage_script_append(const char *s);
-int storage_script_clear(void);
-int storage_script_del(int i);
+const char *usr_scripts_next(const char *prev);
+const char *usr_scripts_get(int id);
+int usr_scripts_append(const char *s);
+int usr_scripts_remove(int id);
+int usr_scripts_erase(void);
 
 
 #endif /* __STORAGE_INC__ */

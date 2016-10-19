@@ -11,7 +11,7 @@ void print_error(int error)
     case ERR_NotImplemented:    console_puts("Error: Not implemented\r\n"); break;
     case ERR_StaticNumberOverrun: console_puts("Error: ..\r\n"); break;
     case ERR_StackOverflow:     console_puts("Error: Stack overflow\r\n"); break;
-    case ERR_ResourceOutLimit:  console_puts("Error: Resource out of limited\r\n"); break;
+    case ERR_ResourceOutLimit:  console_puts("Error: Resource out of limit\r\n"); break;
 
     case ERR_InvalidToken:      console_puts("Error: Invalid Token\r\n"); break;
     case ERR_InvalidSyntax:     console_puts("Error: Invalid syntax\r\n"); break;
@@ -30,9 +30,14 @@ void print_error(int error)
 
 void print_value(val_t *v)
 {
+    char buf[32];
+
     if (val_is_number(v)) {
-        char buf[32];
-        snprintf(buf, 32, "%f\r\n", val_2_double(v));
+        if (*v & 0xffff) {
+            snprintf(buf, 32, "%f\r\n", val_2_double(v));
+        } else {
+            snprintf(buf, 32, "%lld\r\n", (int64_t)val_2_double(v));
+        }
         console_puts(buf);
     } else
     if (val_is_boolean(v)) {
@@ -50,45 +55,72 @@ void print_value(val_t *v)
         console_puts("NaN\r\n");
     } else
     if (val_is_function(v)) {
-        char buf[32];
-        snprintf(buf, 32, "function:%p\r\n", (void *)val_2_intptr(v));
+        snprintf(buf, 32, "<function:%p>\r\n", (void *)val_2_intptr(v));
+        console_puts(buf);
+    } else
+    if (val_is_dictionary(v)) {
+        snprintf(buf, 32, "<object:%p>\r\n", (void *)val_2_intptr(v));
+        console_puts(buf);
+    } else
+    if (val_is_array(v)) {
+        snprintf(buf, 32, "<array:%p>\r\n", (void *)val_2_intptr(v));
         console_puts(buf);
     } else {
         console_puts("object\r\n");
     }
 }
 
-static val_t native_led_on(env_t *env, int ac, val_t *av)
+static val_t native_led(env_t *env, int ac, val_t *av)
 {
     (void) env;
-    (void) ac;
-    (void) av;
 
-    hal_led_on(HAL_LED_1);
+    if (ac > 0 && val_is_string(av)) {
+        const char *req = val_2_cstring(av);
+
+        if (!strcmp(req, "on")) {
+            hal_led_on();
+            return val_mk_undefined();
+        } else
+        if (!strcmp(req, "off")){
+            hal_led_off();
+            return val_mk_undefined();
+        }
+    }
+    hal_led_toggle();
     return val_mk_undefined();
 }
 
-static val_t native_led_off(env_t *env, int ac, val_t *av)
+static val_t native_sysinfos(env_t *env, int ac, val_t *av)
 {
-    (void) env;
+    hal_info_t hal;
+    char buf[80];
+
     (void) ac;
     (void) av;
 
-    hal_led_off(HAL_LED_1);
+    hal_info_get(&hal);
+
+    snprintf(buf, 80, "FREQ: %luM\r\n", hal.sys_freq / 1000000);
+    console_puts(buf);
+    snprintf(buf, 80, "RAM: %dK\r\n", hal.ram_sz / 1024);
+    console_puts(buf);
+    snprintf(buf, 80, "ROM: %dK\r\n\r\n", hal.rom_sz / 1024);
+    console_puts(buf);
+    snprintf(buf, 80, "symbal: %d/%d, ", env->symbal_tbl_hold, env->symbal_tbl_size);
+    console_puts(buf);
+    snprintf(buf, 80, "string: %d/%d, ", env->exe.string_num, env->exe.string_max);
+    console_puts(buf);
+    snprintf(buf, 80, "number: %d/%d, ", env->exe.number_num, env->exe.number_max);
+    console_puts(buf);
+    snprintf(buf, 80, "function: %d/%d, ", env->exe.func_num, env->exe.func_max);
+    console_puts(buf);
+    snprintf(buf, 80, "variable: %d\r\n", env->main_var_num);
+    console_puts(buf);
+
     return val_mk_undefined();
 }
 
-static val_t native_led_toggle(env_t *env, int ac, val_t *av)
-{
-    (void) env;
-    (void) ac;
-    (void) av;
-
-    hal_led_toggle(HAL_LED_1);
-    return val_mk_undefined();
-}
-
-static val_t native_systick(env_t *env, int ac, val_t *av)
+static val_t native_systicks(env_t *env, int ac, val_t *av)
 {
     (void) env;
     (void) ac;
@@ -187,30 +219,46 @@ static val_t native_clear_interval(env_t *env, int ac, val_t *av)
     return n < 0 ? val_mk_boolean(0) : val_mk_number(n);
 }
 
-static val_t native_script_show(env_t *env, int ac, val_t *av)
+static val_t native_scripts(env_t *env, int ac, val_t *av)
 {
-    const char *script;
-    int ctx = 0, n = 0;
+    const char *script = NULL;
+    int show = -1, del = 0, n = 0;
 
     (void) env;
 
     if (ac > 0) {
-        if (val_is_string(av)) {
-            return storage_script_append(val_2_cstring(av)) ?
-                val_mk_boolean(0) : val_mk_boolean(1);
-        }
         if (val_is_number(av)) {
-            return storage_script_del(val_2_double(av)) ? 
+            show = val_2_double(av);
+        } else {
+            show = -1;
+        }
+    }
+
+    if (ac > 1) {
+        if (val_is_string(av + 1)) {
+            if (strcmp("delete", val_2_cstring(av + 1))) {
+                del = 1;
+            }
+        }
+    }
+
+    if (del) {
+        if (n < 0) {
+            return usr_scripts_erase() ?
+                val_mk_boolean(0) : val_mk_boolean(1);
+        } else {
+            return usr_scripts_remove(val_2_double(av)) ?
                 val_mk_boolean(0) : val_mk_boolean(1);
         }
     }
 
-    while (NULL != (script = storage_script_next(&ctx))) {
-        char id[16];
-        snprintf(id, 16, "[%4d: %d]\r\n", n, ctx);
-        console_puts(id);
-        console_puts(script);
-        console_puts("\r\n");
+    while (NULL != (script = usr_scripts_next(script))) {
+        if (show < 0 || show == n) {
+            char id[16];
+            snprintf(id, 16, "[%.4d]\r\n", n);
+            console_puts(id);
+            console_puts(script);
+        }
         n++;
     }
 
@@ -218,19 +266,18 @@ static val_t native_script_show(env_t *env, int ac, val_t *av)
 }
 
 static const native_t native_entry[] = {
-    {"systick",         native_systick},
+    {"sysinfos",        native_sysinfos},
+    {"systicks",        native_systicks},
+
+    {"print",           print},
+    {"led",             native_led},
 
     {"setTimeout",      native_set_timeout},
     {"setInterval",     native_set_interval},
     {"clearTimeout",    native_clear_timeout},
     {"clearInterval",   native_clear_interval},
 
-    {"print",       print},
-
-    {"script",          native_script_show},
-    {"ledOn",      native_led_on},
-    {"ledOff",     native_led_off},
-    {"ledToggle",  native_led_toggle},
+    {"scripts",         native_scripts},
 };
 
 int native_init(env_t *env)

@@ -151,6 +151,21 @@ static int console_input_parse(char *input, int end, int *ppos, char *pkey)
                 if (key == 68) {
                     type = CON_CTRL_LEFT;
                 }
+            } else
+            if (input[pos] == 79) {
+                key = input[pos + 1];
+                if (key == 80) {
+                    type = CON_CTRL_F1;
+                } else
+                if (key == 81) {
+                    type = CON_CTRL_F2;
+                } else
+                if (key == 82) {
+                    type = CON_CTRL_F3;
+                } else
+                if (key == 83) {
+                    type = CON_CTRL_F4;
+                }
             }
             pos = end; // Skip all left input
         }
@@ -253,6 +268,7 @@ static void console_input_char(char c)
 static void console_input_enter(void)
 {
     console_puts(CRLF);
+    console_buf_write_byte(CON_IN, '\r');
     console_buf_write_byte(CON_IN, '\n');
     console_in_pos = 0;
 }
@@ -325,6 +341,10 @@ static void console_input_proc(int type, char c)
     case CON_CTRL_DOWN:         console_puts(BELL); break;
     case CON_CTRL_RIGHT:        console_input_seek(1);  break;
     case CON_CTRL_LEFT:         console_input_seek(-1); break;
+    case CON_CTRL_F1:
+    case CON_CTRL_F2:
+    case CON_CTRL_F3:
+    case CON_CTRL_F4:           console_puts(BELL); break;
     default: break;
     }
 }

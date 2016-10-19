@@ -19,7 +19,11 @@ typedef enum console_ctrl_t{
     CON_CTRL_UP,
     CON_CTRL_DOWN,
     CON_CTRL_RIGHT,
-    CON_CTRL_LEFT
+    CON_CTRL_LEFT,
+    CON_CTRL_F1,
+    CON_CTRL_F2,
+    CON_CTRL_F3,
+    CON_CTRL_F4
 } console_ctrl_t;
 
 

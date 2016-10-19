@@ -244,7 +244,7 @@ static void history_append(char *line)
     pos = 0;
     for (pos = 0; pos < HISTORY_SIZE - 1; pos++) {
         char c = line[pos];
-        if (c == 0 || c == '\n') {
+        if (c == 0 || c == '\n' || c == '\r') {
             break;
         }
         buf[pos] = c;
@@ -261,6 +261,17 @@ static int enter(void)
     return 0;
 }
 
+static int save_input(void)
+{
+    if (usr_scripts_append(input_buf)) {
+        console_puts("save fail ...");
+        return 0;
+    } else {
+        console_puts("save ok ...");
+        return CON_PREVENT_DEFAULT;
+    }
+}
+
 static int console_ctrl_handle(int ctrl)
 {
     switch (ctrl) {
@@ -268,18 +279,18 @@ static int console_ctrl_handle(int ctrl)
     case CON_CTRL_UP:    return history_load(-1);
     case CON_CTRL_DOWN:  return history_load(1);
     case CON_CTRL_ENTER: return enter();
+    case CON_CTRL_F2:    return save_input();
     default: return 0;
     }
 }
 
 static int shell_execute_start_script(void)
 {
-    const char *script;
-    int    ctx = 0;
-    int    err = 0;
+    const char *script = NULL;
     val_t *res;
+    int err = 0;
 
-    while (NULL != (script = storage_script_next(&ctx))) {
+    while (NULL != (script = usr_scripts_next(script))) {
         err = interp_execute_string(&shell_env, script, &res);
         if (err < 0) {
             break;
@@ -309,7 +320,7 @@ int shell_init(void)
     console_handle_register(console_ctrl_handle);
 
     /* Execute user restored scripts */
-    //shell_execute_start_script();
+    shell_execute_start_script();
 
     return 0;
 }
