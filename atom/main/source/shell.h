@@ -5,11 +5,12 @@
 
 int  shell_init(void);
 
+val_t *shell_reference_create(val_t *v);
+void shell_reference_release(val_t *ref);
+
 void shell_input_execute(void);
 void shell_timeout_execute(void);
 
-int shell_timeout_regiseter(uint32_t wait, val_t *handle, int repeat);
-int shell_timeout_unregiseter(int tid, int repeat);
 
 #endif /* __SHELL_INC__ */
 

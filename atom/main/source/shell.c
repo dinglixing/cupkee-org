@@ -7,7 +7,8 @@
 
 #include "sal.h"
 #include "shell.h"
-#include "native.h"
+#include "misc.h"
+#include "timeout.h"
 
 #define HEAP_SIZE     (1024 * 8)
 #define STACK_SIZE    (256)
@@ -17,88 +18,56 @@
 #define INPUT_BUF_SIZE    (1024)
 #define HISTORY_SIZE  (128)
 #define HISTORY_MAX   (4)
-#define TIMEOUT_MAX   (16)
 
-typedef struct timeout_t {
-    int repeat;
-    uint32_t from;
-    uint32_t wait;
-    val_t   *handle;
-    struct timeout_t *next;
-} timeout_t;
+#define VARIABLE_REF_MAX    (16)
 
 static uint8_t memory[MEM_SIZE];
 static env_t shell_env;
 
 static int execute_mode = 0;
-static int input_cached = 0;
 
+static int input_cached = 0;
 static char input_buf[INPUT_BUF_SIZE];
 static char history_buf[HISTORY_MAX][HISTORY_SIZE];
 static char history_start, history_count, history_pos;
 
-static timeout_t timeout_queue[TIMEOUT_MAX];
-static timeout_t *timeout_free;
-static timeout_t *timeout_wait;
+static val_t variable_refs[VARIABLE_REF_MAX];
 
-static val_t timeout_handles[TIMEOUT_MAX];
-
-static void timeout_init(env_t *env)
+static void reference_init(env_t *env)
 {
     int i;
 
-    (void) env;
-
-    timeout_wait = NULL;
-    timeout_free = NULL;
-    for (i = 0; i < TIMEOUT_MAX; i++) {
-        timeout_t *to = &timeout_queue[i];
-
-        to->handle = NULL;
-        to->from= 0;
-        to->wait = 0;
-        to->repeat = 0;
-        to->next = timeout_free;
-        timeout_free = to;
-
-        val_set_undefined(&timeout_handles[i]);
+    for (i = 0; i < VARIABLE_REF_MAX; i++) {
+        val_set_undefined(&variable_refs[i]);
     }
 
-    env_reference_set(env, timeout_handles, TIMEOUT_MAX);
+    env_reference_set(env, variable_refs, VARIABLE_REF_MAX);
 }
 
-static void timeout_release(timeout_t *to)
+val_t *shell_reference_create(val_t *v)
 {
-    if (to) {
-        if (to->handle) {
-            val_set_undefined(to->handle);
-            to->handle = NULL;
+    int i;
+
+    for (i = 0; i < VARIABLE_REF_MAX; i++) {
+        val_t *r = variable_refs + i;
+
+        if (val_is_undefined(r)) {
+            *r = *v;
+            return r;
         }
-        to->next = timeout_free;
-        timeout_free = to;
     }
+    return NULL;
 }
 
-static timeout_t *timeout_alloc(void)
+void shell_reference_release(val_t *ref)
 {
-    timeout_t *to = timeout_free;
+    if (ref) {
+        int pos = ref - variable_refs;
 
-    if (to) {
-        int i;
-
-        timeout_free = to->next;
-        for (i = 0; i < TIMEOUT_MAX; i++) {
-            if (val_is_undefined(timeout_handles + i)) {
-                to->handle = timeout_handles + i;
-                return to;
-            }
+        if (pos >= 0 && pos < VARIABLE_REF_MAX) {
+            val_set_undefined(ref);
         }
-
-        // should not go here!!
-        timeout_release(to);
     }
-
-    return to;
 }
 
 typedef struct auto_complete_t {
@@ -300,31 +269,6 @@ static int shell_execute_start_script(void)
     return err;
 }
 
-int shell_init(void)
-{
-    /* Initialise shell evn */
-    if(0 != interp_env_init_interactive(&shell_env, memory, MEM_SIZE, NULL, HEAP_SIZE, NULL, STACK_SIZE)) {
-        return -1;
-    }
-
-    /* Initialise all native functions */
-    native_init(&shell_env);
-
-    /* Initialise timer */
-    timeout_init(&shell_env);
-
-    /* */
-    history_init();
-
-    /* Register console ctrl handle, to support: auto complete, history .etc */
-    console_handle_register(console_ctrl_handle);
-
-    /* Execute user restored scripts */
-    shell_execute_start_script();
-
-    return 0;
-}
-
 static char *more_handle(void)
 {
     execute_mode = 1;
@@ -389,6 +333,49 @@ static void shell_input_execute_multi(void)
     console_puts("> ");
 }
 
+static const native_t native_entry[] = {
+    {"sysinfos",        native_sysinfos},
+    {"systicks",        native_systicks},
+
+    {"print",           native_print},
+    {"led",             native_led},
+
+    {"setTimeout",      native_set_timeout},
+    {"setInterval",     native_set_interval},
+    {"clearTimeout",    native_clear_timeout},
+    {"clearInterval",   native_clear_interval},
+
+    {"scripts",         native_scripts},
+};
+
+int shell_init(void)
+{
+    /* Initialise shell evn */
+    if(0 != interp_env_init_interactive(&shell_env, memory, MEM_SIZE, NULL, HEAP_SIZE, NULL, STACK_SIZE)) {
+        return -1;
+    }
+
+    /* Initialise all native functions */
+    env_native_set(&shell_env, native_entry, sizeof(native_entry)/sizeof(native_t));
+
+    /* Initialise reference */
+    reference_init(&shell_env);
+
+    /* Initialise timer */
+    timeout_init(&shell_env);
+
+    /* */
+    history_init();
+
+    /* Register console ctrl handle, to support: auto complete, history .etc */
+    console_handle_register(console_ctrl_handle);
+
+    /* Execute user restored scripts */
+    shell_execute_start_script();
+
+    return 0;
+}
+
 void shell_input_execute(void)
 {
     if (execute_mode) {
@@ -400,95 +387,6 @@ void shell_input_execute(void)
 
 void shell_timeout_execute(void)
 {
-    uint32_t cur_ticks = system_ticks_count;
-    timeout_t *to = timeout_wait;
-    timeout_t **ref = &timeout_wait;
-
-    while(to) {
-        int should_release = 0;
-
-        if (cur_ticks - to->from >= to->wait) {
-
-            env_push_call_function(&shell_env, to->handle);
-            interp_execute_call(&shell_env, 0);
-
-            if (to->repeat) {
-                to->from = cur_ticks;
-            } else {
-                should_release = 1;
-            }
-        }
-
-        if (should_release) {
-            timeout_t *next = to->next;
-
-            timeout_release(to);
-
-            to   = next;
-            *ref = next;
-        } else {
-            ref = &to->next;
-            to = to->next;
-        }
-    }
-}
-
-int shell_timeout_regiseter(uint32_t wait, val_t *handle, int repeat)
-{
-    timeout_t *to;
-
-    if (!val_is_function(handle)) {
-        return -1;
-    }
-
-    to = timeout_alloc();
-    if (to) {
-        to->from = system_ticks_count;
-        to->wait = wait;
-        to->repeat = repeat;
-        *to->handle = *handle;
-        to->next = timeout_wait;
-        timeout_wait = to;
-
-        return to - timeout_queue;
-    } else {
-        return -1;
-    }
-}
-
-int shell_timeout_unregiseter(int tid, int repeat)
-{
-    timeout_t *to = timeout_wait;
-    timeout_t **ref = &timeout_wait;
-    int drop = 0;
-
-    while(to) {
-        int should_release = 0;
-
-        if (tid < 0) {
-            if (!repeat == !to->repeat) {
-                should_release = 1;
-            }
-        } else {
-            if (to - timeout_queue == tid) {
-                should_release = 1;
-            }
-        }
-
-        if (should_release) {
-            timeout_t *next = to->next;
-
-            to   = next;
-            *ref = next;
-
-            timeout_release(to);
-            drop ++;
-        } else {
-            ref = &to->next;
-            to = to->next;
-        }
-    }
-
-    return drop;
+    timeout_execute(&shell_env);
 }
 

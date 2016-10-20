@@ -1,6 +1,6 @@
 #include "sal.h"
-#include "shell.h"
-#include "native.h"
+#include "panda.h"
+#include "misc.h"
 
 void print_error(int error)
 {
@@ -70,7 +70,7 @@ void print_value(val_t *v)
     }
 }
 
-static val_t native_led(env_t *env, int ac, val_t *av)
+val_t native_led(env_t *env, int ac, val_t *av)
 {
     (void) env;
 
@@ -90,7 +90,7 @@ static val_t native_led(env_t *env, int ac, val_t *av)
     return val_mk_undefined();
 }
 
-static val_t native_sysinfos(env_t *env, int ac, val_t *av)
+val_t native_sysinfos(env_t *env, int ac, val_t *av)
 {
     hal_info_t hal;
     char buf[80];
@@ -120,7 +120,7 @@ static val_t native_sysinfos(env_t *env, int ac, val_t *av)
     return val_mk_undefined();
 }
 
-static val_t native_systicks(env_t *env, int ac, val_t *av)
+val_t native_systicks(env_t *env, int ac, val_t *av)
 {
     (void) env;
     (void) ac;
@@ -129,7 +129,7 @@ static val_t native_systicks(env_t *env, int ac, val_t *av)
     return val_mk_number(system_ticks_count);
 }
 
-static val_t print(env_t *env, int ac, val_t *av)
+val_t native_print(env_t *env, int ac, val_t *av)
 {
     int i;
     (void) env;
@@ -145,81 +145,7 @@ static val_t print(env_t *env, int ac, val_t *av)
     return val_mk_undefined();
 }
 
-static int timeout_register(int ac, val_t *av, int repeat)
-{
-    val_t   *handle;
-    uint32_t wait;
-
-    if (ac > 0) {
-        handle = av;
-    } else {
-        return -1;
-    }
-
-    if (ac > 1 && val_is_number(av + 1)) {
-        wait = val_2_double(av + 1);
-    } else {
-        wait = 0;
-    }
-
-    return shell_timeout_regiseter(wait, handle, repeat);
-}
-
-static int timeout_unregister(int ac, val_t *av, int repeat)
-{
-    int tid;
-
-    if (ac > 0) {
-        if (val_is_number(av)) {
-            tid = val_2_double(av);
-        } else {
-            return -1;
-        }
-    } else {
-        // clear all
-        tid = -1;
-    }
-
-    return shell_timeout_unregiseter(tid, repeat);
-}
-
-static val_t native_set_timeout(env_t *env, int ac, val_t *av)
-{
-    int tid = timeout_register(ac, av, 0);
-
-    (void) env;
-
-    return tid < 0 ? val_mk_boolean(0) : val_mk_number(tid);
-}
-
-static val_t native_set_interval(env_t *env, int ac, val_t *av)
-{
-    int tid = timeout_register(ac, av, 1);
-
-    (void) env;
-
-    return tid < 0 ? val_mk_boolean(0) : val_mk_number(tid);
-}
-
-static val_t native_clear_timeout(env_t *env, int ac, val_t *av)
-{
-    int n = timeout_unregister(ac, av, 0);
-
-    (void) env;
-
-    return n < 0 ? val_mk_boolean(0) : val_mk_number(n);
-}
-
-static val_t native_clear_interval(env_t *env, int ac, val_t *av)
-{
-    int n = timeout_unregister(ac, av, 1);
-
-    (void) env;
-
-    return n < 0 ? val_mk_boolean(0) : val_mk_number(n);
-}
-
-static val_t native_scripts(env_t *env, int ac, val_t *av)
+val_t native_scripts(env_t *env, int ac, val_t *av)
 {
     const char *script = NULL;
     int show = -1, del = 0, n = 0;
@@ -265,23 +191,4 @@ static val_t native_scripts(env_t *env, int ac, val_t *av)
     return val_mk_number(n);
 }
 
-static const native_t native_entry[] = {
-    {"sysinfos",        native_sysinfos},
-    {"systicks",        native_systicks},
-
-    {"print",           print},
-    {"led",             native_led},
-
-    {"setTimeout",      native_set_timeout},
-    {"setInterval",     native_set_interval},
-    {"clearTimeout",    native_clear_timeout},
-    {"clearInterval",   native_clear_interval},
-
-    {"scripts",         native_scripts},
-};
-
-int native_init(env_t *env)
-{
-    return env_native_set(env, native_entry, sizeof(native_entry)/sizeof(native_t));
-}
 
