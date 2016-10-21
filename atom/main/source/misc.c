@@ -148,40 +148,36 @@ val_t native_print(env_t *env, int ac, val_t *av)
 val_t native_scripts(env_t *env, int ac, val_t *av)
 {
     const char *script = NULL;
-    int show = -1, del = 0, n = 0;
+    int which = -1, del = 0, n = 0;
 
     (void) env;
 
-    if (ac > 0) {
-        if (val_is_number(av)) {
-            show = val_2_double(av);
-        } else {
-            show = -1;
-        }
+    if (ac > 0 && val_is_number(av)) {
+        which = val_2_double(av);
+        ac--;
+        av++;
     }
 
-    if (ac > 1) {
-        if (val_is_string(av + 1)) {
-            if (strcmp("delete", val_2_cstring(av + 1))) {
-                del = 1;
-            }
+    if (ac && val_is_string(av)) {
+        if (strcmp("delete", val_2_cstring(av + 1))) {
+            del = 1;
         }
     }
 
     if (del) {
-        if (n < 0) {
-            return usr_scripts_erase() ?
-                val_mk_boolean(0) : val_mk_boolean(1);
+        int err;
+        if (which < 0) {
+            err = usr_scripts_erase();
         } else {
-            return usr_scripts_remove(val_2_double(av)) ?
-                val_mk_boolean(0) : val_mk_boolean(1);
+            err = usr_scripts_remove(which);
         }
+        return val_mk_boolean(err == 0 ? val_mk_boolean(1) : val_mk_boolean(0));
     }
 
     while (NULL != (script = usr_scripts_next(script))) {
-        if (show < 0 || show == n) {
+        if (which < 0 || which == n) {
             char id[16];
-            snprintf(id, 16, "[%.4d]\r\n", n);
+            snprintf(id, 16, "[%.4d] ", n);
             console_puts(id);
             console_puts(script);
         }

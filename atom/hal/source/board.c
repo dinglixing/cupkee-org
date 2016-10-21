@@ -20,12 +20,12 @@ void sys_tick_handler(void)
 
 static void hal_led_setup(void)
 {
-	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_GPIOA);
 
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
 
-	gpio_set(GPIOB, GPIO5);
+	gpio_set(GPIOA, GPIO8);
 }
 
 static void hal_systick_setup(void)
@@ -50,24 +50,23 @@ void hal_info_get(hal_info_t *info)
 
 void hal_led_on(void)
 {
-	gpio_clear(GPIOB, GPIO5);
+	gpio_clear(GPIOA, GPIO8);
 }
 
 void hal_led_off(void)
 {
-	gpio_set(GPIOB, GPIO5);
+	gpio_set(GPIOA, GPIO8);
 }
 
 void hal_led_toggle(void)
 {
-	gpio_toggle(GPIOB, GPIO5);
+	gpio_toggle(GPIOA, GPIO8);
 }
 
 
-#define USR_STORAGE_SIZE 4096
 static int  _storage_sec_size;
-static int  _storage_usr_size;// = USR_STORAGE_SIZE;
-static char *_storage_usr_base;//[USR_STORAGE_SIZE];
+static int  _storage_usr_size;
+static char *_storage_usr_base;
 void *hal_storage_base_usr(void)
 {
     return _storage_usr_base;
@@ -160,10 +159,10 @@ int hal_storage_write_usr(const void *data, int size)
     }
 
     if (tail) {
-        uint8_t tail_buf[4] = {0};
+        uint32_t tail_val = 0;
 
-        memcpy(tail_buf, data + off, tail);
-        flash_program_word((uint32_t)(bgn + off), *((uint32_t *)(data + off)));
+        memcpy(&tail_val, data + off, tail);
+        flash_program_word((uint32_t)(bgn + off), tail_val);
         off += 4;
     }
     flash_lock();
@@ -182,7 +181,7 @@ static void hal_storage_setup(void)
 
     if (rom >= 256) {
         _storage_sec_size = 2 * 1024;
-        _storage_usr_size = 16 * 1024;
+        _storage_usr_size = 8 * 1024;
     } else {
         _storage_sec_size = 1 * 1024;
         _storage_usr_size = 8 * 1024;

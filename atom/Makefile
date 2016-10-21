@@ -1,5 +1,5 @@
 
-export MCU = stm32f103ze
+export MCU = stm32f103rc
 
 all: hal sal lang main
 	@printf "build ok\n"
