@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #define SYSTEM_TICKS_PRE_SEC     1000
+#define SYSTEM_STACK_SIZE        8 * 1024
 typedef struct hal_info_t {
     int ram_sz;
     int rom_sz;
@@ -18,6 +19,8 @@ typedef struct hal_info_t {
 extern uint32_t system_ticks_count;
 
 void board_setup(void);
+
+int hal_memory_alloc(void **p, int size, int align);
 
 void hal_loop(void);
 void hal_halt(void);

@@ -1,10 +1,12 @@
 #include <ctype.h>
 #include <string.h>
-#include "hal.h"
-#include "sal.h"
 
+#include <cupkee.h>
+
+#include "misc.h"
 #include "rbuff.h"
-
+#include "event.h"
+#include "console.h"
 
 #define BELL    "\007"
 #define CRLF    "\r\n"

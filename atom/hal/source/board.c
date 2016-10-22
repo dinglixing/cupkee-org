@@ -3,6 +3,7 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/cm3/nvic.h>
+#include <libopencm3/cm3/vector.h>
 #include <libopencm3/stm32/desig.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
@@ -203,6 +204,34 @@ void board_setup(void)
     hal_systick_setup();
 
     hal_storage_setup();
+}
+
+extern vector_table_t vector_table;
+extern char end;
+int hal_memory_alloc(void **p, int size, int align)
+{
+    static void *heap_free = &end;
+    intptr_t mem_pos = (intptr_t)heap_free;
+    void *mem;
+    int max;
+
+    mem_pos = mem_pos % align;
+    if (mem_pos) {
+        mem = heap_free + (align - mem_pos);
+    } else {
+        mem = heap_free;
+    }
+
+    max = (char *)(vector_table.initial_sp_value) - (char *)mem;
+    if (size > 0) {
+        size = size < max ? size : max;
+    } else {
+        size = max;
+    }
+    heap_free = mem + size;
+
+    *p = mem;
+    return size;
 }
 
 void hal_loop(void)

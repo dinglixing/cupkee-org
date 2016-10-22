@@ -1,6 +1,121 @@
-#include "sal.h"
-#include "panda.h"
+#include <cupkee.h>
+
+#include "console.h"
 #include "misc.h"
+
+#define VARIABLE_REF_MAX    (16)
+
+static const char *scripts_get(int id)
+{
+    const char *s;
+
+    s = scripts_load(NULL);
+    while (s && 0 < id--) {
+        s = scripts_load(s);
+    }
+
+    return s;
+}
+
+static int scripts_remove(int id)
+{
+    const char *pos = scripts_get(id);
+
+    if (pos) {
+        return hal_storage_clear_usr(pos, strlen(pos));
+    }
+    return -1;
+}
+
+const char *scripts_load(const char *prev)
+{
+    char *cur = prev ? (char *)prev : (char *)hal_storage_base_usr();
+    char *end = (char *)hal_storage_base_usr() + hal_storage_size_usr();
+
+    if (!hal_storage_valid_usr(cur)) {
+        return NULL;
+    }
+
+    // Skip zero
+    while (*cur == 0 && cur != end) {
+        cur++;
+    }
+    if (cur == end || *cur == 0xff) {
+        return NULL;
+    }
+
+    if (!prev) {
+        return cur;
+    }
+
+    // Skip current string
+    while (*cur != 0 && cur != end) {
+        cur++;
+    }
+    if (cur == end || *cur == 0xff) {
+        return NULL;
+    }
+
+    // Skip string terminate and paddings
+    while (*cur == 0 && cur != end) {
+        cur++;
+    }
+    if (cur == end || *cur == 0xff) {
+        return NULL;
+    }
+
+    return cur;
+}
+
+int scripts_save(const char *s)
+{
+    int len = strlen(s);
+
+    if (!len) {
+        return 0;
+    }
+    len += 1; // Include the terminate char '\000'
+
+    return hal_storage_write_usr(s, len);
+}
+
+static val_t reference_vals[VARIABLE_REF_MAX];
+void reference_init(env_t *env)
+{
+    int i;
+
+    for (i = 0; i < VARIABLE_REF_MAX; i++) {
+        val_set_undefined(&reference_vals[i]);
+    }
+
+    env_reference_set(env, reference_vals, VARIABLE_REF_MAX);
+}
+
+val_t *reference_create(val_t *v)
+{
+    int i;
+
+    for (i = 0; i < VARIABLE_REF_MAX; i++) {
+        val_t *r = reference_vals + i;
+
+        if (val_is_undefined(r)) {
+            *r = *v;
+            return r;
+        }
+    }
+    return NULL;
+}
+
+void reference_release(val_t *ref)
+{
+    if (ref) {
+        int pos = ref - reference_vals;
+
+        if (pos >= 0 && pos < VARIABLE_REF_MAX) {
+            val_set_undefined(ref);
+        }
+    }
+}
 
 void print_error(int error)
 {
@@ -90,6 +205,7 @@ val_t native_led(env_t *env, int ac, val_t *av)
     return val_mk_undefined();
 }
 
+extern char end;
 val_t native_sysinfos(env_t *env, int ac, val_t *av)
 {
     hal_info_t hal;
@@ -105,6 +221,8 @@ val_t native_sysinfos(env_t *env, int ac, val_t *av)
     snprintf(buf, 80, "RAM: %dK\r\n", hal.ram_sz / 1024);
     console_puts(buf);
     snprintf(buf, 80, "ROM: %dK\r\n\r\n", hal.rom_sz / 1024);
+    console_puts(buf);
+    snprintf(buf, 80, "Stack bottom: %p\r\n\r\n", &end);
     console_puts(buf);
     snprintf(buf, 80, "symbal: %d/%d, ", env->symbal_tbl_hold, env->symbal_tbl_size);
     console_puts(buf);
@@ -167,14 +285,14 @@ val_t native_scripts(env_t *env, int ac, val_t *av)
     if (del) {
         int err;
         if (which < 0) {
-            err = usr_scripts_erase();
+            err =  hal_storage_erase_usr();
         } else {
-            err = usr_scripts_remove(which);
+            err = scripts_remove(which);
         }
         return val_mk_boolean(err == 0 ? val_mk_boolean(1) : val_mk_boolean(0));
     }
 
-    while (NULL != (script = usr_scripts_next(script))) {
+    while (NULL != (script = scripts_load(script))) {
         if (which < 0 || which == n) {
             char id[16];
             snprintf(id, 16, "[%.4d] ", n);

@@ -1,6 +1,8 @@
 
-#include "sal.h"
-#include "shell.h"
+#include <cupkee.h>
+
+#include "misc.h"
+#include "event.h"
 #include "timeout.h"
 
 #define TIMEOUT_MAX   (16)
@@ -22,7 +24,7 @@ static timeout_t *timeout_alloc(val_t *handle)
     timeout_t *to = timeout_free;
 
     if (to) {
-        val_t *ref = shell_reference_create(handle);
+        val_t *ref = reference_create(handle);
 
         if (ref) {
             to->handle_ref = ref;
@@ -38,7 +40,7 @@ static void timeout_release(timeout_t *to)
 {
     if (to) {
         if (to->handle_ref) {
-            shell_reference_release(to->handle_ref);
+            reference_release(to->handle_ref);
             to->handle_ref = NULL;
         }
         to->next = timeout_free;

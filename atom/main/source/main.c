@@ -17,47 +17,33 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "hal.h"
-#include "sal.h"
-#include "shell.h"
+#include "cupkee.h"
 
-//static const char *logo = "CUPKEE\r\n> ";
+static const native_t native_entry[] = {
+    /* cupkee native */
+    {"sysinfos",        native_sysinfos},
+    {"systicks",        native_systicks},
 
-static const char *logo = "\
- _________               __                  \r\n\
- \\_   ___ \\ __ ________ |  | __ ____   ____  \r\n\
- /    \\  \\/|  |  \\____ \\|  |/ // __ \\_/ __ \\ \r\n\
- \\     \\___|  |  /  |_> >    <\\  ___/\\  ___/ \r\n\
-  \\________/____/|   __/|__|_ \\\\____> \\____>\r\n\
-                 |__|        \\/ ATOM v0.0.1\r\n";
+    {"print",           native_print},
+    {"led",             native_led},
+
+    {"setTimeout",      native_set_timeout},
+    {"setInterval",     native_set_interval},
+    {"clearTimeout",    native_clear_timeout},
+    {"clearInterval",   native_clear_interval},
+
+    {"scripts",         native_scripts},
+
+    /* user native */
+};
 
 int main(void)
 {
-    //hal_init();
-    sal_init();
+    cupkee_init();
 
-    if (0 != shell_init()) {
-        hal_halt();
-    }
+    /* user code here */
 
-    while (1) {
-        int e;
-        while (EVENT_IDLE != (e = event_get())) {
-            switch (e) {
-            case EVENT_CONSOLE_READY:
-                hal_console_sync_puts(logo);
-                break;
-            case EVENT_CONSOLE_INPUT:
-                shell_input_execute();
-                break;
-            case EVENT_SYSTICK_OCCUR:
-                shell_timeout_execute();
-                break;
-            default:
-                break;
-            }
-        }
-        sal_loop();
-    }
+    cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
+    return cupkee_loop();
 }
 
