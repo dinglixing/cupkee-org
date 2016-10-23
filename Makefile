@@ -39,10 +39,10 @@ clean:
 	@rm -rf ${BUILD_DIR}
 
 do:
-	rm -rf main/out.elf
+	rm -rf build/cupkee.elf
 
 load: do main
-	openocd -f../openocd/interface/jlink.cfg -f../openocd/target/stm32f1x.cfg \
+	openocd -fopenocd/interface/jlink.cfg -fopenocd/target/stm32f1x.cfg \
 		-c "program build/cupkee.elf verify reset exit"
 
 .PHONY: bin hal sal lang main clean load build
