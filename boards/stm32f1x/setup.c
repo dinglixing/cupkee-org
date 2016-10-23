@@ -9,7 +9,7 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/flash.h>
 
-#include "hal.h"
+#include "bsp.h"
 #include "usb.h"
 
 /* systick interrupt handle routing  */

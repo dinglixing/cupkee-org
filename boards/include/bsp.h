@@ -1,7 +1,7 @@
 
 
-#ifndef __HAL_INC__
-#define __HAL_INC__
+#ifndef __BSP_INC__
+#define __BSP_INC__
 
 #include <stdint.h>
 
@@ -43,5 +43,5 @@ int hal_storage_write_usr(const void *data, int size);
 int hal_storage_valid_usr(const void *addr);
 void *hal_storage_base_usr(void);
 
-#endif /* __HAL_INC__ */
+#endif /* __BSP_INC__ */
 

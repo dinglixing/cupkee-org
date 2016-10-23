@@ -47,7 +47,7 @@ DEFS		+= -DSTM32F1
 FP_FLAGS	?= -msoft-float
 ARCH_FLAGS	= -mthumb -mcpu=cortex-m3 $(FP_FLAGS) -mfix-cortex-m3-ldrd
 
-OPENCM3_DIR = ${PWD}/../libopencm3
+OPENCM3_DIR = ${BASE_DIR}/libopencm3
 else
 	$(error "mcu ${MCU}: not support now!")
 endif

@@ -6,7 +6,7 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
-#include "hal.h"
+#include "bsp.h"
 #include "usb.h"
 
 static const struct usb_device_descriptor dev = {
