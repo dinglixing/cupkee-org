@@ -12,8 +12,8 @@ typedef struct hal_info_t {
     int rom_sz;
     void *ram_base;
     void *rom_base;
-    uint32_t sys_freq;
-    uint32_t sys_ticks_pre_sec;
+    unsigned sys_freq;
+    unsigned sys_ticks_pre_sec;
 } hal_info_t;
 
 extern uint32_t system_ticks_count;
@@ -22,7 +22,7 @@ void board_setup(void);
 
 int hal_memory_alloc(void **p, int size, int align);
 
-void hal_loop(void);
+void hal_poll(void);
 void hal_halt(void);
 void hal_info_get(hal_info_t *);
 

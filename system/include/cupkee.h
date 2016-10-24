@@ -11,7 +11,8 @@
 
 
 int cupkee_init(void);
-int cupkee_loop(void);
+int cupkee_start(void);
+int cupkee_poll(void);
 int cupkee_set_native(const native_t *, int n);
 
 val_t native_led(env_t *env, int ac, val_t *av);

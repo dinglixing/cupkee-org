@@ -234,7 +234,7 @@ int hal_memory_alloc(void **p, int size, int align)
     return size;
 }
 
-void hal_loop(void)
+void hal_poll(void)
 {
     hal_usb_poll();
 }

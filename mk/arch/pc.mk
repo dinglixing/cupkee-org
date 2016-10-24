@@ -1,0 +1,11 @@
+
+
+
+#LDSCRIPT    =
+#DEFS		=
+
+#ARCH_FLAGS	 =
+#ARCH_LDFLAGS =
+
+#PREFIX  =
+

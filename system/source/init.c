@@ -83,20 +83,19 @@ int cupkee_set_native(const native_t *entry, int n)
     return env_native_set(&shell_env, entry, n);
 }
 
-int cupkee_loop(void)
+int cupkee_start(void)
 {
     /* */
     timeout_init(&shell_env);
-
     shell_init(&shell_env);
 
-    /* forever */
-    while (1) {
-        hal_loop();
-        sal_poll();
-    }
+    return 0;
+}
 
-    /* Never go here! */
+int cupkee_poll(void)
+{
+    hal_poll();
+    sal_poll();
     return 0;
 }
 

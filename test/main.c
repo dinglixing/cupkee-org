@@ -1,11 +1,5 @@
-/*
- * This file is part of the cupkee project.
- *
- * Copyright (C) 2016 Lixing Ding <ding.lixing@gmail.com>
- *
- */
 
-#include "cupkee.h"
+#include "test.h"
 
 static const native_t native_entry[] = {
     /* cupkee native */
@@ -23,22 +17,44 @@ static const native_t native_entry[] = {
     {"scripts",         native_scripts},
 
     /* user native */
-
 };
 
-int main(void)
+int test_cupkee_init(void)
 {
     cupkee_init();
-
-    /* user code here */
 
     cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
     cupkee_start();
 
-    while (1)
-        cupkee_poll();
-
-    // Should not go here
     return 0;
+}
+
+int test_cupkee_deinit(void)
+{
+    return 0;
+}
+
+int main(int argc, const char *argv[])
+{
+    (void) argc;
+    (void) argv;
+
+    if (CUE_SUCCESS != CU_initialize_registry()) {
+        return CU_get_error();
+    }
+
+    // add test suite here:
+    if (!test_hello_entry()) {
+        printf("Init test suite \"%s\" fail\n", "hello");
+    }
+    if (!test_misc_entry()) {
+        printf("Init test suite \"%s\" fail\n", "misc");
+    }
+
+    CU_basic_set_mode(CU_BRM_VERBOSE);
+    CU_basic_run_tests();
+    CU_cleanup_registry();
+
+    return CU_get_error();
 }
 

@@ -40,7 +40,7 @@ const char *scripts_load(const char *prev)
     while (*cur == 0 && cur != end) {
         cur++;
     }
-    if (cur == end || *cur == 0xff) {
+    if (cur == end || *cur == -1) {
         return NULL;
     }
 
@@ -52,7 +52,7 @@ const char *scripts_load(const char *prev)
     while (*cur != 0 && cur != end) {
         cur++;
     }
-    if (cur == end || *cur == 0xff) {
+    if (cur == end || *cur == -1) {
         return NULL;
     }
 
@@ -60,7 +60,7 @@ const char *scripts_load(const char *prev)
     while (*cur == 0 && cur != end) {
         cur++;
     }
-    if (cur == end || *cur == 0xff) {
+    if (cur == end || *cur == -1) {
         return NULL;
     }
 
@@ -205,7 +205,6 @@ val_t native_led(env_t *env, int ac, val_t *av)
     return val_mk_undefined();
 }
 
-extern char end;
 val_t native_sysinfos(env_t *env, int ac, val_t *av)
 {
     hal_info_t hal;
@@ -216,13 +215,11 @@ val_t native_sysinfos(env_t *env, int ac, val_t *av)
 
     hal_info_get(&hal);
 
-    snprintf(buf, 80, "FREQ: %luM\r\n", hal.sys_freq / 1000000);
+    snprintf(buf, 80, "FREQ: %uM\r\n", hal.sys_freq / 1000000);
     console_puts(buf);
     snprintf(buf, 80, "RAM: %dK\r\n", hal.ram_sz / 1024);
     console_puts(buf);
     snprintf(buf, 80, "ROM: %dK\r\n\r\n", hal.rom_sz / 1024);
-    console_puts(buf);
-    snprintf(buf, 80, "Stack bottom: %p\r\n\r\n", &end);
     console_puts(buf);
     snprintf(buf, 80, "symbal: %d/%d, ", env->symbal_tbl_hold, env->symbal_tbl_size);
     console_puts(buf);

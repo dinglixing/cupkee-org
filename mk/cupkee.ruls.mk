@@ -1,13 +1,52 @@
-## This file is part of the cupkee project.
-#
-# cupkee.ruls.mk
-#
-# Copyright (C) 2016 ding.lixing@gmail.com
-#
-# public make rules
-# user should not modify anything there
+##
+## MIT License
+##
+## This file is part of cupkee project.
+##
+## Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+##
+## Permission is hereby granted, free of charge, to any person obtaining a copy
+## of this software and associated documentation files (the "Software"), to deal
+## in the Software without restriction, including without limitation the rights
+## to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+## copies of the Software, and to permit persons to whom the Software is
+## furnished to do so, subject to the following conditions:
+##
+## The above copyright notice and this permission notice shall be included in all
+## copies or substantial portions of the Software.
+##
+## THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+## IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+## FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+## AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+## LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+## OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+## SOFTWARE.
+##
 
-# Be silent per default, but 'make V=1' will show all compiler calls.
+
+# WRANING:
+# User should not modify anything there, if you do not known what your doing!
+#
+
+###############################################################################
+# include board config files
+ifeq (${BOARD},)
+	include ${MAKE_DIR}/board/host.mk
+else
+ifneq (${wildcard ${MAKE_DIR}/board/${BOARD}}.mk,)
+	include ${MAKE_DIR}/board/${BOARD}.mk
+else
+	$(error board: ${BOARD}, is not support now)
+endif
+endif
+
+###############################################################################
+# Arch defines
+include ${MAKE_DIR}/arch/${ARCH}.mk
+
+###############################################################################
+# Silent at default, but 'make V=1' will show all build calls.
 ifneq ($(V),1)
 Q		:= @
 NULL 	:= 2>/dev/null
@@ -15,8 +54,6 @@ endif
 
 ###############################################################################
 # Executables
-
-PREFIX  ?= arm-none-eabi-
 AS  	:= ${PREFIX}as
 CC 		:= ${PREFIX}gcc
 LD  	:= ${PREFIX}gcc
@@ -32,33 +69,6 @@ MAKE 	:= make
 OPT		:= -Os
 #CSTD    ?= -std=c99
 
-###############################################################################
-# Depend files
-
-ifeq ($(strip $(MCU)),)
-$(error "Miss target mcu")
-endif
-LDSCRIPT    = ../../ld/$(MCU).ld
-
-ifeq ($(findstring stm32f1,${MCU}),stm32f1)
-LIBNAME		= opencm3_stm32f1
-DEFS		+= -DSTM32F1
-
-FP_FLAGS	?= -msoft-float
-ARCH_FLAGS	= -mthumb -mcpu=cortex-m3 $(FP_FLAGS) -mfix-cortex-m3-ldrd
-
-OPENCM3_DIR = ${BASE_DIR}/libopencm3
-else
-	$(error "mcu ${MCU}: not support now!")
-endif
-
-DEFS		+= -I$(OPENCM3_DIR)/include
-OPENCM3_LIBS = -L$(OPENCM3_DIR)/lib -l$(LIBNAME)
-SYSTEM_LIBS += -Wl,--start-group -lc -lgcc -lnosys -Wl,--end-group
-
-ifeq ($(V),1)
-$(info Using $(OPENCM3_DIR) path to library)
-endif
 
 ###############################################################################
 # Assembler flags
@@ -68,11 +78,11 @@ ASFLAGS     += -D__NEWLIB__
 ###############################################################################
 # C flags
 
-TGT_CFLAGS	+= $(OPT) $(CSTD) -g
-TGT_CFLAGS	+= $(ARCH_FLAGS)
-TGT_CFLAGS	+= -Wextra -Wshadow -Wimplicit-function-declaration
-TGT_CFLAGS	+= -Wredundant-decls -Wmissing-prototypes -Wstrict-prototypes
-TGT_CFLAGS	+= -fno-common -ffunction-sections -fdata-sections
+TGT_CFLAGS		+= $(OPT) $(CSTD) -g
+TGT_CFLAGS		+= $(ARCH_FLAGS)
+TGT_CFLAGS		+= -Wextra -Wshadow -Wimplicit-function-declaration
+TGT_CFLAGS		+= -Wredundant-decls -Wmissing-prototypes -Wstrict-prototypes
+TGT_CFLAGS		+= -fno-common -ffunction-sections -fdata-sections
 
 ###############################################################################
 # C++ flags
@@ -92,15 +102,8 @@ TGT_CPPFLAGS	+= $(DEFS)
 
 ###############################################################################
 # Linker flags
-
-TGT_LDFLAGS		+= --static -nostartfiles
-TGT_LDFLAGS		+= -T$(LDSCRIPT)
+TGT_LDFLAGS     += ${ARCH_LDFLAGS}
 TGT_LDFLAGS		+= $(ARCH_FLAGS)
-TGT_LDFLAGS		+= -Wl,--gc-sections
-ifeq ($(V),99)
-TGT_LDFLAGS		+= -Wl,--print-gc-sections
-endif
-TGT_LDFLAGS     += ${SYSTEM_LIBS} ${OPENCM3_LIBS}
 
 ###############################################################################
 # Build ruls
@@ -153,9 +156,16 @@ ${1}_DEPS += ${${1}_ASRCS:%.S=%.d}
 
 ${1}: ${1}.info ${1}.elf
 
+ifeq (${PREFIX},)
 ${1}.elf: $${${1}_OBJS}
 	@printf "[LD]\t$$@\n\n"
-	$(Q)${LD} -o $$@ $${${1}_OBJS} $${${1}_LDFLAGS} ${TGT_LDFLAGS} -Wl,-Map=${1}.map
+	$(Q)${LD} -o $$@ $${${1}_OBJS} ${TGT_CPPFLAGS} ${${1}_CPPFLAGS} $${${1}_LDFLAGS} ${TGT_LDFLAGS}
+else
+${1}.elf: $${${1}_OBJS}
+	@printf "[LD]\t$$@\n\n"
+	$(Q)${LD} -o $$@ $${${1}_OBJS} ${TGT_CPPFLAGS} ${${1}_CPPFLAGS} $${${1}_LDFLAGS} ${TGT_LDFLAGS} -Wl,-Map=${1}.map
+endif
+
 
 ${1}.info:
 	@printf "build ${1}.elf\n"
@@ -206,11 +216,14 @@ bin: ${elf_NAMES} ${elf_NAMES:%=%.bin}
 
 hex: ${elf_NAMES} ${elf_NAMES:%=%.hex}
 
+srec: ${elf_NAMES} ${elf_NAMES:%=%.srec}
+
 list: ${elf_NAMES} ${elf_NAMES:%=%.list}
 
 clean: ${elf_NAMES:%=%.clean} ${lib_NAMES:%=%.clean}
 	@${RM} ${elf_NAMES:%=%.bin}
 	@${RM} ${elf_NAMES:%=%.hex}
+	@${RM} ${elf_NAMES:%=%.srec}
 	@${RM} ${elf_NAMES:%=%.list}
 
 $(foreach elf,${elf_NAMES},$(eval $(call build_elf_rule,${elf})))
