@@ -31,17 +31,38 @@ SOFTWARE.
 
 static int test_setup()
 {
-    return test_cupkee_init();
+    return 0;
 }
 
 static int test_clean()
 {
-    return test_cupkee_deinit();
+    return 0;
 }
 
 static void test_systicks(void)
 {
-    // show logo
+    test_cupkee_reset();
+
+    test_cupkee_start();
+
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("\r", NULL, 1));
+
+    hw_mock_systicks_set(0);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("systicks()\r", "0", 1));
+
+    hw_mock_systicks_set(1234);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("systicks()\r", "1234", 1));
+}
+
+static void test_storage(void)
+{
+
+    test_cupkee_reset();
+
+    test_cupkee_start();
+
+
     CU_ASSERT(0 == test_cupkee_run_with_reply("\r", NULL, 1));
 
     hw_mock_systicks_set(0);
@@ -56,7 +77,8 @@ CU_pSuite test_misc_entry()
     CU_pSuite suite = CU_add_suite("misc", test_setup, test_clean);
 
     if (suite) {
-        CU_add_test(suite, "systicks", test_systicks);
+        CU_add_test(suite, "systicks",  test_systicks);
+        CU_add_test(suite, "storage",   test_storage);
     }
 
     return suite;

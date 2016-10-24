@@ -5,80 +5,6 @@
 
 #define VARIABLE_REF_MAX    (16)
 
-static const char *scripts_get(int id)
-{
-    const char *s;
-
-    s = scripts_load(NULL);
-    while (s && 0 < id--) {
-        s = scripts_load(s);
-    }
-
-    return s;
-}
-
-static int scripts_remove(int id)
-{
-    const char *pos = scripts_get(id);
-
-    if (pos) {
-        return hal_storage_clear_usr(pos, strlen(pos));
-    }
-    return -1;
-}
-
-const char *scripts_load(const char *prev)
-{
-    char *cur = prev ? (char *)prev : (char *)hal_storage_base_usr();
-    char *end = (char *)hal_storage_base_usr() + hal_storage_size_usr();
-
-    if (!hal_storage_valid_usr(cur)) {
-        return NULL;
-    }
-
-    // Skip zero
-    while (*cur == 0 && cur != end) {
-        cur++;
-    }
-    if (cur == end || *cur == -1) {
-        return NULL;
-    }
-
-    if (!prev) {
-        return cur;
-    }
-
-    // Skip current string
-    while (*cur != 0 && cur != end) {
-        cur++;
-    }
-    if (cur == end || *cur == -1) {
-        return NULL;
-    }
-
-    // Skip string terminate and paddings
-    while (*cur == 0 && cur != end) {
-        cur++;
-    }
-    if (cur == end || *cur == -1) {
-        return NULL;
-    }
-
-    return cur;
-}
-
-int scripts_save(const char *s)
-{
-    int len = strlen(s);
-
-    if (!len) {
-        return 0;
-    }
-    len += 1; // Include the terminate char '\000'
-
-    return hal_storage_write_usr(s, len);
-}
-
 static val_t reference_vals[VARIABLE_REF_MAX];
 void reference_init(env_t *env)
 {
@@ -282,14 +208,14 @@ val_t native_scripts(env_t *env, int ac, val_t *av)
     if (del) {
         int err;
         if (which < 0) {
-            err =  hal_storage_erase_usr();
+            err = hal_scripts_erase();
         } else {
-            err = scripts_remove(which);
+            err = hal_scripts_remove(which);
         }
         return val_mk_boolean(err == 0 ? val_mk_boolean(1) : val_mk_boolean(0));
     }
 
-    while (NULL != (script = scripts_load(script))) {
+    while (NULL != (script = hal_scripts_load(script))) {
         if (which < 0 || which == n) {
             char id[16];
             snprintf(id, 16, "[%.4d] ", n);

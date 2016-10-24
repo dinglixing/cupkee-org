@@ -380,6 +380,10 @@ static void console_drain_handle(void)
 
 int console_init(void)
 {
+    console_ready = 0;
+    console_in_pos = 0;
+    console_recv_bytes = 0;
+
     rbuff_init(&console_buff[CON_IN], CON_BUFF_SIZE, console_buff_mem[CON_IN]);
     rbuff_init(&console_buff[CON_OUT], CON_BUFF_SIZE, console_buff_mem[CON_OUT]);
 

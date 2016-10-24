@@ -7,8 +7,8 @@
 #include "mock.h"
 #include "cupkee.h"
 
-int test_cupkee_init(void);
-int test_cupkee_deinit(void);
+int test_cupkee_reset(void);
+int test_cupkee_start(void);
 
 int test_cupkee_run_with_reply(const char *input, const char *expected, int try);
 

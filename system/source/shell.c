@@ -190,7 +190,7 @@ static int input_enter(void)
 
 static int input_save(void)
 {
-    if (scripts_save(input_buf)) {
+    if (hal_scripts_save(input_buf)) {
         console_puts("save fail ...");
         return 0;
     } else {
@@ -211,13 +211,13 @@ static int console_ctrl_handle(int ctrl)
     }
 }
 
-static int saved_run(env_t *env)
+static int run_saved_scripts(env_t *env)
 {
     const char *script = NULL;
     val_t *res;
     int err = 0;
 
-    while (NULL != (script = scripts_load(script))) {
+    while (NULL != (script = hal_scripts_load(script))) {
         err = interp_execute_string(env, script, &res);
         if (err < 0) {
             break;
@@ -299,7 +299,7 @@ int shell_init(env_t *env)
     console_handle_register(console_ctrl_handle);
 
     /* Execute user restored scripts */
-    saved_run(env);
+    run_saved_scripts(env);
 
     env_ptr = env;
     return 0;

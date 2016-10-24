@@ -19,20 +19,22 @@ static const native_t native_entry[] = {
     /* user native */
 };
 
-int test_cupkee_init(void)
+int test_cupkee_reset(void)
 {
+    hw_mock_reset();
+
     cupkee_init();
-
     cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
-    cupkee_start();
 
     return 0;
 }
 
-int test_cupkee_deinit(void)
+int test_cupkee_start(void)
 {
+    cupkee_start();
     return 0;
 }
+
 
 int main(int argc, const char *argv[])
 {

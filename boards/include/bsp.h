@@ -36,12 +36,10 @@ void hal_led_on(void);
 void hal_led_off(void);
 void hal_led_toggle(void);
 
-int hal_storage_size_usr(void);
-int hal_storage_erase_usr(void);
-int hal_storage_clear_usr(const void *addr, int size);
-int hal_storage_write_usr(const void *data, int size);
-int hal_storage_valid_usr(const void *addr);
-void *hal_storage_base_usr(void);
+int hal_scripts_erase(void);
+int hal_scripts_remove(int id);
+int hal_scripts_save(const char *s);
+const char *hal_scripts_load(const char *prev);
 
 #endif /* __BSP_INC__ */
 

@@ -8,6 +8,9 @@
 
 #define MEMORY_SIZE         (64 * 1024)
 
+
+uint32_t system_ticks_count = 0;
+
 #define CONSOLE_BUF_SIZE    (1024 * 8)
 
 static char console_buf[CONSOLE_BUF_SIZE];
@@ -15,12 +18,9 @@ static int  console_end = 0;
 static void (*console_input_cb)(void *, int);
 static void (*console_drain_cb)(void);
 
-uint32_t system_ticks_count = 0;
-
 void hw_mock_reset(void)
 {
     system_ticks_count = 0;
-
     console_end = 0;
 }
 
@@ -131,41 +131,23 @@ void hal_led_off(void)
 void hal_led_toggle(void)
 {}
 
-int hal_storage_size_usr(void)
+
+
+int hal_scripts_erase(void)
 {
-    return 0;
+    return -1;
+}
+int hal_scripts_remove(int id)
+{
+    return -1;
+}
+int hal_scripts_save(const char *s)
+{
+    return -1;
 }
 
-void *hal_storage_base_usr(void)
+const char *hal_scripts_load(const char *prev)
 {
     return NULL;
-}
-
-int hal_storage_erase_usr(void)
-{
-    return 0;
-}
-
-int hal_storage_clear_usr(const void *addr, int size)
-{
-    (void) addr;
-    (void) size;
-
-    return 0;
-}
-
-int hal_storage_write_usr(const void *data, int size)
-{
-    (void) data;
-    (void) size;
-
-    return 0;
-}
-
-int hal_storage_valid_usr(const void *addr)
-{
-    (void) addr;
-
-    return 0;
 }
 
