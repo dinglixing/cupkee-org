@@ -14,9 +14,7 @@
 #include "shell.h"
 
 
-#define INPUT_BUF_SIZE      (1024)
-#define HISTORY_SIZE        (128)
-#define HISTORY_MAX         (8)
+#define HISTORY_SIZE        (64)
 
 typedef struct auto_complete_t {
     uint8_t prefix;
@@ -26,14 +24,13 @@ typedef struct auto_complete_t {
     char buf[TOKEN_MAX_SIZE];
 } auto_complete_t;
 
-
 static env_t *env_ptr;
-
-
 static int shell_mode = 0;
 static int input_cached = 0;
-static char input_buf[INPUT_BUF_SIZE];
-static char history_buf[HISTORY_MAX][HISTORY_SIZE];
+static int input_buf_size = 0;
+static int history_max = 0;
+static char *input_buf = NULL;
+static char *history_buf = NULL;
 static char history_start, history_count, history_pos;
 
 static void history_init(void)
@@ -57,11 +54,12 @@ static int history_load(int dir)
 
     console_input_clear();
     if (pos < history_count) {
+        char *buf = history_buf + pos * HISTORY_SIZE;
         pos += history_start;
-        if (pos >= HISTORY_MAX) {
-            pos -= HISTORY_MAX;
+        if (pos >= history_max) {
+            pos -= history_max;
         }
-        console_input_string(history_buf[pos]);
+        console_input_string(buf);
     }
 
     return CON_PREVENT_DEFAULT;
@@ -72,15 +70,15 @@ static void history_append(char *line)
     int pos;
     char *buf;
 
-    if (history_count < HISTORY_MAX) {
+    if (history_count < history_max) {
         pos = history_count++;
     } else {
         pos = history_start++;
-        if (history_start >= HISTORY_MAX) {
+        if (history_start >= history_max) {
             history_start = 0;
         }
     }
-    buf = history_buf[pos];
+    buf = history_buf + pos * HISTORY_SIZE;
 
     pos = 0;
     for (pos = 0; pos < HISTORY_SIZE - 1; pos++) {
@@ -211,17 +209,18 @@ static int console_ctrl_handle(int ctrl)
     }
 }
 
-static int run_saved_scripts(env_t *env)
+static int run_initial_scripts(env_t *env, const char *initial)
 {
     const char *script = NULL;
     val_t *res;
     int err = 0;
 
-    while (NULL != (script = hal_scripts_load(script))) {
+    if (initial) {
+        err = interp_execute_string(env, initial, &res);
+    }
+
+    while (err >= 0 && NULL != (script = hal_scripts_load(script))) {
         err = interp_execute_string(env, script, &res);
-        if (err < 0) {
-            break;
-        }
     }
 
     return err;
@@ -238,7 +237,7 @@ static void shell_execute_line(env_t *env)
     val_t *res;
     int    err;
 
-    console_gets(input_buf, INPUT_BUF_SIZE);
+    console_gets(input_buf, input_buf_size);
 
     err = interp_execute_interactive(env, input_buf, more_handle, &res);
     if (err < 0) {
@@ -267,7 +266,7 @@ static void shell_execute_multi(env_t *env)
     int    err;
     int    len;
 
-    console_gets(input_buf + input_cached, INPUT_BUF_SIZE - input_cached);
+    console_gets(input_buf + input_cached, input_buf_size - input_cached);
     len = strlen(input_buf + input_cached);
     if (len <= 2) {
         //empty line: "\r\n" only
@@ -291,18 +290,34 @@ static void shell_execute_multi(env_t *env)
     console_puts("> ");
 }
 
-int shell_init(env_t *env)
+int shell_init(env_t *env, void *mem, int size)
 {
+    int blocks = size / HISTORY_SIZE;
+
+    if (blocks < 4) {
+        history_max = 0;
+    } else {
+        history_max = blocks / 2;
+    }
+    input_buf = mem + (HISTORY_SIZE * history_max);
+    input_buf_size = size - HISTORY_SIZE * history_max;
+    history_buf = mem;
+    memset(mem, 0, size);
+
     history_init();
 
     /* Register console ctrl handle, to support: auto complete, history .etc */
     console_handle_register(console_ctrl_handle);
 
-    /* Execute user restored scripts */
-    run_saved_scripts(env);
-
     env_ptr = env;
+
     return 0;
+}
+
+int shell_start(const char *initial)
+{
+    /* Execute scripts initial and restored by user, */
+    return run_initial_scripts(env_ptr, initial);
 }
 
 void shell_execute(env_t *env)

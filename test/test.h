@@ -8,7 +8,7 @@
 #include "cupkee.h"
 
 int test_cupkee_reset(void);
-int test_cupkee_start(void);
+int test_cupkee_start(const char *init);
 
 void test_reply_show(int on);
 int test_cupkee_run_with_reply(const char *input, const char *expected, int try);

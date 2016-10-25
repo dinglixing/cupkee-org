@@ -39,11 +39,20 @@ static int test_clean()
     return 0;
 }
 
+static void test_initial(void)
+{
+    test_cupkee_reset();
+
+    CU_ASSERT(0 == test_cupkee_start("var a = 0"));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "0\r\n", 1));
+}
+
 static void test_enter(void)
 {
     test_cupkee_reset();
 
-    CU_ASSERT(0 == test_cupkee_start());
+    CU_ASSERT(0 == test_cupkee_start(NULL));
 
     // empty input should feedback new prompt
     CU_ASSERT(0 == test_cupkee_run_with_reply("\r", NULL, 1));
@@ -54,7 +63,7 @@ static void test_systicks(void)
 {
     test_cupkee_reset();
 
-    CU_ASSERT(0 == test_cupkee_start());
+    CU_ASSERT(0 == test_cupkee_start(NULL));
 
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("\r", NULL, 1));
@@ -72,7 +81,7 @@ static void test_scripts(void)
 
     hw_scripts_save("var a = 0");
 
-    CU_ASSERT(0 == test_cupkee_start());
+    CU_ASSERT(0 == test_cupkee_start(NULL));
 
     // variable a should defined
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "0\r\n", 1));
@@ -101,7 +110,7 @@ static void test_timeout(void)
 {
     test_cupkee_reset();
 
-    CU_ASSERT(0 == test_cupkee_start());
+    CU_ASSERT(0 == test_cupkee_start(NULL));
 
     //test_reply_show(1);
     CU_ASSERT(0 == test_cupkee_run_with_reply("var a = 0\r", "undefined\r\n", 1));
@@ -170,6 +179,7 @@ CU_pSuite test_misc_entry()
     CU_pSuite suite = CU_add_suite("misc", test_setup, test_clean);
 
     if (suite) {
+        CU_add_test(suite, "initial",   test_initial);
         CU_add_test(suite, "empty",     test_enter);
         CU_add_test(suite, "systicks",  test_systicks);
         CU_add_test(suite, "scripts",   test_scripts);

@@ -13,11 +13,24 @@
 #include "usb.h"
 #include "storage.h"
 
+#define MAIN_STACK_SIZE 8192
+
 /* systick interrupt handle routing  */
 uint32_t system_ticks_count = 0;
 void sys_tick_handler(void)
 {
     system_ticks_count++;
+}
+
+extern vector_table_t vector_table;
+extern char end;
+static int memory_alloced = 0;
+static int memory_size = 0;
+
+static void memory_init(void)
+{
+    memory_alloced = 0;
+    memory_size = (char *)(vector_table.initial_sp_value) - (&end) - MAIN_STACK_SIZE;
 }
 
 static void hal_led_setup(void)
@@ -69,6 +82,8 @@ void board_setup(void)
 {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
+    memory_init();
+
     hal_led_setup();
 
     /* setup usb: to support console */
@@ -79,31 +94,34 @@ void board_setup(void)
     hal_storage_setup();
 }
 
-extern vector_table_t vector_table;
-extern char end;
 int hal_memory_alloc(void **p, int size, int align)
 {
-    static void *heap_free = &end;
-    intptr_t mem_pos = (intptr_t)heap_free;
-    void *mem;
-    int max;
+    int start = (intptr_t) (&end) + memory_alloced;
+    int shift = 0;
 
-    mem_pos = mem_pos % align;
-    if (mem_pos) {
-        mem = heap_free + (align - mem_pos);
-    } else {
-        mem = heap_free;
+    if (size == 0) {
+        return 0;
     }
 
-    max = (char *)(vector_table.initial_sp_value) - (char *)mem;
-    if (size > 0) {
-        size = size < max ? size : max;
+    if (start % align) {
+        shift = align - (start % align);
     } else {
-        size = max;
+        shift = 0;
     }
-    heap_free = mem + size;
+    memory_alloced += shift;
 
-    *p = mem;
+    if (size < 0) {
+        size = memory_size - memory_alloced;
+    } else
+    if (memory_alloced + size > memory_size) {
+        return -1;
+    }
+
+    if (p) {
+        *p = &end + memory_alloced;
+        memory_alloced += size;
+    }
+
     return size;
 }
 

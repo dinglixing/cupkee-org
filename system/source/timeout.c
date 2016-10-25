@@ -161,11 +161,9 @@ val_t native_clear_interval(env_t *env, int ac, val_t *av)
 }
 
 
-void timeout_init(env_t *env)
+void timeout_init(void)
 {
     int i;
-
-    (void) env;
 
     timeout_wait = NULL;
     timeout_free = NULL;

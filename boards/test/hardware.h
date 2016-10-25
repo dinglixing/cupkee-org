@@ -8,6 +8,7 @@
 void hw_reset(void);
 
 void hw_systicks_set(uint32_t x);
+int  hw_memory_alloc(void **p, int size, int align);
 
 void hw_console_reset(void);
 void hw_console_give(const char *data);

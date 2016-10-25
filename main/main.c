@@ -26,6 +26,8 @@ static const native_t native_entry[] = {
 
 };
 
+static char *initial = ""; // system initial scripts
+
 int main(void)
 {
     cupkee_init();
@@ -33,7 +35,7 @@ int main(void)
     /* user code here */
 
     cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
-    cupkee_start();
+    cupkee_start(initial);
 
     while (1)
         cupkee_poll();

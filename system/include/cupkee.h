@@ -11,7 +11,7 @@
 
 
 int cupkee_init(void);
-int cupkee_start(void);
+int cupkee_start(const char *scripts);
 int cupkee_poll(void);
 int cupkee_set_native(const native_t *, int n);
 

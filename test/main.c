@@ -29,9 +29,9 @@ int test_cupkee_reset(void)
     return 0;
 }
 
-int test_cupkee_start(void)
+int test_cupkee_start(const char *init)
 {
-    cupkee_start();
+    cupkee_start(init);
 
     return test_cupkee_run_with_reply("\r", NULL, 1);
 }

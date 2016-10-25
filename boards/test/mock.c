@@ -15,11 +15,7 @@ void board_setup(void)
 
 int hal_memory_alloc(void **p, int size, int align)
 {
-    (void) p;
-    (void) size;
-    (void) align;
-
-    return 0;
+    return hw_memory_alloc(p, size, align);
 }
 
 void hal_poll(void)
