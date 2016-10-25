@@ -4,13 +4,15 @@
 #include "CUnit.h"
 #include "CUnit_Basic.h"
 
-#include "mock.h"
+#include "hardware.h"
 #include "cupkee.h"
 
 int test_cupkee_reset(void);
 int test_cupkee_start(void);
 
+void test_reply_show(int on);
 int test_cupkee_run_with_reply(const char *input, const char *expected, int try);
+int test_cupkee_run_without_reply(const char *input, int try_max);
 
 
 CU_pSuite test_hello_entry(void);

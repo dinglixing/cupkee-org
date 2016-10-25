@@ -200,7 +200,7 @@ val_t native_scripts(env_t *env, int ac, val_t *av)
     }
 
     if (ac && val_is_string(av)) {
-        if (strcmp("delete", val_2_cstring(av + 1))) {
+        if (strcmp("delete", val_2_cstring(av)) == 0) {
             del = 1;
         }
     }

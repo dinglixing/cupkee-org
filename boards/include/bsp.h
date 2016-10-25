@@ -32,14 +32,14 @@ int hal_console_puts(const char *s);
 int hal_console_write_sync_byte(char c);
 int hal_console_sync_puts(const char *s);
 
-void hal_led_on(void);
-void hal_led_off(void);
-void hal_led_toggle(void);
-
 int hal_scripts_erase(void);
 int hal_scripts_remove(int id);
 int hal_scripts_save(const char *s);
 const char *hal_scripts_load(const char *prev);
+
+void hal_led_on(void);
+void hal_led_off(void);
+void hal_led_toggle(void);
 
 #endif /* __BSP_INC__ */
 

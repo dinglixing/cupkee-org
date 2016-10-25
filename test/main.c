@@ -21,7 +21,7 @@ static const native_t native_entry[] = {
 
 int test_cupkee_reset(void)
 {
-    hw_mock_reset();
+    hw_reset();
 
     cupkee_init();
     cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
@@ -32,7 +32,8 @@ int test_cupkee_reset(void)
 int test_cupkee_start(void)
 {
     cupkee_start();
-    return 0;
+
+    return test_cupkee_run_with_reply("\r", NULL, 1);
 }
 
 

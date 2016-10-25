@@ -4,17 +4,11 @@ static int   reply_show = 0;
 
 static char *test_cut_prompt(char *buf, int end)
 {
-    if (end < 4) {
-        return NULL;
+    if (end > 1 && buf[end - 1] == ' ' && buf[end - 2] == '>') {
+        buf[end - 2] = 0;
     }
 
-    if (buf[end - 1] == ' ' && buf[end - 2] == '>' &&
-        buf[end - 3] == '\n' && buf[end - 4] == '\r') {
-        buf[end - 4] = 0;
-        return buf;
-    }
-
-    return NULL;
+    return buf;
 }
 
 static char *test_parse_cupkee_reply()
@@ -22,10 +16,10 @@ static char *test_parse_cupkee_reply()
     int   len;
     char *buf;
 
-    len = hw_mock_console_reply(&buf);
+    len = hw_console_reply(&buf);
     if (len > 0) {
         if (reply_show) {
-            printf("reply: %s\n", buf);
+            printf("reply(%d): '%s'\n", len, buf);
         }
         return test_cut_prompt(buf, len);
     } else {
@@ -37,7 +31,7 @@ static char *test_cupkee_wait_reply(int try)
 {
     int n = 0;
 
-    hw_mock_console_buf_reset();
+    hw_console_buf_clear();
     while (n++ < try) {
         char *reply;
 
@@ -51,11 +45,19 @@ static char *test_cupkee_wait_reply(int try)
     return NULL; // no reply
 }
 
+void test_reply_show(int on)
+{
+    reply_show = on;
+}
+
 int test_cupkee_run_with_reply(const char *input, const char *expected, int try_max)
 {
     char *reply;
 
-    hw_mock_console_give(input);
+    if (input) {
+        hw_console_give(input);
+    }
+
     reply = test_cupkee_wait_reply(try_max);
     if (reply) {
         if (expected == NULL) {
@@ -69,5 +71,20 @@ int test_cupkee_run_with_reply(const char *input, const char *expected, int try_
         }
     } else {
         return -1;
+    }
+}
+
+int test_cupkee_run_without_reply(const char *input, int try_max)
+{
+    char *reply;
+
+    if (input) {
+        hw_console_give(input);
+    }
+    reply = test_cupkee_wait_reply(try_max);
+    if (reply) {
+        return -1;
+    } else {
+        return 0;
     }
 }
