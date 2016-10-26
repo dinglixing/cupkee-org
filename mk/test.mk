@@ -4,6 +4,7 @@ test_SRCS = main.c \
 			util.c \
 			hello.c \
 			misc.c \
+			pin.c \
 			CUnit_Basic.c \
 			CUnit_Error.c \
 			CUnit_Mem.c \

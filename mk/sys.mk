@@ -6,7 +6,8 @@ sys_SRCS = init.c \
 		   rbuff.c \
 		   console.c \
 		   shell.c \
-		   timeout.c
+		   timeout.c \
+		   device.c
 
 sys_CPPFLAGS = -I${BSP_DIR}/include -I${SYS_DIR}/include -I${LANG_DIR}/include
 sys_CFLAGS   =

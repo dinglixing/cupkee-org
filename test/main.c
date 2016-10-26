@@ -15,6 +15,8 @@ static const native_t native_entry[] = {
     {"clearInterval",   native_clear_interval},
 
     {"scripts",         native_scripts},
+    {"device",          native_device},
+    {"config",          native_config},
 
     /* user native */
 };
@@ -52,6 +54,9 @@ int main(int argc, const char *argv[])
     }
     if (!test_misc_entry()) {
         printf("Init test suite \"%s\" fail\n", "misc");
+    }
+    if (!test_pin_entry()) {
+        printf("Init test suite \"%s\" fail\n", "pin");
     }
 
     CU_basic_set_mode(CU_BRM_VERBOSE);

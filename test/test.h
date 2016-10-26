@@ -17,5 +17,6 @@ int test_cupkee_run_without_reply(const char *input, int try_max);
 
 CU_pSuite test_hello_entry(void);
 CU_pSuite test_misc_entry(void);
+CU_pSuite test_pin_entry(void);
 
 #endif /* __TEST_INC__ */

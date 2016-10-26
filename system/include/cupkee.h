@@ -9,7 +9,6 @@
 #include <bsp.h>
 #include <panda.h>
 
-
 int cupkee_init(void);
 int cupkee_start(const char *scripts);
 int cupkee_poll(void);
@@ -25,6 +24,9 @@ val_t native_set_timeout(env_t *env, int ac, val_t *av);
 val_t native_set_interval(env_t *env, int ac, val_t *av);
 val_t native_clear_timeout(env_t *env, int ac, val_t *av);
 val_t native_clear_interval(env_t *env, int ac, val_t *av);
+
+val_t native_device(env_t *env, int ac, val_t *av);
+val_t native_config(env_t *env, int ac, val_t *av);
 
 #endif /* __CUPKEE_INC__ */
 

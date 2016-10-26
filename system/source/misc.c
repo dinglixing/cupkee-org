@@ -96,18 +96,15 @@ void print_value(val_t *v)
         console_puts("NaN\r\n");
     } else
     if (val_is_function(v)) {
-        snprintf(buf, 32, "<function:%p>\r\n", (void *)val_2_intptr(v));
-        console_puts(buf);
+        console_puts("<function>\r\n");
     } else
     if (val_is_dictionary(v)) {
-        snprintf(buf, 32, "<object:%p>\r\n", (void *)val_2_intptr(v));
-        console_puts(buf);
+        console_puts("<dictionary>\r\n");
     } else
     if (val_is_array(v)) {
-        snprintf(buf, 32, "<array:%p>\r\n", (void *)val_2_intptr(v));
-        console_puts(buf);
+        console_puts("<array>\r\n");
     } else {
-        console_puts("object\r\n");
+        console_puts("<object>\r\n");
     }
 }
 

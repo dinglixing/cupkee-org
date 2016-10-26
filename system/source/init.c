@@ -8,6 +8,7 @@
 #include "event.h"
 #include "shell.h"
 #include "console.h"
+#include "device.h"
 #include "timeout.h"
 
 static const char *logo = "\
@@ -115,6 +116,9 @@ int cupkee_init(void)
 
     /* Initial timeout resource */
     timeout_init();
+
+    /* Initial devices resource */
+    device_init();
 
     /* Initial shell resource */
     shell_init(&core_env, shell_mem, shell_mem_sz);

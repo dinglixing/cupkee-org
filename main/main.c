@@ -22,6 +22,9 @@ static const native_t native_entry[] = {
 
     {"scripts",         native_scripts},
 
+    {"device",          native_device},
+    {"config",          native_config},
+
     /* user native */
 
 };
