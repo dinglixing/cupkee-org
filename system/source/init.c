@@ -2,10 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <cupkee.h>
+#include "util.h"
 
 #include "misc.h"
-#include "event.h"
 #include "shell.h"
 #include "console.h"
 #include "device.h"
@@ -118,7 +117,7 @@ int cupkee_init(void)
     timeout_init();
 
     /* Initial devices resource */
-    device_init();
+    device_setup();
 
     /* Initial shell resource */
     shell_init(&core_env, shell_mem, shell_mem_sz);

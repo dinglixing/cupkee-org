@@ -1,11 +1,9 @@
 #include <ctype.h>
 #include <string.h>
 
-#include <cupkee.h>
+#include "util.h"
 
 #include "misc.h"
-#include "rbuff.h"
-#include "event.h"
 #include "console.h"
 
 #define BELL    "\007"

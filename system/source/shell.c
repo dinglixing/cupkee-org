@@ -5,13 +5,11 @@
  *
  */
 
-#include <cupkee.h>
-#include "event.h"
+
+#include "shell.h"
+#include "misc.h"
 #include "timeout.h"
 #include "console.h"
-
-#include "misc.h"
-#include "shell.h"
 
 
 #define HISTORY_SIZE        (64)

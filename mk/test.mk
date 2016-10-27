@@ -2,9 +2,9 @@
 elf_NAMES = test
 test_SRCS = main.c \
 			util.c \
-			hello.c \
-			misc.c \
-			pin.c \
+			test_hello.c \
+			test_misc.c \
+			test_gpio.c \
 			CUnit_Basic.c \
 			CUnit_Error.c \
 			CUnit_Mem.c \

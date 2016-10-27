@@ -9,6 +9,13 @@
 #include <bsp.h>
 #include <panda.h>
 
+/* CUPKEE error code define */
+#define CUPKEE_OK               0       // not implement
+#define CUPKEE_EIMPLEMENT       20000   // not implement
+#define CUPKEE_ENAME            20001   // invalid device name
+#define CUPKEE_EINVAL           20002   // invalid argument
+#define CUPKEE_ERESOURCE        20003   // not enought resource
+
 int cupkee_init(void);
 int cupkee_start(const char *scripts);
 int cupkee_poll(void);

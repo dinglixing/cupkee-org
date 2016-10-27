@@ -2,7 +2,7 @@
 #ifndef __TIMEOUT_INC__
 #define __TIMEOUT_INC__
 
-#include "event.h"
+#include "util.h"
 
 void timeout_init(void);
 void timeout_execute(env_t *env);

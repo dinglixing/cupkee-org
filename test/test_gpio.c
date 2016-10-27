@@ -45,19 +45,42 @@ static void test_device(void)
 
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
-    // create device 'pio'
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var h = device('gpio')\r",    "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var c\r",                    "undefined\r\n", 1));
+    // create device 'gpio'
+    CU_ASSERT(0 == test_cupkee_run_with_reply("device('GPIO') >= 0\r",    "true\r\n", 1));
 
-    // get device configs
-    test_reply_show(1);
-    test_reply_show(0);
+    // create device with callback
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var e, h, h2\r", "undefined\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("device('other', def fn(err, hnd) {if (err) e = err else h = hnd})\r",    "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h\r",            "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",            "1\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("e = 0\r",        "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("(h2 = device('GPIO', fn)) >= 0\r", "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h == h2\r",      "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",            "0\r\n", 1));
+
+}
+
+static void test_config(void)
+{
+    test_cupkee_reset();
+
+    CU_ASSERT(0 == test_cupkee_start(NULL));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var e, h, c\r", "undefined\r\n", 1));
+
+
+    // get device default configs
+    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('GPIO')) >= 0\r","true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("c = config(h, 'enable')\r",  "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("c = config(h, 'select')\r",  "<array>\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("c = config(h, 'dir')\r",     "\"out\"\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("c = config(h, 'mode')\r",    "\"push-pull\"\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("c = config(h, 'other')\r",   "undefined\r\n", 1));
 
+    test_reply_show(1);
+    test_reply_show(0);
     /*
     // device configure
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'select', PORTB[0])\r", "true\r\n", 1)); // one pin
@@ -134,12 +157,13 @@ static void test_unref(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 }
 
-CU_pSuite test_pin_entry(void)
+CU_pSuite test_gpio_entry(void)
 {
-    CU_pSuite suite = CU_add_suite("misc", test_setup, test_clean);
+    CU_pSuite suite = CU_add_suite("gpio", test_setup, test_clean);
 
     if (suite) {
         CU_add_test(suite, "device",    test_device);
+        CU_add_test(suite, "config",    test_config);
         CU_add_test(suite, "read-write",test_read_write);
         CU_add_test(suite, "event",     test_event);
         CU_add_test(suite, "unref",     test_unref);

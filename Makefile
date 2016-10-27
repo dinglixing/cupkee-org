@@ -76,6 +76,7 @@ serc: main
 	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk serc
 
 test: build bsp sys lang
+	@rm -rf ${BUILD_DIR}/test.elf
 	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/test.mk
 	${BUILD_DIR}/test.elf
 

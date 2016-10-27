@@ -55,8 +55,8 @@ int main(int argc, const char *argv[])
     if (!test_misc_entry()) {
         printf("Init test suite \"%s\" fail\n", "misc");
     }
-    if (!test_pin_entry()) {
-        printf("Init test suite \"%s\" fail\n", "pin");
+    if (!test_gpio_entry()) {
+        printf("Init test suite \"%s\" fail\n", "gpio");
     }
 
     CU_basic_set_mode(CU_BRM_VERBOSE);

@@ -1,7 +1,7 @@
 #ifndef __SHELL_INC__
 #define __SHELL_INC__
 
-#include "panda.h"
+#include "util.h"
 
 int  shell_init(env_t *env, void *mem, int size);
 int  shell_start(const char *init_script);
