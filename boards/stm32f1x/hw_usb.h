@@ -5,8 +5,8 @@
 
 #include <stdint.h>
 
-void hal_usb_setup(void);
-void hal_usb_poll(void);
+void hw_usb_setup(void);
+void hw_usb_poll(void);
 
 
 #endif /* __SETUP_USB_INC__ */

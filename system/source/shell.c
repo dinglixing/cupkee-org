@@ -186,7 +186,7 @@ static int input_enter(void)
 
 static int input_save(void)
 {
-    if (hal_scripts_save(input_buf)) {
+    if (hw_scripts_save(input_buf)) {
         console_puts("save fail ...");
         return 0;
     } else {
@@ -217,7 +217,7 @@ static int run_initial_scripts(env_t *env, const char *initial)
         err = interp_execute_string(env, initial, &res);
     }
 
-    while (err >= 0 && NULL != (script = hal_scripts_load(script))) {
+    while (err >= 0 && NULL != (script = hw_scripts_load(script))) {
         err = interp_execute_string(env, script, &res);
     }
 

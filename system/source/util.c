@@ -16,11 +16,10 @@ void cupkee_do_callback(env_t *env, val_t *cb, uint8_t ac, val_t *av)
     }
 }
 
-void cupkee_error(val_t *err, env_t *env, int code)
+val_t cupkee_error(env_t *env, int code)
 {
     (void) env;
-    (void) code;
 
-    val_set_number(err, 1);
+    return val_mk_number(code);
 }
 

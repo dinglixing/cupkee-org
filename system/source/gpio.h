@@ -5,5 +5,7 @@
 
 extern cupkee_driver_t cupkee_gpio_driver;
 
+int gpio_setup(void);
+
 #endif /* __GPIO_INC__ */
 

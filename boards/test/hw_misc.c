@@ -1,14 +1,22 @@
-#include <bsp.h>
+/*******************************************************************************
+ * dbg field
+*******************************************************************************/
 #include "hardware.h"
 
 #define SCRIPTS_MAX_SIZE    (1 * 1024)
 
-static char scripts_storage[SCRIPTS_MAX_SIZE];
-static int  scripts_end = 0;
+static char dbg_scripts_storage[SCRIPTS_MAX_SIZE];
+static int  dbg_scripts_end = 0;
+
+
+/*******************************************************************************
+ * hw field
+*******************************************************************************/
+#include <bsp.h>
 
 static inline int storage_ptr_valid(const void *addr)
 {
-    int dis = (intptr_t)addr - (intptr_t)scripts_storage;
+    int dis = (intptr_t)addr - (intptr_t)dbg_scripts_storage;
 
     return dis >= 0 && dis < SCRIPTS_MAX_SIZE && (dis % 4) == 0;
 }
@@ -30,8 +38,8 @@ static int storage_clear(const void *addr, int size)
 
 static int storage_write(const void *data, int size)
 {
-    uint8_t *bgn = (uint8_t *)scripts_storage + scripts_end;
-    uint8_t *end = (uint8_t *)scripts_storage + SCRIPTS_MAX_SIZE;
+    uint8_t *bgn = (uint8_t *)dbg_scripts_storage + dbg_scripts_end;
+    uint8_t *end = (uint8_t *)dbg_scripts_storage + SCRIPTS_MAX_SIZE;
     int tail;
 
     if (!storage_ptr_valid(bgn)) {
@@ -57,7 +65,7 @@ static int storage_write(const void *data, int size)
         size += 4 - tail;
     }
 
-    scripts_end += size;
+    dbg_scripts_end += size;
 
     return 0;
 }
@@ -74,10 +82,13 @@ static const char *hw_scripts_get(int id)
     return s;
 }
 
+/*******************************************************************************
+ * bsp interface
+*******************************************************************************/
 int hw_scripts_erase(void)
 {
-    memset(scripts_storage, 0xff, SCRIPTS_MAX_SIZE);
-    scripts_end = 0;
+    memset(dbg_scripts_storage, 0xff, SCRIPTS_MAX_SIZE);
+    dbg_scripts_end = 0;
     return 0;
 }
 
@@ -93,8 +104,8 @@ int hw_scripts_remove(int id)
 
 const char *hw_scripts_load(const char *prev)
 {
-    char *cur = prev ? (char *)prev : (char *) scripts_storage;
-    char *end = (char *) scripts_storage +  SCRIPTS_MAX_SIZE;
+    char *cur = prev ? (char *)prev : (char *) dbg_scripts_storage;
+    char *end = (char *) dbg_scripts_storage +  SCRIPTS_MAX_SIZE;
 
     if (!storage_ptr_valid(cur)) {
         return NULL;

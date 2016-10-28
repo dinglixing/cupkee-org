@@ -116,33 +116,33 @@ val_t native_led(env_t *env, int ac, val_t *av)
         const char *req = val_2_cstring(av);
 
         if (!strcmp(req, "on")) {
-            hal_led_on();
+            hw_led_on();
             return val_mk_undefined();
         } else
         if (!strcmp(req, "off")){
-            hal_led_off();
+            hw_led_off();
             return val_mk_undefined();
         }
     }
-    hal_led_toggle();
+    hw_led_toggle();
     return val_mk_undefined();
 }
 
 val_t native_sysinfos(env_t *env, int ac, val_t *av)
 {
-    hal_info_t hal;
+    hw_info_t hw;
     char buf[80];
 
     (void) ac;
     (void) av;
 
-    hal_info_get(&hal);
+    hw_info_get(&hw);
 
-    snprintf(buf, 80, "FREQ: %uM\r\n", hal.sys_freq / 1000000);
+    snprintf(buf, 80, "FREQ: %uM\r\n", hw.sys_freq / 1000000);
     console_puts(buf);
-    snprintf(buf, 80, "RAM: %dK\r\n", hal.ram_sz / 1024);
+    snprintf(buf, 80, "RAM: %dK\r\n", hw.ram_sz / 1024);
     console_puts(buf);
-    snprintf(buf, 80, "ROM: %dK\r\n\r\n", hal.rom_sz / 1024);
+    snprintf(buf, 80, "ROM: %dK\r\n\r\n", hw.rom_sz / 1024);
     console_puts(buf);
     snprintf(buf, 80, "symbal: %d/%d, ", env->symbal_tbl_hold, env->symbal_tbl_size);
     console_puts(buf);
@@ -205,14 +205,14 @@ val_t native_scripts(env_t *env, int ac, val_t *av)
     if (del) {
         int err;
         if (which < 0) {
-            err = hal_scripts_erase();
+            err = hw_scripts_erase();
         } else {
-            err = hal_scripts_remove(which);
+            err = hw_scripts_remove(which);
         }
         return val_mk_boolean(err == 0 ? val_mk_boolean(1) : val_mk_boolean(0));
     }
 
-    while (NULL != (script = hal_scripts_load(script))) {
+    while (NULL != (script = hw_scripts_load(script))) {
         if (which < 0 || which == n) {
             char id[16];
             snprintf(id, 16, "[%.4d] ", n);

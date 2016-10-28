@@ -10,8 +10,9 @@
 #include <libopencm3/stm32/flash.h>
 
 #include <bsp.h>
-#include "usb.h"
-#include "storage.h"
+#include "hw_usb.h"
+#include "hw_storage.h"
+#include "hw_gpio.h"
 
 #define MAIN_STACK_SIZE 8192
 
@@ -27,13 +28,13 @@ extern char end;
 static int memory_alloced = 0;
 static int memory_size = 0;
 
-static void memory_init(void)
+static void hw_memory_init(void)
 {
     memory_alloced = 0;
     memory_size = (char *)(vector_table.initial_sp_value) - (&end) - MAIN_STACK_SIZE;
 }
 
-static void hal_led_setup(void)
+static void hw_led_setup(void)
 {
 	rcc_periph_clock_enable(RCC_GPIOA);
 
@@ -43,7 +44,7 @@ static void hal_led_setup(void)
 	gpio_set(GPIOA, GPIO8);
 }
 
-static void hal_systick_setup(void)
+static void hw_systick_setup(void)
 {
     systick_set_frequency(SYSTEM_TICKS_PRE_SEC, 72000000);
 
@@ -51,7 +52,7 @@ static void hal_systick_setup(void)
     systick_counter_enable();
 }
 
-void hal_info_get(hal_info_t *info)
+void hw_info_get(hw_info_t *info)
 {
     if (info) {
         info->sys_freq = 72000000;
@@ -63,38 +64,40 @@ void hal_info_get(hal_info_t *info)
     }
 }
 
-void hal_led_on(void)
+void hw_led_on(void)
 {
 	gpio_clear(GPIOA, GPIO8);
 }
 
-void hal_led_off(void)
+void hw_led_off(void)
 {
 	gpio_set(GPIOA, GPIO8);
 }
 
-void hal_led_toggle(void)
+void hw_led_toggle(void)
 {
 	gpio_toggle(GPIOA, GPIO8);
 }
 
-void board_setup(void)
+void hw_setup(void)
 {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
-    memory_init();
+    hw_memory_init();
 
-    hal_led_setup();
+    hw_led_setup();
+
+    hw_gpio_setup();
 
     /* setup usb: to support console */
-    hal_usb_setup();
+    hw_usb_setup();
 
-    hal_systick_setup();
+    hw_systick_setup();
 
-    hal_storage_setup();
+    hw_storage_setup();
 }
 
-int hal_memory_alloc(void **p, int size, int align)
+int hw_memory_alloc(void **p, int size, int align)
 {
     int start = (intptr_t) (&end) + memory_alloced;
     int shift = 0;
@@ -125,18 +128,15 @@ int hal_memory_alloc(void **p, int size, int align)
     return size;
 }
 
-void hal_poll(void)
+void hw_poll(void)
 {
-    hal_usb_poll();
+    hw_usb_poll();
+    hw_gpio_poll();
 }
 
-void hal_halt(void)
+void hw_halt(void)
 {
     while (1) {
-        int i;
-        for (i = 0; i < 0x1000000; i++)
-            __asm__("nop");
-        hal_led_toggle();
     }
 }
 

@@ -6,8 +6,8 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
-#include "bsp.h"
-#include "usb.h"
+#include <bsp.h>
+#include "hw_usb.h"
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -213,44 +213,44 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 
 static usbd_device *usbd_dev;
 
-void hal_usb_setup(void)
+void hw_usb_setup(void)
 {
 	usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
 }
 
-int hal_console_write_byte(char c)
+int hw_console_putc(int c)
 {
     return usbd_ep_write_packet(usbd_dev, 0x82, &c, 1);
 }
 
-int hal_console_puts(const char *s)
+int hw_console_puts(const char *s)
 {
     const char *p = s;
-    while (*p && hal_console_write_byte(*p)) {
+    while (*p && hw_console_putc(*p)) {
         p++;
     }
     return p - s;
 }
 
-int hal_console_write_sync_byte(char c)
+int hw_console_sync_putc(int c)
 {
     while(!usbd_ep_write_packet(usbd_dev, 0x82, &c, 1))
         ;
     return 1;
 }
 
-int hal_console_sync_puts(const char *s)
+int hw_console_sync_puts(const char *s)
 {
     const char *p = s;
     while (*p) {
-        hal_console_write_sync_byte(*p);
+        hw_console_sync_putc(*p);
         p++;
     }
     return p - s;
 }
 
-int hal_console_set_cb(void (*input)(void *, int), void (*drain)(void))
+int hw_console_set_callback(void (*input)(void *, int), void (*drain)(void))
 {
     console_input_cb = input;
     console_drain_cb = drain;
@@ -258,7 +258,7 @@ int hal_console_set_cb(void (*input)(void *, int), void (*drain)(void))
     return 0;
 }
 
-void hal_usb_poll(void)
+void hw_usb_poll(void)
 {
     usbd_poll(usbd_dev);
 

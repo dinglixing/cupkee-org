@@ -5,21 +5,30 @@
 #include <stdint.h>
 #include <string.h>
 
-void hw_reset(void);
+/******************************************************************************
+ * Debug api
+******************************************************************************/
+// MISC
+void hw_dbg_reset(void);
+void hw_dbg_set_systicks(uint32_t x);
+// CONSOLE
+void hw_dbg_console_reset(void);
+void hw_dbg_console_set_input(const char *data);
+int  hw_dbg_console_get_reply(char **ptr);
+void hw_dbg_console_clr_buf(void);
+// GPIO
+int hw_dbg_gpio_get_pin(int port, int pin);
+int hw_dbg_gpio_set_pin(int port, int pin);
+int hw_dbg_gpio_clr_pin(int port, int pin);
 
-void hw_systicks_set(uint32_t x);
-int  hw_memory_alloc(void **p, int size, int align);
-
-void hw_console_reset(void);
-void hw_console_give(const char *data);
-int  hw_console_reply(char **ptr);
-void hw_console_set_cb(void (*input)(void *, int), void (*drain)(void));
+/******************************************************************************
+ * Hardware interface not in bsp.h
+******************************************************************************/
+// CONSOLE
+void hw_console_setup(void);
 int  hw_console_putc(int ch);
-void hw_console_buf_clear(void);
-
-int hw_scripts_erase(void);
-int hw_scripts_remove(int id);
-int hw_scripts_save(const char *s);
-const char *hw_scripts_load(const char *prev);
+// GPIO
+int  hw_gpio_setup(void);
+void hw_gpio_poll(void);
 
 #endif /* __HW_MOCK_INC__ */

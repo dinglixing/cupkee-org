@@ -5,7 +5,7 @@
 #include <libopencm3/stm32/flash.h>
 
 #include <bsp.h>
-#include "storage.h"
+#include "hw_storage.h"
 
 static int  _storage_sec_size;
 static int  _storage_usr_size;
@@ -93,19 +93,19 @@ static int storage_write(const void *data, int size)
     }
 }
 
-static const char *hal_scripts_get(int id)
+static const char *hw_scripts_get(int id)
 {
     const char *s;
 
-    s = hal_scripts_load(NULL);
+    s = hw_scripts_load(NULL);
     while (s && 0 < id--) {
-        s = hal_scripts_load(s);
+        s = hw_scripts_load(s);
     }
 
     return s;
 }
 
-void hal_storage_setup(void)
+void hw_storage_setup(void)
 {
     int rom = desig_get_flash_size();
 
@@ -121,7 +121,7 @@ void hal_storage_setup(void)
     _storage_usr_base = (char *) (0x08000000 + (rom - _storage_usr_size));
 }
 
-int hal_scripts_erase(void)
+int hw_scripts_erase(void)
 {
     int off;
 
@@ -137,9 +137,9 @@ int hal_scripts_erase(void)
     return 0;
 }
 
-int hal_scripts_remove(int id)
+int hw_scripts_remove(int id)
 {
-    const char *pos = hal_scripts_get(id);
+    const char *pos = hw_scripts_get(id);
 
     if (pos) {
         return storage_clear(pos, strlen(pos));
@@ -147,7 +147,7 @@ int hal_scripts_remove(int id)
     return -1;
 }
 
-const char *hal_scripts_load(const char *prev)
+const char *hw_scripts_load(const char *prev)
 {
     char *cur = prev ? (char *)prev : (char *) _storage_usr_base;
     char *end = (char *) _storage_usr_base +  _storage_usr_size;
@@ -187,7 +187,7 @@ const char *hal_scripts_load(const char *prev)
     return cur;
 }
 
-int hal_scripts_save(const char *s)
+int hw_scripts_save(const char *s)
 {
     int len = strlen(s);
 

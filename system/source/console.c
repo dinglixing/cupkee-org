@@ -67,7 +67,7 @@ static void parse_input(void *data, int len)
     pos += snprintf(buf + pos, 128 - pos, "\r\n");
     buf[pos] = 0;
 
-    hal_console_sync_puts(buf);
+    hw_console_sync_puts(buf);
 }
 #endif
 
@@ -369,7 +369,7 @@ static void console_drain_handle(void)
 {
     char c;
     while (console_buf_read_byte(CON_OUT, &c)) {
-        if (!hal_console_write_byte(c)) {
+        if (!hw_console_putc(c)) {
             console_buf_unread_byte(CON_OUT, c);
             break;
         }
@@ -385,7 +385,7 @@ int console_init(void)
     rbuff_init(&console_buff[CON_IN], CON_BUFF_SIZE, console_buff_mem[CON_IN]);
     rbuff_init(&console_buff[CON_OUT], CON_BUFF_SIZE, console_buff_mem[CON_OUT]);
 
-    return hal_console_set_cb(console_input_handle, console_drain_handle);
+    return hw_console_set_callback(console_input_handle, console_drain_handle);
 }
 
 int console_handle_register(int (*handle)(int))
@@ -397,7 +397,7 @@ int console_handle_register(int (*handle)(int))
 int console_put(char c)
 {
     if (rbuff_is_empty(&console_buff[CON_OUT])) {
-        if (hal_console_write_byte(c))
+        if (hw_console_putc(c))
             return 1;
     }
 
@@ -409,7 +409,7 @@ int console_puts(const char *s)
     const char *p = s;
 
     if (rbuff_is_empty(&console_buff[CON_OUT])) {
-        while(*p && hal_console_write_byte(*p))
+        while(*p && hw_console_putc(*p))
             p++;
     }
     while(*p && console_buf_write_byte(CON_OUT, *p))

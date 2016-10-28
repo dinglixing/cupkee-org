@@ -68,10 +68,10 @@ static void test_systicks(void)
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("\r", NULL, 1));
 
-    hw_systicks_set(0);
+    hw_dbg_set_systicks(0);
     CU_ASSERT(0 == test_cupkee_run_with_reply("systicks()\r", "0\r\n", 1));
 
-    hw_systicks_set(1234);
+    hw_dbg_set_systicks(1234);
     CU_ASSERT(0 == test_cupkee_run_with_reply("systicks()\r", "1234\r\n", 1));
 }
 
@@ -119,34 +119,34 @@ static void test_timeout(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "1\r\n", 1));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("var t = setTimeout(f, 10)\r", "undefined\r\n", 1));
-    hw_systicks_set(9);
+    hw_dbg_set_systicks(9);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 10));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "1\r\n", 1));
 
     // trigger timeout
-    hw_systicks_set(10);
+    hw_dbg_set_systicks(10);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "2\r\n", 1));
 
     // clear timeout
     CU_ASSERT(0 == test_cupkee_run_with_reply("var t = setTimeout(f, 10)\r", "undefined\r\n", 1));
-    hw_systicks_set(19);
+    hw_dbg_set_systicks(19);
     CU_ASSERT(0 == test_cupkee_run_with_reply("clearTimeout(t)\r", "1\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("clearTimeout(t)\r", "0\r\n", 1));
-    hw_systicks_set(20);
+    hw_dbg_set_systicks(20);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "2\r\n", 1));
 
     // register self
     CU_ASSERT(0 == test_cupkee_run_with_reply("def fn() if (a < 5) { a++, setTimeout(fn, 10)};\r", NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("fn()\r", "undefined\r\n", 1));
-    hw_systicks_set(29);
+    hw_dbg_set_systicks(29);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 10));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "3\r\n", 1));
-    hw_systicks_set(30);
+    hw_dbg_set_systicks(30);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "4\r\n", 1));
-    hw_systicks_set(40);
+    hw_dbg_set_systicks(40);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "5\r\n", 1));
 
@@ -156,20 +156,20 @@ static void test_timeout(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("t = setInterval(f, 10)\r", NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "5\r\n", 1));
     // trigger interval event
-    hw_systicks_set(50);
+    hw_dbg_set_systicks(50);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "6\r\n", 1));
-    hw_systicks_set(60);
+    hw_dbg_set_systicks(60);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "7\r\n", 1));
-    hw_systicks_set(70);
+    hw_dbg_set_systicks(70);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "8\r\n", 1));
 
     // clear interval
     CU_ASSERT(0 == test_cupkee_run_with_reply("clearInterval(t)\r", "1\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("clearInterval(t)\r", "0\r\n", 1));
-    hw_systicks_set(80);
+    hw_dbg_set_systicks(80);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "8\r\n", 1));
 }

@@ -33,10 +33,10 @@ static void memory_distribution(
     void *memory;
     int size, blocks;
 
-    size = hal_memory_alloc(&memory, -1, 16);
+    size = hw_memory_alloc(&memory, -1, 16);
     if (size < 1024 * 8) {
         // memory not enought !
-        hal_halt();
+        hw_halt();
     }
 
     blocks = size / MEM_BLOCK_SIZE;
@@ -55,7 +55,7 @@ static void core_init(void *memory, int size, int stack_mem_size, int heap_mem_s
     if(0 != interp_env_init_interactive(&core_env, memory, size,
                                         NULL, heap_mem_size,
                                         NULL, stack_mem_size / sizeof(val_t))) {
-        hal_halt();
+        hw_halt();
     }
 
     event_init();
@@ -63,7 +63,7 @@ static void core_init(void *memory, int size, int stack_mem_size, int heap_mem_s
 
 
 //static uint32_t system_ticks_count_pre = 0;
-static void sal_poll(void)
+static void ck_poll(void)
 {
     static uint32_t system_ticks_count_pre = 0;
     int e;
@@ -76,7 +76,7 @@ static void sal_poll(void)
     while (EVENT_IDLE != (e = event_get())) {
         switch (e) {
         case EVENT_CONSOLE_READY:
-            hal_console_sync_puts(logo);
+            hw_console_sync_puts(logo);
             break;
         case EVENT_CONSOLE_INPUT:
             shell_execute(&core_env);
@@ -96,7 +96,7 @@ int cupkee_init(void)
     int   core_mem_sz, shell_mem_sz, heap_mem_sz, stack_mem_sz;
 
     /* initial hardware */
-    board_setup();
+    hw_setup();
 
 
     memory_distribution(
@@ -138,8 +138,8 @@ int cupkee_start(const char *scripts)
 
 int cupkee_poll(void)
 {
-    hal_poll();
-    sal_poll();
+    hw_poll();
+    ck_poll();
     return 0;
 }
 

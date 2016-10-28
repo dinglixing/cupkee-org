@@ -15,15 +15,20 @@ static const native_t native_entry[] = {
     {"clearInterval",   native_clear_interval},
 
     {"scripts",         native_scripts},
+
+    {"pin",             native_pin},
     {"device",          native_device},
+    {"enable",          native_enable},
     {"config",          native_config},
+    {"write",           native_write},
+    {"read",            native_read},
 
     /* user native */
 };
 
 int test_cupkee_reset(void)
 {
-    hw_reset();
+    hw_dbg_reset();
 
     cupkee_init();
     cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
