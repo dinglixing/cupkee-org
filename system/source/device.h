@@ -23,8 +23,8 @@ typedef struct cupkee_driver_t {
     int (*enable)   (cupkee_device_t *dev);
     int (*disable)  (cupkee_device_t *dev);
 
-    int (*listen)   (cupkee_device_t *dev);
-    int (*ignore)   (cupkee_device_t *dev);
+    int (*listen)   (cupkee_device_t *dev, val_t *event, val_t *callback);
+    int (*ignore)   (cupkee_device_t *dev, val_t *event);
 
     val_t (*config) (cupkee_device_t *dev, env_t *env, const char *name, val_t *v);
     val_t (*read)   (cupkee_device_t *dev);

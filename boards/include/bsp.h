@@ -94,6 +94,7 @@ void hw_led_toggle(void);
 #define MAX_GPIO_SPEED          50      // M
 #define MIN_GPIO_SPEED          2       // M
 
+
 typedef struct hw_gpio_conf_t{
     uint8_t speed;
     uint8_t dir;
@@ -102,16 +103,16 @@ typedef struct hw_gpio_conf_t{
     uint8_t pins[GPIO_GROUP_SIZE];
 } hw_gpio_conf_t;
 
-hw_gpio_conf_t *hw_gpio_conf_alloc(void);
-void hw_gpio_conf_release(hw_gpio_conf_t *conf);
+int hw_gpio_group_alloc(void);
+int hw_gpio_group_release(int grp);
 void hw_gpio_conf_reset(hw_gpio_conf_t *conf);
 
 int hw_gpio_pin_is_valid(uint8_t pin);
-int hw_gpio_enable (hw_gpio_conf_t *conf);
-int hw_gpio_disable(hw_gpio_conf_t *conf);
+int hw_gpio_enable (int grp, hw_gpio_conf_t *conf);
+int hw_gpio_disable(int grp);
 
-int hw_gpio_read (hw_gpio_conf_t *conf, uint32_t *data);
-int hw_gpio_write(hw_gpio_conf_t *conf, uint32_t data);
+int hw_gpio_read (int grp, uint32_t *data);
+int hw_gpio_write(int grp, uint32_t data);
 
 
 #endif /* __BSP_INC__ */

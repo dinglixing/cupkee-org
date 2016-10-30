@@ -145,6 +145,24 @@ static inline val_t device_read(cupkee_device_t *dev)
     return dev->driver->read(dev);
 }
 
+static inline val_t device_listen(cupkee_device_t *dev, val_t *e, val_t *cb)
+{
+    if ((dev->flags & DEV_FL_ERROR)) {
+        return VAL_FALSE;
+    }
+
+    return dev->driver->listen(dev, e, cb);
+}
+
+static inline val_t device_ignore(cupkee_device_t *dev, val_t *e)
+{
+    if ((dev->flags & DEV_FL_ERROR)) {
+        return VAL_FALSE;
+    }
+
+    return dev->driver->ignore(dev, e);
+}
+
 void device_setup(void)
 {
     int i;
@@ -291,5 +309,46 @@ val_t native_read(env_t *env, int ac, val_t *av)
     }
 
     return device_read(dev);
+}
+
+val_t native_listen(env_t *env, int ac, val_t *av)
+{
+    cupkee_device_t *dev;
+
+    (void) env;
+
+    if (ac < 3 || !(dev = device_get(av))) {
+        return VAL_UNDEFINED;
+    }
+
+    val_t *event = av + 1;
+    val_t *cb = av + 2;
+
+    if (!val_is_string(event) && !val_is_number(event)) {
+        return VAL_FALSE;
+    }
+    if (!val_is_function(cb)) {
+        return VAL_FALSE;
+    }
+
+    return device_listen(dev, event, cb);
+}
+
+val_t native_ignore(env_t *env, int ac, val_t *av)
+{
+    cupkee_device_t *dev;
+
+    (void) env;
+
+    if (ac < 2 || !(dev = device_get(av))) {
+        return VAL_UNDEFINED;
+    }
+
+    val_t *event = av + 1;
+    if (!val_is_string(event) && !val_is_number(event)) {
+        return VAL_FALSE;
+    }
+
+    return device_ignore(dev, event);
 }
 

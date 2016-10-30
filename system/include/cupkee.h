@@ -47,8 +47,12 @@ val_t native_unref(env_t *env, int ac, val_t *av);
 
 val_t native_enable(env_t *env, int ac, val_t *av);
 val_t native_config(env_t *env, int ac, val_t *av);
+
 val_t native_read(env_t *env, int ac, val_t *av);
 val_t native_write(env_t *env, int ac, val_t *av);
+
+val_t native_listen(env_t *env, int ac, val_t *av);
+val_t native_ignore(env_t *env, int ac, val_t *av);
 
 // GPIO api
 val_t native_pin(env_t *env, int ac, val_t *av);

@@ -2,12 +2,24 @@
 #include "device.h"
 #include "gpio.h"
 
+typedef struct ctrl_gpio_group_t {
+    int             group;
+    hw_gpio_conf_t  conf;
+} ctrl_gpio_group_t;
+
+static ctrl_gpio_group_t _ctrl_blocks[GPIO_GROUP_MAX];
+
 static int gpio_init(cupkee_device_t *dev)
 {
-    hw_gpio_conf_t *conf = hw_gpio_conf_alloc();
+    int grp = hw_gpio_group_alloc();
 
-    if (conf) {
-        dev->data = conf;
+    if (grp >= 0 && grp < GPIO_GROUP_MAX) {
+        ctrl_gpio_group_t *_ctrl = &_ctrl_blocks[grp];
+
+        hw_gpio_conf_reset(&_ctrl->conf);
+        _ctrl->group = grp;
+
+        dev->data = _ctrl;
         return CUPKEE_OK;
     }
     return -CUPKEE_ERESOURCE;
@@ -15,13 +27,13 @@ static int gpio_init(cupkee_device_t *dev)
 
 static int gpio_deinit(cupkee_device_t *dev)
 {
-    hw_gpio_conf_t *conf = (hw_gpio_conf_t *)dev->data;
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
 
-    if (!conf) {
+    if (!_ctrl) {
         return -CUPKEE_EINVAL;
     }
 
-    hw_gpio_disable(conf);
+    hw_gpio_disable(_ctrl->group);
     dev->data = NULL;
 
     return CUPKEE_OK;
@@ -29,23 +41,30 @@ static int gpio_deinit(cupkee_device_t *dev)
 
 static int gpio_enable(cupkee_device_t *dev)
 {
-    return hw_gpio_enable(dev->data);
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
+    return hw_gpio_enable(_ctrl->group, &_ctrl->conf);
 }
 
 static int gpio_disable(cupkee_device_t *dev)
 {
-    return hw_gpio_disable(dev->data);
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
+    return hw_gpio_disable(_ctrl->group);
 }
 
-static int gpio_listen(cupkee_device_t *dev)
+static int gpio_listen(cupkee_device_t *dev, val_t *event, val_t *callback)
 {
     (void) dev;
+    (void) event;
+    (void) callback;
+
     return -CUPKEE_EIMPLEMENT;
 }
 
-static int gpio_ignore(cupkee_device_t *dev)
+static int gpio_ignore(cupkee_device_t *dev, val_t *event)
 {
     (void) dev;
+    (void) event;
+
     return -CUPKEE_EIMPLEMENT;
 }
 
@@ -58,13 +77,14 @@ static void group_add_pin(hw_gpio_conf_t *conf, uint8_t pin)
 
 static val_t gpio_config_get_sel(cupkee_device_t *dev, env_t *env)
 {
-    hw_gpio_conf_t *conf = (hw_gpio_conf_t *)dev->data;
-    val_t pins[GPIO_GROUP_MAX];
-    int i;
-
-    if (!conf) {
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
+    if (!_ctrl) {
         return VAL_FALSE;
     }
+
+    hw_gpio_conf_t *conf = &_ctrl->conf;
+    val_t pins[GPIO_GROUP_MAX];
+    int i;
 
     for (i = 0; i < conf->pin_num; i++) {
         val_set_number(pins + i, conf->pins[i]);
@@ -75,12 +95,14 @@ static val_t gpio_config_get_sel(cupkee_device_t *dev, env_t *env)
 
 static val_t gpio_config_set_sel(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
-    hw_gpio_conf_t *conf = (hw_gpio_conf_t *)dev->data;
-
-    (void) env;
-    if (!conf) {
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
+    if (!_ctrl) {
         return VAL_FALSE;
     }
+
+    (void) env;
+
+    hw_gpio_conf_t *conf = &_ctrl->conf;
 
     conf->pin_num = 0;
     if (val_is_number(setting)) {
@@ -114,15 +136,16 @@ static const char * const gpio_dirs[] = {
 
 static val_t gpio_config_set_dir(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
-    hw_gpio_conf_t *conf = (hw_gpio_conf_t *)dev->data;
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
     const char *s = val_2_cstring(setting);
     unsigned dir;
 
     (void) env;
 
-    if (!s || !conf) {
+    if (!s || !_ctrl) {
         return VAL_UNDEFINED;
     }
+    hw_gpio_conf_t *conf = &_ctrl->conf;
 
     for (dir = 0; dir < sizeof(gpio_dirs)/sizeof(const char *); dir++) {
         if (strcmp(s, gpio_dirs[dir])) {
@@ -137,30 +160,33 @@ static val_t gpio_config_set_dir(cupkee_device_t *dev, env_t *env, val_t *settin
 
 static val_t gpio_config_get_dir(cupkee_device_t *dev, env_t *env)
 {
-    hw_gpio_conf_t *conf = (hw_gpio_conf_t *)dev->data;
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
 
     (void) env;
 
-    if (!conf) {
+    if (!_ctrl) {
         return VAL_UNDEFINED;
-    } else {
-        uint8_t dir = conf->dir;
-        return val_mk_static_string((intptr_t)gpio_dirs[dir]);
     }
+
+    hw_gpio_conf_t *conf = &_ctrl->conf;
+    uint8_t dir = conf->dir;
+
+    return val_mk_static_string((intptr_t)gpio_dirs[dir]);
 }
 
 static val_t gpio_config_set_mod(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
-    hw_gpio_conf_t *conf = (hw_gpio_conf_t *)dev->data;
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
     const char *s = val_2_cstring(setting);
     unsigned mod;
 
     (void) env;
 
-    if (!s || !conf) {
+    if (!s || !_ctrl) {
         return VAL_UNDEFINED;
     }
 
+    hw_gpio_conf_t *conf = &_ctrl->conf;
     for (mod = 0; mod < sizeof(gpio_modes)/sizeof(const char *); mod++) {
         if (strcmp(s, gpio_modes[mod])) {
             continue;
@@ -174,48 +200,47 @@ static val_t gpio_config_set_mod(cupkee_device_t *dev, env_t *env, val_t *settin
 
 static val_t gpio_config_get_mod(cupkee_device_t *dev, env_t *env)
 {
-    hw_gpio_conf_t *conf = (hw_gpio_conf_t *)dev->data;
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
+    if (!_ctrl) {
+        return VAL_UNDEFINED;
+    }
 
     (void) env;
 
-    if (!conf) {
-        return VAL_UNDEFINED;
-    } else {
-        int mod = conf->mod;
-        return val_mk_static_string((intptr_t)gpio_modes[mod]);
-    }
+    hw_gpio_conf_t *conf = &_ctrl->conf;
+    int mod = conf->mod;
+    return val_mk_static_string((intptr_t)gpio_modes[mod]);
 }
 
 static val_t gpio_config_set_speed(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
-    hw_gpio_conf_t *conf = (hw_gpio_conf_t *)dev->data;
-
-    (void) env;
-
-    if (!conf || !val_is_number(setting)) {
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
+    if (!_ctrl || !val_is_number(setting)) {
         return VAL_UNDEFINED;
     }
 
+    (void) env;
+
     int speed = val_2_double(setting);
+
     if (speed > MAX_GPIO_SPEED || speed < MIN_GPIO_SPEED) {
         return VAL_FALSE;
     }
 
-    conf->speed = speed;
+    _ctrl->conf.speed = speed;
     return VAL_TRUE;
 }
 
 static val_t gpio_config_get_speed(cupkee_device_t *dev, env_t *env)
 {
-    hw_gpio_conf_t *conf = (hw_gpio_conf_t *)dev->data;
-
-    (void) env;
-
-    if (!conf) {
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
+    if (!_ctrl) {
         return VAL_UNDEFINED;
     }
 
-    return val_mk_number(conf->speed);
+    (void) env;
+
+    return val_mk_number(_ctrl->conf.speed);
 }
 
 static val_t gpio_config(cupkee_device_t *dev, env_t *env, const char *name, val_t *setting)
@@ -258,14 +283,11 @@ static val_t gpio_config(cupkee_device_t *dev, env_t *env, const char *name, val
 
 static val_t gpio_write(cupkee_device_t *dev, val_t *data)
 {
-    uint32_t d;
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
+    uint32_t d = val_2_double(data);
 
-    if (!val_is_number(data)) {
-        return VAL_FALSE;
-    }
-
-    d = val_2_double(data);
-    if (hw_gpio_write(dev->data, d) > 0) {
+    if (_ctrl->conf.dir != OPT_GPIO_DIR_IN &&
+        val_is_number(data) && hw_gpio_write(_ctrl->group, d) > 0) {
         return VAL_TRUE;
     } else {
         return VAL_FALSE;
@@ -274,9 +296,10 @@ static val_t gpio_write(cupkee_device_t *dev, val_t *data)
 
 static val_t gpio_read(cupkee_device_t *dev)
 {
+    ctrl_gpio_group_t *_ctrl= (ctrl_gpio_group_t*)dev->data;
     uint32_t d;
 
-    if (hw_gpio_read(dev->data, &d) > 0) {
+    if (_ctrl->conf.dir != OPT_GPIO_DIR_OUT && hw_gpio_read(_ctrl->group, &d) > 0) {
         return val_mk_number(d);
     } else {
         return VAL_FALSE;
