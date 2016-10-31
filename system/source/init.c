@@ -10,13 +10,6 @@
 #include "device.h"
 #include "timeout.h"
 
-static const char *logo = "\
- _________               __                  \r\n\
- \\_   ___ \\ __ ________ |  | __ ____   ____  \r\n\
- /    \\  \\/|  |  \\____ \\|  |/ // __ \\_/ __ \\ \r\n\
- \\     \\___|  |  /  |_> >    <\\  ___/\\  ___/ \r\n\
-  \\________/____/|   __/|__|_ \\\\____> \\____>\r\n\
-                 |__|        \\/ ATOM v0.0.1\r\n";
 static env_t core_env;
 
 
@@ -70,20 +63,18 @@ static void ck_poll(void)
 
     if (system_ticks_count_pre != system_ticks_count) {
         system_ticks_count_pre = system_ticks_count;
-        event_put(EVENT_SYSTICK_OCCUR);
+        event_put(EVENT_MAKE(EVENT_SYSTICK));
     }
 
     while (EVENT_IDLE != (e = event_get())) {
-        switch (e) {
-        case EVENT_CONSOLE_READY:
-            hw_console_sync_puts(logo);
+        switch (EVENT_TYPE(e)) {
+        case EVENT_SHELL:
+            shell_event_proc(&core_env, e);
             break;
-        case EVENT_CONSOLE_INPUT:
-            shell_execute(&core_env);
+        case EVENT_SYSTICK:
+            timeout_event_proc(&core_env, e);
             break;
-        case EVENT_SYSTICK_OCCUR:
-            timeout_execute(&core_env);
-            break;
+        case EVENT_DEVICE:
         default:
             break;
         }

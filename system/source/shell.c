@@ -23,6 +23,7 @@ typedef struct auto_complete_t {
 } auto_complete_t;
 
 static env_t *env_ptr;
+static int shell_ready = 0;
 static int shell_mode = 0;
 static int input_cached = 0;
 static int input_buf_size = 0;
@@ -30,6 +31,13 @@ static int history_max = 0;
 static char *input_buf = NULL;
 static char *history_buf = NULL;
 static char history_start, history_count, history_pos;
+static const char *logo = "\
+ _________               __                  \r\n\
+ \\_   ___ \\ __ ________ |  | __ ____   ____  \r\n\
+ /    \\  \\/|  |  \\____ \\|  |/ // __ \\_/ __ \\ \r\n\
+ \\     \\___|  |  /  |_> >    <\\  ___/\\  ___/ \r\n\
+  \\________/____/|   __/|__|_ \\\\____> \\____>\r\n\
+                 |__|        \\/ ATOM v0.0.1\r\n";
 
 static void history_init(void)
 {
@@ -180,7 +188,7 @@ static int input_complete(void)
 
 static int input_enter(void)
 {
-    event_put(EVENT_CONSOLE_INPUT);
+    event_put(EVENT_MAKE_PARAM(EVENT_SHELL, 1));
     return 0;
 }
 
@@ -197,6 +205,10 @@ static int input_save(void)
 
 static int console_ctrl_handle(int ctrl)
 {
+    if (!shell_ready) {
+        shell_ready = 1;
+        event_put(EVENT_MAKE_PARAM(EVENT_SHELL, 0));
+    }
     switch (ctrl) {
     case CON_CTRL_TABLE: return input_complete();
     case CON_CTRL_UP:    return history_load(-1);
@@ -305,6 +317,7 @@ int shell_init(env_t *env, void *mem, int size)
     history_init();
 
     /* Register console ctrl handle, to support: auto complete, history .etc */
+    shell_ready = 0;
     console_handle_register(console_ctrl_handle);
 
     env_ptr = env;
@@ -318,12 +331,18 @@ int shell_start(const char *initial)
     return run_initial_scripts(env_ptr, initial);
 }
 
-void shell_execute(env_t *env)
+void shell_event_proc(env_t *env, int event)
 {
-    if (shell_mode) {
-        shell_execute_multi(env);
+    event = EVENT_PARAM(event);
+
+    if (event == 0) {
+        hw_console_sync_puts(logo);
     } else {
-        shell_execute_line(env);
+        if (shell_mode) {
+            shell_execute_multi(env);
+        } else {
+            shell_execute_line(env);
+        }
     }
 }
 

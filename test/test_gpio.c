@@ -243,13 +243,12 @@ static void test_read_write(void)
 
 static void test_event(void)
 {
-    return;
     test_cupkee_reset();
 
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var h, d\r",                                               "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var h, d\r",                                             "undefined\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('GPIO')) >= 0\r",                            "true\r\n", 1));
 
     // configs
@@ -268,7 +267,7 @@ static void test_event(void)
 
     // listen "change"
     CU_ASSERT(0 == test_cupkee_run_with_reply("def cb(){d = read(h)}\r",                                "<function>\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("listen(h, 'change', db)\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("listen(h, 'change', def() {d = read(h)})\r",             "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d\r",                                                    "undefined\r\n", 1));
 
     hw_dbg_gpio_set_pin(0, 0);

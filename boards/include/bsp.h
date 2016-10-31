@@ -75,6 +75,12 @@ void hw_led_toggle(void);
 #define GPIO_GROUP_MAX          4       // board depened
 #define GPIO_GROUP_SIZE         8       // board depened
 
+#define GPIO_EVENT_MAGIC        (0x20)  //
+enum GPIO_EVENT_TYPE {
+    GPIO_EVENT_CHANGE = 0,
+    GPIO_EVENT_MAX,
+};
+
 #define CFG_GPIO_SEL            0       // Selected pins
 #define CFG_GPIO_DIR            1       // direction:
 #define CFG_GPIO_MOD            2
@@ -110,6 +116,8 @@ void hw_gpio_conf_reset(hw_gpio_conf_t *conf);
 int hw_gpio_pin_is_valid(uint8_t pin);
 int hw_gpio_enable (int grp, hw_gpio_conf_t *conf);
 int hw_gpio_disable(int grp);
+int hw_gpio_event_enable(int grp, int event);
+int hw_gpio_event_disable(int grp, int event);
 
 int hw_gpio_read (int grp, uint32_t *data);
 int hw_gpio_write(int grp, uint32_t data);

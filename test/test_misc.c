@@ -184,6 +184,8 @@ CU_pSuite test_misc_entry()
         CU_add_test(suite, "systicks",  test_systicks);
         CU_add_test(suite, "scripts",   test_scripts);
         CU_add_test(suite, "timeout",   test_timeout);
+        if (0) {
+        }
     }
 
     return suite;

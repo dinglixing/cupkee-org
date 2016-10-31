@@ -176,11 +176,13 @@ void timeout_init(void)
     }
 }
 
-void timeout_execute(env_t *env)
+void timeout_event_proc(env_t *env, int event)
 {
     uint32_t cur_ticks = system_ticks_count;
     timeout_t *to = timeout_wait;
     timeout_t *tr = NULL;
+
+    (void) event;
 
     timeout_wait = NULL;
     while(to) {

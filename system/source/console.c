@@ -351,11 +351,6 @@ static void console_input_proc(int type, char c)
 
 static void console_input_handle(void *data, int n)
 {
-    if (!console_ready) {
-        console_ready = 1;
-        event_put(EVENT_CONSOLE_READY);
-    }
-
     int pos = 0;
     char c = '.';
     while (pos < n) {

@@ -177,3 +177,12 @@ int hw_gpio_read(int grp, uint32_t *data)
     return 1;
 }
 
+int hw_gpio_event_enable(int grp, int event)
+{
+    return 0;
+}
+
+int hw_gpio_event_disable(int grp, int event)
+{
+    return 0;
+}

@@ -30,7 +30,6 @@ typedef enum console_ctrl_t{
 int console_init(void);
 int console_handle_register(int (*handle)(int));
 
-
 int console_put(char c);
 int console_get(void);
 

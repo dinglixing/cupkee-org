@@ -5,7 +5,8 @@
 
 int  shell_init(env_t *env, void *mem, int size);
 int  shell_start(const char *init_script);
-void shell_execute(env_t *env);
+
+void shell_event_proc(env_t *env, int event);
 
 #endif /* __SHELL_INC__ */
 

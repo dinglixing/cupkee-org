@@ -151,7 +151,8 @@ static inline val_t device_listen(cupkee_device_t *dev, val_t *e, val_t *cb)
         return VAL_FALSE;
     }
 
-    return dev->driver->listen(dev, e, cb);
+    return dev->driver->listen(dev, e, cb) == CUPKEE_OK ?
+           VAL_TRUE : VAL_FALSE;
 }
 
 static inline val_t device_ignore(cupkee_device_t *dev, val_t *e)
@@ -160,7 +161,8 @@ static inline val_t device_ignore(cupkee_device_t *dev, val_t *e)
         return VAL_FALSE;
     }
 
-    return dev->driver->ignore(dev, e);
+    return dev->driver->ignore(dev, e) == CUPKEE_OK ?
+           VAL_TRUE : VAL_FALSE;
 }
 
 void device_setup(void)

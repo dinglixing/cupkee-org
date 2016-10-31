@@ -10,9 +10,10 @@
 #include <panda.h>
 
 /************************************************************************
- * Cupkee error code 
+ * Cupkee error code
  ***********************************************************************/
 #define CUPKEE_OK               0       // not implement
+#define CUPKEE_ERROR            10000   // error not in list:
 #define CUPKEE_EIMPLEMENT       20000   // not implement
 #define CUPKEE_ENAME            20001   // invalid device name
 #define CUPKEE_EINVAL           20002   // invalid argument

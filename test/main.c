@@ -57,15 +57,9 @@ int main(int argc, const char *argv[])
     }
 
     // add test suite here:
-    if (!test_hello_entry()) {
-        printf("Init test suite \"%s\" fail\n", "hello");
-    }
-    if (!test_misc_entry()) {
-        printf("Init test suite \"%s\" fail\n", "misc");
-    }
-    if (!test_gpio_entry()) {
-        printf("Init test suite \"%s\" fail\n", "gpio");
-    }
+    test_hello_entry();
+    test_misc_entry();
+    test_gpio_entry();
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();
