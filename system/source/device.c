@@ -90,7 +90,7 @@ static int device_alloc(const char *name, cupkee_device_t **pdev)
     return -CUPKEE_ENAME;
 }
 
-static inline val_t device_config(cupkee_device_t *dev, env_t *env, const char *name, val_t *setting)
+static inline val_t device_config(cupkee_device_t *dev, env_t *env, val_t *name, val_t *setting)
 {
     if (dev->flags & DEV_FL_ENBALE && setting) {
         return VAL_FALSE;
@@ -186,6 +186,26 @@ void device_setup(void)
     return;
 }
 
+void device_event_post(int id, int which, int type)
+{
+    event_put(EVENT_MAKE_PARAM3(EVENT_DEVICE, id, which, type));
+}
+
+void device_event_proc(env_t *env, int event)
+{
+    uint8_t dev   = (event >> 16) & 0xff;
+    uint8_t which = (event >> 8) & 0xff;
+    int max = sizeof(drivers)/sizeof(struct driver_entry_t);
+
+    if (dev < max) {
+        event = (event & 0xff);
+        const cupkee_driver_t *driver = drivers[dev].driver;
+        if (driver->event_handle) {
+            driver->event_handle(env, which, event);
+        }
+    }
+}
+
 val_t native_device(env_t *env, int ac, val_t *av)
 {
     cupkee_device_t *dev = NULL;
@@ -239,24 +259,21 @@ val_t native_device(env_t *env, int ac, val_t *av)
 val_t native_config(env_t *env, int ac, val_t *av)
 {
     cupkee_device_t *dev;
-    const char *name;
+    val_t *name;
     val_t *setting;
 
     if (ac == 0 || !(dev = device_get(av))) {
         return VAL_UNDEFINED;
-    } else {
-        av++; ac--;
     }
 
-    if (ac && val_is_string(av)) {
-        name = val_2_cstring(av);
-        av++; ac--;
+    if (ac > 1) {
+        name = av + 1;
     } else {
         name = NULL;
     }
 
-    if (ac) {
-        setting = av;
+    if (ac > 2) {
+        setting = av + 2;
     } else {
         setting = NULL;
     }

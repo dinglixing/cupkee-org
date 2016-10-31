@@ -2,10 +2,13 @@
 
 void cupkee_do_callback(env_t *env, val_t *cb, uint8_t ac, val_t *av)
 {
+    if (!cb) return;
+
     if (val_is_native(cb)) {
         function_native_t fn = (function_native_t) val_2_intptr(cb);
         fn(env, ac, av);
-    } else {
+    } else
+    if (val_is_script(cb)){
         if (ac) {
             int i;
             for (i = ac - 1; i >= 0; i--)
@@ -21,5 +24,23 @@ val_t cupkee_error(env_t *env, int code)
     (void) env;
 
     return val_mk_number(code);
+}
+
+int cupkee_id(val_t *in, int max, const char **names)
+{
+    int id;
+
+    if (val_is_number(in)) {
+        id = val_2_double(in);
+    } else {
+        const char *str = val_2_cstring(in);
+
+        for (id = 0; id < max && names[id]; id++) {
+            if (!strcmp(str, names[id])) {
+                break;
+            }
+        }
+    }
+    return id;
 }
 

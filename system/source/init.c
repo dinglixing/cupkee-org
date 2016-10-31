@@ -56,25 +56,15 @@ static void core_init(void *memory, int size, int stack_mem_size, int heap_mem_s
 
 
 //static uint32_t system_ticks_count_pre = 0;
-static void ck_poll(void)
+static void system_poll(void)
 {
-    static uint32_t system_ticks_count_pre = 0;
     int e;
-
-    if (system_ticks_count_pre != system_ticks_count) {
-        system_ticks_count_pre = system_ticks_count;
-        event_put(EVENT_MAKE(EVENT_SYSTICK));
-    }
 
     while (EVENT_IDLE != (e = event_get())) {
         switch (EVENT_TYPE(e)) {
-        case EVENT_SHELL:
-            shell_event_proc(&core_env, e);
-            break;
-        case EVENT_SYSTICK:
-            timeout_event_proc(&core_env, e);
-            break;
-        case EVENT_DEVICE:
+        case EVENT_SHELL:   shell_event_proc(&core_env, e);     break;
+        case EVENT_SYSTICK: timeout_event_proc(&core_env, e);   break;
+        case EVENT_DEVICE:  device_event_proc(&core_env, e);    break;
         default:
             break;
         }
@@ -88,7 +78,6 @@ int cupkee_init(void)
 
     /* initial hardware */
     hw_setup();
-
 
     memory_distribution(
             &core_mem, &core_mem_sz,
@@ -130,7 +119,9 @@ int cupkee_start(const char *scripts)
 int cupkee_poll(void)
 {
     hw_poll();
-    ck_poll();
+
+    system_poll();
+
     return 0;
 }
 

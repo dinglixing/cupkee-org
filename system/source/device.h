@@ -23,15 +23,23 @@ typedef struct cupkee_driver_t {
     int (*enable)   (cupkee_device_t *dev);
     int (*disable)  (cupkee_device_t *dev);
 
-    int (*listen)   (cupkee_device_t *dev, val_t *event, val_t *callback);
-    int (*ignore)   (cupkee_device_t *dev, val_t *event);
-
-    val_t (*config) (cupkee_device_t *dev, env_t *env, const char *name, val_t *v);
+    val_t (*config) (cupkee_device_t *dev, env_t *env, val_t *name, val_t *setting);
     val_t (*read)   (cupkee_device_t *dev);
     val_t (*write)  (cupkee_device_t *dev, val_t *data);
+
+    int (*listen)   (cupkee_device_t *dev, val_t *event, val_t *callback);
+    int (*ignore)   (cupkee_device_t *dev, val_t *event);
+    void (*event_handle) (env_t *env, uint8_t which, uint8_t event);
 } cupkee_driver_t;
 
+typedef struct device_config_handle_t {
+    val_t (*setter)(cupkee_device_t *, env_t *, val_t *);
+    val_t (*getter)(cupkee_device_t *, env_t *);
+} device_config_handle_t;
+
 void device_setup(void);
+void device_event_post(int magic, int n, int type);
+void device_event_proc(env_t *env, int event);
 
 #endif /* __DEVICE_INC__ */
 

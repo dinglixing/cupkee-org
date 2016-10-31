@@ -31,4 +31,8 @@ int  hw_console_putc(int ch);
 int  hw_gpio_setup(void);
 void hw_gpio_poll(void);
 
+//  form cupkee system
+void device_event_post(int magic, int n, int type);
+void timeout_event_post(void);
+
 #endif /* __HW_MOCK_INC__ */

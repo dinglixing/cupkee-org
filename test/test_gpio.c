@@ -86,6 +86,8 @@ static void test_config(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'select')\r",               "<array>\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'select', [pin('A', 0), pin('A', 1)])\r",  "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'select').length()\r",      "2\r\n", 1));
+    test_reply_show(1);
+    test_reply_show(0);
 
     // dir config
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'dir', 'in')\r",   "true\r\n", 1));
@@ -282,6 +284,14 @@ static void test_event(void)
     hw_dbg_gpio_clr_pin(1, 15);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d\r",                                                    "0\r\n", 1));
+
+    // ignore "change"
+    CU_ASSERT(0 == test_cupkee_run_with_reply("ignore(h, 0)\r",                                         "true\r\n", 1));
+
+    hw_dbg_gpio_set_pin(1, 15);
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d\r",                                                    "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("read(h)\r",                                              "2\r\n", 1));
 }
 
 static void test_unref(void)

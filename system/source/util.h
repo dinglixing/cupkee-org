@@ -9,6 +9,7 @@
 
 void cupkee_do_callback(env_t *env, val_t *cb, uint8_t ac, val_t *av);
 val_t cupkee_error(env_t *env, int code);
+int cupkee_id(val_t *in, int max, const char **names);
 
 #endif /* __UTIL_INC__ */
 

@@ -5,6 +5,7 @@
 #include "util.h"
 
 void timeout_init(void);
+void timeout_event_post(void);
 void timeout_event_proc(env_t *env, int e);
 
 int timeout_regiseter(uint32_t wait, val_t *handle, int repeat);

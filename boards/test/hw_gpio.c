@@ -27,7 +27,8 @@ int hw_dbg_gpio_set_pin(int port, int pin)
 typedef struct hw_gpio_group_t{
     uint8_t inused;
     uint8_t enable;
-    uint16_t  last;
+    uint8_t listen;
+    uint8_t  last;
 } hw_gpio_group_t;
 
 static hw_gpio_group_t gpio_grps[GPIO_GROUP_MAX];
@@ -41,6 +42,20 @@ static int hw_gpio_group_check(int grp)
     return -1;
 }
 
+static int hw_gpio_config_set(int grp, hw_gpio_conf_t *cfg)
+{
+    // hardware setting code here
+    gpio_cfgs[grp] = cfg;
+    return 0;
+}
+
+static int hw_gpio_config_clr(int grp)
+{
+    // hardware clear setting code here
+    gpio_cfgs[grp] = NULL;
+    return 0;
+}
+
 int hw_gpio_setup(void)
 {
     int i;
@@ -48,6 +63,7 @@ int hw_gpio_setup(void)
     for (i = 0; i < GPIO_GROUP_MAX; i++) {
         gpio_grps[i].inused = 0;
         gpio_grps[i].enable = 0;
+        gpio_grps[i].listen = 0;
         gpio_grps[i].last   = 0;
     }
 
@@ -56,6 +72,21 @@ int hw_gpio_setup(void)
 
 void hw_gpio_poll(void)
 {
+    int i;
+
+    for (i = 0; i < GPIO_GROUP_MAX; i++) {
+        hw_gpio_group_t *grp = gpio_grps + i;
+
+        if (grp->listen) {
+            uint32_t d;
+            if (hw_gpio_read(i, &d) > 0) {
+                if (d != grp->last) {
+                    device_event_post(GPIO_DEVICE_ID, i, GPIO_EVENT_CHANGE);
+                    grp->last = d;
+                }
+            }
+        }
+    }
 }
 
 int hw_gpio_group_alloc(void)
@@ -113,13 +144,12 @@ int hw_gpio_enable(int grp, hw_gpio_conf_t *cfg)
     }
 
     if (!gpio_grps[grp].enable) {
-        gpio_cfgs[grp] = cfg;
-
-        //set gpio group hw here
-        gpio_grps[grp].enable = 1;
+        if (0 == hw_gpio_config_set(grp, cfg)) {
+            gpio_grps[grp].enable = 1;
+            return 0;
+        }
     }
-
-    return 0;
+    return -1;
 }
 
 int hw_gpio_disable(int grp)
@@ -129,12 +159,12 @@ int hw_gpio_disable(int grp)
     }
 
     if (gpio_grps[grp].enable) {
-        gpio_cfgs[grp] = NULL;
-
-        //clr gpio group hw here
-        gpio_grps[grp].enable = 0;
+        if (0 == hw_gpio_config_clr(grp)) {
+            gpio_grps[grp].enable = 0;
+            return 0;
+        }
     }
-    return 0;
+    return -1;
 }
 
 int hw_gpio_write(int grp, uint32_t data)
@@ -179,10 +209,22 @@ int hw_gpio_read(int grp, uint32_t *data)
 
 int hw_gpio_event_enable(int grp, int event)
 {
+    if (hw_gpio_group_check(grp) || event >= GPIO_EVENT_MAX) {
+        return -1;
+    }
+
+    gpio_grps[grp].listen |= (1 << event);
+
     return 0;
 }
 
 int hw_gpio_event_disable(int grp, int event)
 {
+    if (hw_gpio_group_check(grp) || event >= GPIO_EVENT_MAX) {
+        return -1;
+    }
+
+    gpio_grps[grp].listen &= ~(1 << event);
+
     return 0;
 }

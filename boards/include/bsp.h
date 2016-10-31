@@ -75,7 +75,7 @@ void hw_led_toggle(void);
 #define GPIO_GROUP_MAX          4       // board depened
 #define GPIO_GROUP_SIZE         8       // board depened
 
-#define GPIO_EVENT_MAGIC        (0x20)  //
+#define GPIO_DEVICE_ID         (0)  //
 enum GPIO_EVENT_TYPE {
     GPIO_EVENT_CHANGE = 0,
     GPIO_EVENT_MAX,
@@ -85,10 +85,12 @@ enum GPIO_EVENT_TYPE {
 #define CFG_GPIO_DIR            1       // direction:
 #define CFG_GPIO_MOD            2
 #define CFG_GPIO_SPEED          3
+#define CFG_GPIO_MAX            4
 
 #define OPT_GPIO_DIR_OUT        0       // output
 #define OPT_GPIO_DIR_IN         1       // input
 #define OPT_GPIO_DIR_DUAL       2       // in & out put
+#define OPT_GPIO_DIR_MAX        3
 
 #define OPT_GPIO_MOD_PUSHPULL   0       // output only
 #define OPT_GPIO_MOD_OPENDRAIN  1       // output or dual
@@ -96,6 +98,7 @@ enum GPIO_EVENT_TYPE {
 #define OPT_GPIO_MOD_FLOATING   3       // input
 #define OPT_GPIO_MOD_PULLDOWN   4       // input
 #define OPT_GPIO_MOD_PULLUP     5       // input
+#define OPT_GPIO_MOD_MAX        6
 
 #define MAX_GPIO_SPEED          50      // M
 #define MIN_GPIO_SPEED          2       // M
