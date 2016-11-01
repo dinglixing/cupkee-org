@@ -37,9 +37,8 @@ typedef struct device_config_handle_t {
     val_t (*getter)(cupkee_device_t *, env_t *);
 } device_config_handle_t;
 
-void device_setup(void);
-void device_event_post(int magic, int n, int type);
-void device_event_proc(env_t *env, int event);
+void devices_setup(void);
+void devices_event_proc(env_t *env, int event);
 
 #endif /* __DEVICE_INC__ */
 

@@ -63,8 +63,8 @@ static void system_poll(void)
     while (EVENT_IDLE != (e = event_get())) {
         switch (EVENT_TYPE(e)) {
         case EVENT_SHELL:   shell_event_proc(&core_env, e);     break;
-        case EVENT_SYSTICK: timeout_event_proc(&core_env, e);   break;
-        case EVENT_DEVICE:  device_event_proc(&core_env, e);    break;
+        case EVENT_SYSTICK: systick_event_proc(&core_env, e);   break;
+        case EVENT_DEVICE:  devices_event_proc(&core_env, e);   break;
         default:
             break;
         }
@@ -97,7 +97,7 @@ int cupkee_init(void)
     timeout_init();
 
     /* Initial devices resource */
-    device_setup();
+    devices_setup();
 
     /* Initial shell resource */
     shell_init(&core_env, shell_mem, shell_mem_sz);

@@ -165,7 +165,7 @@ static inline val_t device_ignore(cupkee_device_t *dev, val_t *e)
            VAL_TRUE : VAL_FALSE;
 }
 
-void device_setup(void)
+void devices_setup(void)
 {
     int i;
 
@@ -186,12 +186,7 @@ void device_setup(void)
     return;
 }
 
-void device_event_post(int id, int which, int type)
-{
-    event_put(EVENT_MAKE_PARAM3(EVENT_DEVICE, id, which, type));
-}
-
-void device_event_proc(env_t *env, int event)
+void devices_event_proc(env_t *env, int event)
 {
     uint8_t dev   = (event >> 16) & 0xff;
     uint8_t which = (event >> 8) & 0xff;

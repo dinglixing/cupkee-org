@@ -1,13 +1,10 @@
 
 
-#ifndef __SETUP_USB_INC__
-#define __SETUP_USB_INC__
-
-#include <stdint.h>
+#ifndef __HW_USB_INC__
+#define __HW_USB_INC__
 
 void hw_usb_setup(void);
 void hw_usb_poll(void);
 
-
-#endif /* __SETUP_USB_INC__ */
+#endif /* __HW_USB_INC__ */
 

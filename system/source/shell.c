@@ -188,7 +188,7 @@ static int input_complete(void)
 
 static int input_enter(void)
 {
-    event_put(EVENT_MAKE_PARAM(EVENT_SHELL, 1));
+    shell_event_post(1);
     return 0;
 }
 
@@ -207,7 +207,7 @@ static int console_ctrl_handle(int ctrl)
 {
     if (!shell_ready) {
         shell_ready = 1;
-        event_put(EVENT_MAKE_PARAM(EVENT_SHELL, 0));
+        shell_event_post(0);
     }
     switch (ctrl) {
     case CON_CTRL_TABLE: return input_complete();

@@ -1,13 +1,5 @@
-#include <stdlib.h>
-#include <libopencm3/cm3/systick.h>
-#include <libopencm3/cm3/cortex.h>
-#include <libopencm3/cm3/nvic.h>
-#include <libopencm3/stm32/rcc.h>
-#include <libopencm3/usb/usbd.h>
-#include <libopencm3/usb/cdc.h>
-
+#include "hardware.h"
 #include <bsp.h>
-#include "hw_usb.h"
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,

@@ -24,15 +24,8 @@ int hw_dbg_gpio_clr_pin(int port, int pin);
 /******************************************************************************
  * Hardware interface not in bsp.h
 ******************************************************************************/
-// CONSOLE
-void hw_console_setup(void);
-int  hw_console_putc(int ch);
-// GPIO
-int  hw_gpio_setup(void);
-void hw_gpio_poll(void);
-
-//  form cupkee system
-void device_event_post(int magic, int n, int type);
-void timeout_event_post(void);
+#include "system.h"
+#include "hw_console.h"
+#include "hw_gpio.h"
 
 #endif /* __HW_MOCK_INC__ */

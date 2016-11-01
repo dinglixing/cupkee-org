@@ -26,5 +26,9 @@ void event_init(void);
 int event_put(int e);
 int event_get(void);
 
+void shell_event_post(int type);
+void systick_event_post(void);
+void devices_event_post(int id, int which, int type);
+
 #endif /* __EVENT_INC__ */
 

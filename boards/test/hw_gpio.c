@@ -81,7 +81,7 @@ void hw_gpio_poll(void)
             uint32_t d;
             if (hw_gpio_read(i, &d) > 0) {
                 if (d != grp->last) {
-                    device_event_post(GPIO_DEVICE_ID, i, GPIO_EVENT_CHANGE);
+                    devices_event_post(GPIO_DEVICE_ID, i, GPIO_EVENT_CHANGE);
                     grp->last = d;
                 }
             }

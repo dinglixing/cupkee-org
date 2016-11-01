@@ -29,3 +29,19 @@ int event_get(void)
 
     return eventq_mem[pos];
 }
+
+void devices_event_post(int id, int which, int type)
+{
+    event_put(EVENT_MAKE_PARAM3(EVENT_DEVICE, id, which, type));
+}
+
+void systick_event_post(void)
+{
+    event_put(EVENT_MAKE(EVENT_SYSTICK));
+}
+
+void shell_event_post(int type)
+{
+    event_put(EVENT_MAKE_PARAM(EVENT_SHELL, type));
+}
+

@@ -1,11 +1,6 @@
 
-#include <stdlib.h>
-#include <string.h>
-#include <libopencm3/stm32/desig.h>
-#include <libopencm3/stm32/flash.h>
-
+#include "hardware.h"
 #include <bsp.h>
-#include "hw_storage.h"
 
 static int  _storage_sec_size;
 static int  _storage_usr_size;

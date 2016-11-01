@@ -52,7 +52,7 @@ void hw_poll(void)
     static uint32_t system_ticks_count_pre = 0;
     if (system_ticks_count_pre != system_ticks_count) {
         system_ticks_count_pre = system_ticks_count;
-        timeout_event_post();
+        systick_event_post();
     }
 
     hw_gpio_poll();

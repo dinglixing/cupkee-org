@@ -1,18 +1,6 @@
-#include <stdlib.h>
-#include <string.h>
-#include <libopencm3/cm3/systick.h>
-#include <libopencm3/cm3/cortex.h>
-#include <libopencm3/cm3/nvic.h>
-#include <libopencm3/cm3/vector.h>
-#include <libopencm3/stm32/desig.h>
-#include <libopencm3/stm32/rcc.h>
-#include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/flash.h>
 
+#include "hardware.h"
 #include <bsp.h>
-#include "hw_usb.h"
-#include "hw_storage.h"
-#include "hw_gpio.h"
 
 #define MAIN_STACK_SIZE 8192
 
@@ -131,13 +119,14 @@ int hw_memory_alloc(void **p, int size, int align)
 void hw_poll(void)
 {
     static uint32_t system_ticks_count_pre = 0;
-    if (system_ticks_count_pre != system_ticks_count) {
-        system_ticks_count_pre = system_ticks_count;
-        timeout_event_post();
-    }
 
     hw_usb_poll();
     hw_gpio_poll();
+
+    if (system_ticks_count_pre != system_ticks_count) {
+        system_ticks_count_pre = system_ticks_count;
+        systick_event_post();
+    }
 }
 
 void hw_halt(void)
