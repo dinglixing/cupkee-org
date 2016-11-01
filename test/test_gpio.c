@@ -288,6 +288,40 @@ static void test_unref(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 }
 
+static void test_together(void)
+{
+    return;
+    test_cupkee_reset();
+
+    CU_ASSERT(0 == test_cupkee_start(NULL));
+
+    hw_dbg_gpio_clr_pin(0, 0);
+    hw_dbg_gpio_clr_pin(0, 1);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var v, io;\r",                                            "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("device('GPIO').enable({\
+                                                pin: [pin('a', 0), pin('a', 1)],\
+                                                mod: 'dual',\
+                                                speed: 50\
+                                              }, function(err, dev) {\
+                                                if (!err) {\
+                                                  dev.listen('change', function(){v = read(dev)});\
+                                                  io = dev;\
+                                                }\
+                                              });\r",                                                   "true\r\n", 1));
+    hw_dbg_gpio_set_pin(0, 1);
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                                    "1\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io.write(3)\r",                                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                                    "3\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io.ignore('change')\r",                                  "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io.write(0)\r",                                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                                    "3\r\n", 1));
+    CU_ASSERT(0 == hw_dbg_gpio_get_pin(0, 0));
+    CU_ASSERT(0 == hw_dbg_gpio_get_pin(0, 1));
+}
+
 CU_pSuite test_gpio_entry(void)
 {
     CU_pSuite suite = CU_add_suite("gpio", test_setup, test_clean);
@@ -300,6 +334,7 @@ CU_pSuite test_gpio_entry(void)
         CU_add_test(suite, "read-write",test_read_write);
         CU_add_test(suite, "event",     test_event);
         CU_add_test(suite, "unref",     test_unref);
+        CU_add_test(suite, "together",  test_together);
         if (0) {
         }
     }

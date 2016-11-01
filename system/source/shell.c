@@ -32,12 +32,12 @@ static char *input_buf = NULL;
 static char *history_buf = NULL;
 static char history_start, history_count, history_pos;
 static const char *logo = "\
- _________               __                  \r\n\
- \\_   ___ \\ __ ________ |  | __ ____   ____  \r\n\
+    ______               __                  \r\n\
+  /   ___ \\ __ ________ |  | __ ____   ____  \r\n\
  /    \\  \\/|  |  \\____ \\|  |/ // __ \\_/ __ \\ \r\n\
- \\     \\___|  |  /  |_> >    <\\  ___/\\  ___/ \r\n\
+ \\     \\___|  |  /  |_> |    <\\  ___/\\  ___/ \r\n\
   \\________/____/|   __/|__|_ \\\\____> \\____>\r\n\
-                 |__|        \\/ ATOM v0.0.1\r\n";
+                 |__|        \\/ v0.0.1\r\n";
 
 static void history_init(void)
 {

@@ -240,6 +240,11 @@ static void console_input_char(char c)
 {
     rbuff_t *rb = &console_buff[CON_IN];
 
+    if (rbuff_is_full(rb)) {
+        //TODO: post console error event
+        return;
+    }
+
     if (console_in_pos == rbuff_end(rb)) {
         console_put(c);
         console_buf_write_byte(CON_IN, c);
