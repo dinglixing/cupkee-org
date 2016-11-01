@@ -108,26 +108,6 @@ void print_value(val_t *v)
     }
 }
 
-val_t native_led(env_t *env, int ac, val_t *av)
-{
-    (void) env;
-
-    if (ac > 0 && val_is_string(av)) {
-        const char *req = val_2_cstring(av);
-
-        if (!strcmp(req, "on")) {
-            hw_led_on();
-            return val_mk_undefined();
-        } else
-        if (!strcmp(req, "off")){
-            hw_led_off();
-            return val_mk_undefined();
-        }
-    }
-    hw_led_toggle();
-    return val_mk_undefined();
-}
-
 val_t native_sysinfos(env_t *env, int ac, val_t *av)
 {
     hw_info_t hw;

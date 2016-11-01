@@ -119,9 +119,8 @@ int hw_gpio_group_release(int grp)
 void hw_gpio_conf_reset(hw_gpio_conf_t *conf)
 {
     conf->pin_num = 0;
-    conf->dir = OPT_GPIO_DIR_OUT;
-    conf->mod = OPT_GPIO_MOD_PUSHPULL;
-    conf->speed = MIN_GPIO_SPEED;
+    conf->mod = OPT_GPIO_MOD_INPUT_FLOAT;
+    conf->speed = OPT_GPIO_SPEED_MIN;
 }
 
 int hw_gpio_pin_is_valid(uint8_t pin)

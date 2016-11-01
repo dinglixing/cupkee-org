@@ -12,13 +12,10 @@ typedef struct gpio_group_ctrl_t {
 
 static gpio_group_ctrl_t controls[GPIO_GROUP_MAX];
 static const char *gpio_confs[] = {
-    "select", "dir", "mode", "speed"
+    "pin", "mode", "speed"
 };
 static const char *gpio_modes[] = {
-    "push-pull", "open-drain", "analog", "floating", "pull-down", "pull-up"
-};
-static const char *gpio_dirs[] = {
-    "out", "in", "dual"
+    "in-float", "in-pullupdown", "out-pushpull", "out-opendrain", "dual"
 };
 static const char *gpio_events[] = {
     "change"
@@ -26,7 +23,7 @@ static const char *gpio_events[] = {
 
 static void gpio_add_pin(hw_gpio_conf_t *conf, uint8_t pin);
 
-static val_t get_select(cupkee_device_t *dev, env_t *env)
+static val_t get_pin(cupkee_device_t *dev, env_t *env)
 {
     gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
     if (!control) {
@@ -44,7 +41,7 @@ static val_t get_select(cupkee_device_t *dev, env_t *env)
     return val_mk_array((void *)array_create(env, i, pins));
 }
 
-static val_t set_select(cupkee_device_t *dev, env_t *env, val_t *setting)
+static val_t set_pin(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
     gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
     if (!control) {
@@ -76,33 +73,6 @@ static val_t set_select(cupkee_device_t *dev, env_t *env, val_t *setting)
     }
 
     return conf->pin_num ? VAL_TRUE : VAL_FALSE;
-}
-
-static val_t set_dir(cupkee_device_t *dev, env_t *env, val_t *setting)
-{
-    gpio_group_ctrl_t *control = (gpio_group_ctrl_t*)dev->data;
-    int dir = cupkee_id(setting, 3, gpio_dirs);
-
-    if (control && dir < OPT_GPIO_DIR_MAX) {
-        control->conf.dir = dir;
-        return VAL_TRUE;
-    }
-    return VAL_UNDEFINED;
-
-    (void) env;
-}
-
-static val_t get_dir(cupkee_device_t *dev, env_t *env)
-{
-    gpio_group_ctrl_t *control = (gpio_group_ctrl_t*)dev->data;
-
-    if (!control) {
-        return VAL_UNDEFINED;
-    }
-
-    return val_mk_static_string((intptr_t)gpio_dirs[control->conf.dir]);
-
-    (void) env;
 }
 
 static val_t set_mode(cupkee_device_t *dev, env_t *env, val_t *setting)
@@ -140,7 +110,7 @@ static val_t set_speed(cupkee_device_t *dev, env_t *env, val_t *setting)
 
     int speed = val_2_double(setting);
 
-    if (speed > MAX_GPIO_SPEED || speed < MIN_GPIO_SPEED) {
+    if (speed > OPT_GPIO_SPEED_MAX || speed < OPT_GPIO_SPEED_MIN) {
         return VAL_FALSE;
     }
 
@@ -163,10 +133,9 @@ static val_t get_speed(cupkee_device_t *dev, env_t *env)
 }
 
 static device_config_handle_t config_handles[] = {
-    {set_select,    get_select},
-    {set_dir,       get_dir},
-    {set_mode,      get_mode},
-    {set_speed,     get_speed},
+    {set_pin,   get_pin},
+    {set_mode,  get_mode},
+    {set_speed, get_speed},
 };
 
 /************************************************************************************
@@ -274,8 +243,8 @@ static val_t gpio_config(cupkee_device_t *dev, env_t *env, val_t *name, val_t *s
         return VAL_FALSE;
     }
 
-    id = cupkee_id(name, 4, gpio_confs);
-    if (id < 4) {
+    id = cupkee_id(name, CFG_GPIO_MAX, gpio_confs);
+    if (id < CFG_GPIO_MAX) {
         if (setting) {
             return config_handles[id].setter(dev, env, setting);
         } else {
@@ -291,7 +260,7 @@ static val_t gpio_write(cupkee_device_t *dev, val_t *data)
     gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
     uint32_t d = val_2_double(data);
 
-    if (control->conf.dir != OPT_GPIO_DIR_IN &&
+    if (OPT_GPIO_MOD_WRITEABLE(control->conf.mod) &&
         val_is_number(data) && hw_gpio_write(control->group, d) > 0) {
         return VAL_TRUE;
     } else {
@@ -304,7 +273,8 @@ static val_t gpio_read(cupkee_device_t *dev)
     gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
     uint32_t d;
 
-    if (control->conf.dir != OPT_GPIO_DIR_OUT && hw_gpio_read(control->group, &d) > 0) {
+    if (OPT_GPIO_MOD_READABLE(control->conf.mod) &&
+        hw_gpio_read(control->group, &d) > 0) {
         return val_mk_number(d);
     } else {
         return VAL_FALSE;

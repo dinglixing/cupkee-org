@@ -7,7 +7,6 @@ static const native_t native_entry[] = {
     {"systicks",        native_systicks},
 
     {"print",           native_print},
-    {"led",             native_led},
 
     {"setTimeout",      native_set_timeout},
     {"setInterval",     native_set_interval},

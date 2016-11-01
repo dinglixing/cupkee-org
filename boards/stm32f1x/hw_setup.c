@@ -22,16 +22,6 @@ static void hw_memory_init(void)
     memory_size = (char *)(vector_table.initial_sp_value) - (&end) - MAIN_STACK_SIZE;
 }
 
-static void hw_led_setup(void)
-{
-	rcc_periph_clock_enable(RCC_GPIOA);
-
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
-
-	gpio_set(GPIOA, GPIO8);
-}
-
 static void hw_systick_setup(void)
 {
     systick_set_frequency(SYSTEM_TICKS_PRE_SEC, 72000000);
@@ -52,28 +42,11 @@ void hw_info_get(hw_info_t *info)
     }
 }
 
-void hw_led_on(void)
-{
-	gpio_clear(GPIOA, GPIO8);
-}
-
-void hw_led_off(void)
-{
-	gpio_set(GPIOA, GPIO8);
-}
-
-void hw_led_toggle(void)
-{
-	gpio_toggle(GPIOA, GPIO8);
-}
-
 void hw_setup(void)
 {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
     hw_memory_init();
-
-    hw_led_setup();
 
     hw_gpio_setup();
 
@@ -121,11 +94,13 @@ void hw_poll(void)
     static uint32_t system_ticks_count_pre = 0;
 
     hw_usb_poll();
-    hw_gpio_poll();
 
     if (system_ticks_count_pre != system_ticks_count) {
         system_ticks_count_pre = system_ticks_count;
+
         systick_event_post();
+
+        hw_gpio_poll();
     }
 }
 

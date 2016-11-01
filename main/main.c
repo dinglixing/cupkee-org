@@ -13,7 +13,6 @@ static const native_t native_entry[] = {
     {"systicks",        native_systicks},
 
     {"print",           native_print},
-    {"led",             native_led},
 
     {"setTimeout",      native_set_timeout},
     {"setInterval",     native_set_interval},
@@ -28,12 +27,25 @@ static const native_t native_entry[] = {
     {"config",          native_config},
     {"write",           native_write},
     {"read",            native_read},
+    {"listen",          native_listen},
+    {"ignore",          native_ignore},
 
     /* user native */
 
 };
 
-static char *initial = ""; // system initial scripts
+// system initial scripts
+static char *initial = "\
+var led = (function() { \
+  var h = device('GPIO');\
+  var v = 0;\
+  config(h, 0, pin('a', 8));\
+  config(h, 1, 'out-pushpull');\
+  enable(h, 1);\
+  \
+  return def() {write(h, v++)}\
+ })();\
+setInterval(led, 1000);";
 
 int main(void)
 {

@@ -62,7 +62,6 @@ int hw_scripts_remove(int id);
 int hw_scripts_save(const char *s);
 const char *hw_scripts_load(const char *prev);
 
-
 void hw_led_on(void);
 void hw_led_off(void);
 void hw_led_toggle(void);
@@ -70,44 +69,37 @@ void hw_led_toggle(void);
 /*
  * GPIO
  */
-#define GPIO_PORT_MAX           8       // 
-#define GPIO_PIN_MAX            16      // 
-#define GPIO_GROUP_MAX          4       // board depened
-#define GPIO_GROUP_SIZE         8       // board depened
-
 #define GPIO_DEVICE_ID         (0)  //
 enum GPIO_EVENT_TYPE {
     GPIO_EVENT_CHANGE = 0,
     GPIO_EVENT_MAX,
 };
 
-#define CFG_GPIO_SEL            0       // Selected pins
-#define CFG_GPIO_DIR            1       // direction:
-#define CFG_GPIO_MOD            2
-#define CFG_GPIO_SPEED          3
-#define CFG_GPIO_MAX            4
+#define CFG_GPIO_PIN                    0       // Selected pins
+#define CFG_GPIO_MOD                    1       // direction:
+#define CFG_GPIO_SPEED                  2
+#define CFG_GPIO_MAX                    3
 
-#define OPT_GPIO_DIR_OUT        0       // output
-#define OPT_GPIO_DIR_IN         1       // input
-#define OPT_GPIO_DIR_DUAL       2       // in & out put
-#define OPT_GPIO_DIR_MAX        3
-
-#define OPT_GPIO_MOD_PUSHPULL   0       // output only
-#define OPT_GPIO_MOD_OPENDRAIN  1       // output or dual
-#define OPT_GPIO_MOD_ANALOG     2       // analog in/out
-#define OPT_GPIO_MOD_FLOATING   3       // input
-#define OPT_GPIO_MOD_PULLDOWN   4       // input
-#define OPT_GPIO_MOD_PULLUP     5       // input
-#define OPT_GPIO_MOD_MAX        6
-
-#define MAX_GPIO_SPEED          50      // M
-#define MIN_GPIO_SPEED          2       // M
-
+#define OPT_GPIO_MOD_INPUT_FLOAT        0       // input
+#define OPT_GPIO_MOD_INPUT_PULL_UPDOWN  1       // input
+#define OPT_GPIO_MOD_OUTPUT_PUSHPULL    2       // output only
+#define OPT_GPIO_MOD_OUTPUT_OPENDRAIN   3       // output or dual
+#define OPT_GPIO_MOD_DUAL               4       // input
+#define OPT_GPIO_MOD_MAX                5
+#define OPT_GPIO_MOD_READABLE(mod)      ((mod) == OPT_GPIO_MOD_DUAL || (mod) < OPT_GPIO_MOD_OUTPUT_PUSHPULL)
+#define OPT_GPIO_MOD_WRITEABLE(mod)     ((mod) >= OPT_GPIO_MOD_OUTPUT_PUSHPULL)
+/* board dependent start */
+#define GPIO_PORT_MAX                   7
+#define GPIO_PIN_MAX                    16
+#define GPIO_GROUP_MAX                  4
+#define GPIO_GROUP_SIZE                 8
+#define OPT_GPIO_SPEED_MAX              50      // M
+#define OPT_GPIO_SPEED_MIN              2       // M
+/* board dependent end */
 
 typedef struct hw_gpio_conf_t{
-    uint8_t speed;
-    uint8_t dir;
     uint8_t mod;
+    uint8_t speed;
     uint8_t pin_num;
     uint8_t pins[GPIO_GROUP_SIZE];
 } hw_gpio_conf_t;
