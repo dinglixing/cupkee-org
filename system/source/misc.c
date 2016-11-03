@@ -98,8 +98,8 @@ void print_value(val_t *v)
     if (val_is_function(v)) {
         console_puts("<function>\r\n");
     } else
-    if (val_is_dictionary(v)) {
-        console_puts("<dictionary>\r\n");
+    if (val_is_object(v)) {
+        console_puts("<object>\r\n");
     } else
     if (val_is_array(v)) {
         console_puts("<array>\r\n");

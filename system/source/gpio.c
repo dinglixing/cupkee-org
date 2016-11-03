@@ -96,7 +96,7 @@ static val_t get_mode(cupkee_device_t *dev, env_t *env)
         return VAL_UNDEFINED;
     }
 
-    return val_mk_static_string((intptr_t)gpio_modes[control->conf.mod]);
+    return val_mk_foreign_string((intptr_t)gpio_modes[control->conf.mod]);
 
     (void) env;
 }
