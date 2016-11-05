@@ -84,7 +84,7 @@ clean:
 	@rm -rf ${BUILD_DIR}
 
 do:
-	rm -rf build/cupkee.elf
+	@rm -rf ${BUILD_DIR}/cupkee.elf
 
 load: do main
 	openocd -fopenocd/interface/jlink.cfg -fopenocd/target/stm32f1x.cfg \
