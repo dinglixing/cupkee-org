@@ -46,21 +46,9 @@ static void test_device(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
     // create device 'gpio'
-    CU_ASSERT(0 == test_cupkee_run_with_reply("device('GPIO') >= 0\r",    "true\r\n", 1));
-
-    // create device with callback
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var e, h, h2\r", "undefined\r\n", 1));
-
-    CU_ASSERT(0 == test_cupkee_run_with_reply("device('other', def fn(err, hnd) {if (err) e = err else h = hnd})\r",    "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h\r",            "undefined\r\n", 1));
-
-    CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",            "-20001\r\n", 1));
-
-    CU_ASSERT(0 == test_cupkee_run_with_reply("e = 0\r",        "0\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("(h2 = device('GPIO', fn)) >= 0\r", "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h == h2\r",      "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",            "0\r\n", 1));
-
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var h\r",                                            "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('GPIO')\r",                               "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('other')\r",                              "undefined\r\n", 1));
 }
 
 static void test_config(void)
@@ -69,16 +57,15 @@ static void test_config(void)
 
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var e, h, c\r", "undefined\r\n", 1));
-
-
-    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('GPIO')) >= 0\r","true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var e, h, c\r",                                      "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('GPIO')) != false\r",                    "true\r\n", 1));
 
     // get device default configs
-    CU_ASSERT(0 == test_cupkee_run_with_reply("c = config(h, 'pin')\r",   "<array>\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("c = config(h, 'mode')\r",  "\"in-float\"\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("c = config(h, 'speed')\r", "2\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("c = config(h, 'other')\r", "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('pin')\r",                                  "<array>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('mode')\r",                                 "\"in-float\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('speed')\r",                                "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('other')\r",                                "undefined\r\n", 1));
+
 
     // pins config
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', pin('A', 0))\r",  "true\r\n", 1));
@@ -125,7 +112,7 @@ static void test_write(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("var h, d\r",                                             "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('GPIO')) >= 0\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('GPIO'))\r",                                  "<object>\r\n", 1));
 
     // configs
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', [pin('A', 0), pin('B', 15)])\r",        "true\r\n", 1));
@@ -172,7 +159,7 @@ static void test_read(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("var h, d\r",                                             "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('GPIO')) >= 0\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('GPIO'))\r",                                  "<object>\r\n", 1));
 
     // configs
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', [pin('A', 0), pin('B', 15)])\r",        "true\r\n", 1));
@@ -206,7 +193,7 @@ static void test_read_write(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("var h, d\r",                                             "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('GPIO')) >= 0\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('GPIO'))\r",                                  "<object>\r\n", 1));
 
     // configs
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', [pin('A', 0), pin('B', 15)])\r",        "true\r\n", 1));
@@ -239,7 +226,7 @@ static void test_event(void)
 
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("var h, d\r",                                             "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('GPIO')) >= 0\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('GPIO'))\r",                                  "<object>\r\n", 1));
 
     // configs
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', [pin('A', 0), pin('B', 15)])\r",        "true\r\n", 1));
@@ -290,29 +277,36 @@ static void test_unref(void)
 
 static void test_together(void)
 {
-    return;
     test_cupkee_reset();
 
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
+//
     hw_dbg_gpio_clr_pin(0, 0);
     hw_dbg_gpio_clr_pin(0, 1);
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var v, io;\r",                                            "2\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("device('GPIO').enable({\
-                                                pin: [pin('a', 0), pin('a', 1)],\
-                                                mod: 'dual',\
-                                                speed: 50\
-                                              }, function(err, dev) {\
-                                                if (!err) {\
-                                                  dev.listen('change', function(){v = read(dev)});\
-                                                  io = dev;\
-                                                }\
-                                              });\r",                                                   "true\r\n", 1));
-    hw_dbg_gpio_set_pin(0, 1);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var v, io;\r",                                            "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("\
+device('GPIO').enable({\
+  pin: [pin('a', 0), pin('a', 1)],\
+  mode: 'dual'\
+}, function(err, dev) {\
+  if (!err) {\
+    io = dev;\
+  }\
+});\r",                                                                                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io\r",                                                   "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io.listen('change', def() {v = read(io)})\r",            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io.config('pin');\r",                                    "<array>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io.config('mode');\r",                                   "\"dual\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io.config('speed');\r",                                  "2\r\n", 1));
+    test_reply_show(0);
+
+    hw_dbg_gpio_set_pin(0, 0);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                                    "1\r\n", 1));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("io.write(3)\r",                                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io.read()\r",                                            "3\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                                    "3\r\n", 1));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("io.ignore('change')\r",                                  "true\r\n", 1));
@@ -320,6 +314,25 @@ static void test_together(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                                    "3\r\n", 1));
     CU_ASSERT(0 == hw_dbg_gpio_get_pin(0, 0));
     CU_ASSERT(0 == hw_dbg_gpio_get_pin(0, 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("\
+device('GPIO').enable({\
+  pin: [pin('b', 0), pin('b', 1)],\
+  mode: 'dual'\
+}, function(err, dev){\
+  if (!err) {\
+    io = dev\
+    dev.listen('change', function(){v = read(io)});\
+  }\
+})\r",                                                                                                  "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v = 0\r",                                                "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("io.write(1)\r",                                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                                    "1\r\n", 1));
+
+    return;
+
+    //
 }
 
 CU_pSuite test_gpio_entry(void)

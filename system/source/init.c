@@ -54,7 +54,6 @@ static void core_init(void *memory, int size, int stack_mem_size, int heap_mem_s
     event_init();
 }
 
-
 //static uint32_t system_ticks_count_pre = 0;
 static void system_poll(void)
 {
@@ -83,9 +82,11 @@ int cupkee_init(void)
             &core_mem, &core_mem_sz,
             &heap_mem_sz, &stack_mem_sz,
             &shell_mem, &shell_mem_sz);
+    //printf("core: %d, heap: %d, stack: %d, shell: %d\n",
+    //       core_mem_sz, heap_mem_sz, stack_mem_sz, shell_mem_sz);
 
     /* Initial memory evn, etc. */
-    core_init(core_mem, core_mem_sz, heap_mem_sz, stack_mem_sz);
+    core_init(core_mem, core_mem_sz, stack_mem_sz, heap_mem_sz);
 
     /* Initial console reources */
     console_init();

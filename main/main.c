@@ -21,14 +21,14 @@ static const native_t native_entry[] = {
 
     {"scripts",         native_scripts},
 
-    {"pin",             native_pin},
+    {"pin",             gpio_native_pin},
     {"device",          native_device},
-    {"enable",          native_enable},
-    {"config",          native_config},
-    {"write",           native_write},
-    {"read",            native_read},
-    {"listen",          native_listen},
-    {"ignore",          native_ignore},
+    {"enable",          device_native_enable},
+    {"config",          device_native_config},
+    {"write",           device_native_write},
+    {"read",            device_native_read},
+    {"listen",          device_native_listen},
+    {"ignore",          device_native_ignore},
 
     /* user native */
 

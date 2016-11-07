@@ -5,7 +5,7 @@
 #define CON_IN              0
 #define CON_OUT             1
 #define CON_BUFF_MAX        2
-#define CON_BUFF_SIZE       256
+#define CON_BUFF_SIZE       512
 #define CON_PREVENT_DEFAULT 1
 
 typedef enum console_ctrl_t{

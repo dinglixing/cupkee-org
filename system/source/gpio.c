@@ -318,7 +318,7 @@ cupkee_driver_t cupkee_gpio_driver = {
 /************************************************************************************
  * GPIO native
  ***********************************************************************************/
-val_t native_pin(env_t *env, int ac, val_t *av)
+val_t gpio_native_pin(env_t *env, int ac, val_t *av)
 {
     int port;
     int pin;
