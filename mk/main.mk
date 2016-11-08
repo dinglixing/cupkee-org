@@ -1,6 +1,6 @@
 elf_NAMES = cupkee
 
-cupkee_SRCS = main.c
+cupkee_SRCS = ${notdir ${wildcard ${BASE_DIR}/main/*.c}}
 
 cupkee_CPPFLAGS = -I${BSP_DIR}/include -I${SYS_DIR}/include -I${LANG_DIR}/include
 cupkee_CFLAGS   =

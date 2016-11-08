@@ -1,16 +1,12 @@
 
 elf_NAMES = test
-test_SRCS = main.c \
-			util.c \
-			test_hello.c \
-			test_misc.c \
-			test_gpio.c \
-			CUnit_Basic.c \
-			CUnit_Error.c \
-			CUnit_Mem.c \
-			CUnit_TestDB.c \
-			CUnit_TestRun.c \
-			CUnit_Util.c \
+test_SRCS = ${notdir ${wildcard ${BASE_DIR}/test/*.c}}
+test_SRCS +=	CUnit_Basic.c \
+				CUnit_Error.c \
+				CUnit_Mem.c \
+				CUnit_TestDB.c \
+				CUnit_TestRun.c \
+				CUnit_Util.c \
 
 test_CPPFLAGS = -I${BSP_DIR}/include -I${SYS_DIR}/include -I${LANG_DIR}/include
 test_CPPFLAGS += -I${TEST_DIR}/cunit -I${BSP_DIR}/test

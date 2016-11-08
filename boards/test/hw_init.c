@@ -45,17 +45,20 @@ uint32_t system_ticks_count = 0;
 void hw_setup(void)
 {
     hw_gpio_setup();
+    hw_adc_setup();
 }
 
 void hw_poll(void)
 {
     static uint32_t system_ticks_count_pre = 0;
+
     if (system_ticks_count_pre != system_ticks_count) {
         system_ticks_count_pre = system_ticks_count;
         systick_event_post();
     }
 
     hw_gpio_poll();
+    hw_adc_poll();
 }
 
 void hw_halt(void)

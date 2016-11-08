@@ -59,6 +59,7 @@ int main(int argc, const char *argv[])
     test_hello_entry();
     test_misc_entry();
     test_gpio_entry();
+    test_adc_entry();
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();

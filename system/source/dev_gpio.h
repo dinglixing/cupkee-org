@@ -3,8 +3,9 @@
 
 #include "util.h"
 
-int gpio_setup(void);
-extern cupkee_driver_t cupkee_gpio_driver;
+int dev_setup_gpio(void);
+
+extern const cupkee_driver_t cupkee_driver_gpio;
 
 
 #endif /* __GPIO_INC__ */

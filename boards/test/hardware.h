@@ -20,6 +20,9 @@ void hw_dbg_console_clr_buf(void);
 int hw_dbg_gpio_get_pin(int port, int pin);
 int hw_dbg_gpio_set_pin(int port, int pin);
 int hw_dbg_gpio_clr_pin(int port, int pin);
+// ADC
+uint16_t hw_dbg_adc_get_channel(int channel);
+void     hw_dbg_adc_set_channel(int channel, uint16_t v);
 
 /******************************************************************************
  * Hardware interface not in bsp.h
@@ -27,5 +30,6 @@ int hw_dbg_gpio_clr_pin(int port, int pin);
 #include "system.h"
 #include "hw_console.h"
 #include "hw_gpio.h"
+#include "hw_adc.h"
 
 #endif /* __HW_MOCK_INC__ */

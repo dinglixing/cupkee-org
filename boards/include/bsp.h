@@ -12,7 +12,6 @@
 
 /* CAPTURE configurables */
 
-/* ADC configurables */
 
 /* DAC configurables */
 
@@ -66,9 +65,7 @@ void hw_led_on(void);
 void hw_led_off(void);
 void hw_led_toggle(void);
 
-/*
- * GPIO
- */
+/* GPIO */
 #define GPIO_DEVICE_ID         (0)  //
 enum GPIO_EVENT_TYPE {
     GPIO_EVENT_CHANGE = 0,
@@ -117,6 +114,37 @@ int hw_gpio_event_disable(int grp, int event);
 int hw_gpio_read (int grp, uint32_t *data);
 int hw_gpio_write(int grp, uint32_t data);
 
+/* ADC */
+#define ADC_DEVICE_ID                  (1)  //
+enum ADC_EVENT_TYPE {
+    ADC_EVENT_DATA = 0,
+    ADC_EVENT_MAX,
+};
+
+#define CFG_ADC_CHANNEL                 0       // channel pins
+#define CFG_ADC_INTERVAL                1       // sample repeat nMS or 0(no repeat)
+#define CFG_ADC_MAX                     2
+
+/* board dependent start */
+#define ADC_CHANNEL_MAX                 18
+#define ADC_MAX                         1
+/* board dependent end */
+
+typedef struct hw_adc_conf_t{
+    uint32_t channels;
+    uint32_t interval;
+} hw_adc_conf_t;
+
+int hw_adc_alloc(void);
+int hw_adc_release(int adc);
+void hw_adc_conf_reset(hw_adc_conf_t *conf);
+
+int hw_adc_enable (int adc, hw_adc_conf_t *conf);
+int hw_adc_disable(int adc);
+int hw_adc_event_enable(int adc, int event);
+int hw_adc_event_disable(int adc, int event);
+
+int hw_adc_read (int adc, int channel, uint32_t *data);
 
 #endif /* __BSP_INC__ */
 

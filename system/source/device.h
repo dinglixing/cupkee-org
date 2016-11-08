@@ -16,6 +16,11 @@ typedef struct cupkee_device_t {
     struct cupkee_device_t *next;
 } cupkee_device_t;
 
+typedef struct device_config_handle_t {
+    int (*setter)(cupkee_device_t *, env_t *, val_t *);
+    val_t (*getter)(cupkee_device_t *, env_t *);
+} device_config_handle_t;
+
 typedef struct cupkee_driver_t {
     int (*init)     (cupkee_device_t *dev);
     int (*deinit)   (cupkee_device_t *dev);
@@ -23,19 +28,15 @@ typedef struct cupkee_driver_t {
     int (*enable)   (cupkee_device_t *dev);
     int (*disable)  (cupkee_device_t *dev);
 
-    val_t (*config) (cupkee_device_t *dev, env_t *env, val_t *name, val_t *setting);
-    val_t (*read)   (cupkee_device_t *dev);
+    val_t (*read)   (cupkee_device_t *dev, int off);
     val_t (*write)  (cupkee_device_t *dev, val_t *data);
 
     int (*listen)   (cupkee_device_t *dev, val_t *event, val_t *callback);
     int (*ignore)   (cupkee_device_t *dev, val_t *event);
-    void (*event_handle) (env_t *env, uint8_t which, uint8_t event);
-} cupkee_driver_t;
 
-typedef struct device_config_handle_t {
-    val_t (*setter)(cupkee_device_t *, env_t *, val_t *);
-    val_t (*getter)(cupkee_device_t *, env_t *);
-} device_config_handle_t;
+    void (*event_handle) (env_t *env, uint8_t which, uint8_t event);
+    device_config_handle_t *(*config) (cupkee_device_t *dev, val_t *name);
+} cupkee_driver_t;
 
 void devices_setup(void);
 void devices_event_proc(env_t *env, int event);

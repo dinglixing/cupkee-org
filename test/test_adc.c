@@ -47,7 +47,7 @@ static void test_device(void)
 
     // create device 'gpio'
     CU_ASSERT(0 == test_cupkee_run_with_reply("var h\r",                                            "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('GPIO')\r",                               "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('ADC')\r",                                "<object>\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('other')\r",                              "undefined\r\n", 1));
 }
 
@@ -58,51 +58,42 @@ static void test_config(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("var e, h, c\r",                                      "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('GPIO')) != false\r",                    "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('ADC'))\r",                              "<object>\r\n", 1));
 
     // get device default configs
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('pin')\r",                                  "<array>\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('mode')\r",                                 "\"in-float\"\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('speed')\r",                                "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')\r",                              "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "0\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('other')\r",                                "undefined\r\n", 1));
 
-
-    // pins config
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', pin('A', 0))\r",                    "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin')\r",                                 "<array>\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', [pin('A', 0), pin('A', 1)])\r",     "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin').length()\r",      "2\r\n", 1));
     test_reply_show(1);
     test_reply_show(0);
 
-    // mode config
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'mode', 'out-pushpull')\r",                "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'mode')\r",                                "\"out-pushpull\"\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'mode', 'in-float')\r",                    "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'mode')\r",                                "\"in-float\"\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'mode', 'dual')\r",                        "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'mode')\r",                                "\"dual\"\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'mode', 'other')\r",                       "false\r\n", 1));
+    // channel set
+    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'channel', 1)\r",                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')\r",                              "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel', 16)\r",                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')\r",                              "16\r\n", 1));
 
-    // speed config
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'speed', 10)\r",                           "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'speed', 20)\r",                           "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'speed')\r",                               "20\r\n", 1));
+    // mode config
+    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'interval', 1)\r",                         "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval', 10)\r",                         "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "10\r\n", 1));
 
     // config set is forbid if enabled
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, true)\r",                                  "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', pin('A', 0))\r",                    "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'mode', 'out-pushpull')\r",                "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'speed', 10)\r",                           "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel', 0)\r",                           "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')\r",                              "16\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval', 0)\r",                          "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "10\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "true\r\n", 1));
 
-    // disable & enable gpio group
+    // disable & enable adc
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, 0)\r",                                     "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, 1)\r",                                     "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "true\r\n", 1));
-
 }
 
 static void test_write(void)
@@ -111,47 +102,34 @@ static void test_write(void)
 
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var h, d\r",                                         "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('GPIO'))\r",                              "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var h;\r",                                           "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('ADC'))\r",                              "<object>\r\n", 1));
 
-    // configs
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', [pin('A', 0), pin('B', 15)])\r",    "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'mode', 'out-opendrain')\r",               "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'speed', 25)\r",                           "true\r\n", 1));
+    test_reply_show(1);
+    test_reply_show(0);
 
-    // enable gpio
-    CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, 1)\r",                                     "true\r\n", 1));
+    // channel set
+    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'channel', 1)\r",                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')\r",                              "1\r\n", 1));
+
+    // interval set
+    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'interval', 1)\r",                         "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "1\r\n", 1));
+
+    // enable device
+    CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, true)\r",                                  "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "true\r\n", 1));
 
-    // write
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 1)\r",                                      "true\r\n", 1));
-    CU_ASSERT(1 == hw_dbg_gpio_get_pin(0, 0));
-    CU_ASSERT(0 == hw_dbg_gpio_get_pin(1, 15));
-
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 2)\r",                                      "true\r\n", 1));
-    CU_ASSERT(0 == hw_dbg_gpio_get_pin(0, 0));
-    CU_ASSERT(1 == hw_dbg_gpio_get_pin(1, 15));
-
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 3)\r",                                      "true\r\n", 1));
-    CU_ASSERT(1 == hw_dbg_gpio_get_pin(0, 0));
-    CU_ASSERT(1 == hw_dbg_gpio_get_pin(1, 15));
-
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 0)\r",                                      "true\r\n", 1));
-    CU_ASSERT(0 == hw_dbg_gpio_get_pin(0, 0));
-    CU_ASSERT(0 == hw_dbg_gpio_get_pin(1, 15));
-
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, true)\r",                                   "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, '1')\r",                                    "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, {})\r",                                     "false\r\n", 1));
-
-    // read
-    // read always false, if dir is 'out'
-    CU_ASSERT(0 == test_cupkee_run_with_reply("read(h)\r",                                          "false\r\n", 1));
+    // write, always false
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 1)\r",                                      "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 2)\r",                                      "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 3)\r",                                      "false\r\n", 1));
 
     test_reply_show(1);
     test_reply_show(0);
 }
 
+/*
 static void test_read(void)
 {
     test_cupkee_reset();
@@ -174,17 +152,9 @@ static void test_read(void)
     hw_dbg_gpio_set_pin(0, 0);
     hw_dbg_gpio_set_pin(1, 15);
     CU_ASSERT(0 == test_cupkee_run_with_reply("read(h)\r",                                              "3\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.read()\r",                                             "3\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h[0]\r",                                                 "1\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h[1]\r",                                                 "1\r\n", 1));
 
     hw_dbg_gpio_clr_pin(0, 0);
     CU_ASSERT(0 == test_cupkee_run_with_reply("read(h)\r",                                              "2\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.read()\r",                                             "2\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h[0]\r",                                                 "0\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h[1]\r",                                                 "1\r\n", 1));
-    test_reply_show(1);
-    test_reply_show(0);
 
     hw_dbg_gpio_clr_pin(1, 15);
     CU_ASSERT(0 == test_cupkee_run_with_reply("read(h)\r",                                              "0\r\n", 1));
@@ -342,22 +312,23 @@ device('GPIO').enable({\
 
     //
 }
+*/
 
-CU_pSuite test_gpio_entry(void)
+CU_pSuite test_adc_entry(void)
 {
-    CU_pSuite suite = CU_add_suite("gpio", test_setup, test_clean);
+    CU_pSuite suite = CU_add_suite("adc", test_setup, test_clean);
 
     if (suite) {
         CU_add_test(suite, "device",    test_device);
         CU_add_test(suite, "config",    test_config);
         CU_add_test(suite, "write",     test_write);
+#if 0
         CU_add_test(suite, "read",      test_read);
         CU_add_test(suite, "read-write",test_read_write);
         CU_add_test(suite, "event",     test_event);
         CU_add_test(suite, "unref",     test_unref);
         CU_add_test(suite, "together",  test_together);
-        if (0) {
-        }
+#endif
     }
 
     return suite;

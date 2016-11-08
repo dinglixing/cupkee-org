@@ -1,8 +1,8 @@
 #include <bsp.h>
 
 #include "device.h"
-#include "gpio.h"
 #include "misc.h"
+#include "dev_gpio.h"
 
 typedef struct gpio_group_ctrl_t {
     int             group;
@@ -41,11 +41,11 @@ static val_t get_pin(cupkee_device_t *dev, env_t *env)
     return val_mk_array((void *)array_create(env, i, pins));
 }
 
-static val_t set_pin(cupkee_device_t *dev, env_t *env, val_t *setting)
+static int set_pin(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
     gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
     if (!control) {
-        return VAL_FALSE;
+        return -1;
     }
 
     (void) env;
@@ -72,21 +72,7 @@ static val_t set_pin(cupkee_device_t *dev, env_t *env, val_t *setting)
         }
     }
 
-    return conf->pin_num ? VAL_TRUE : VAL_FALSE;
-}
-
-static val_t set_mode(cupkee_device_t *dev, env_t *env, val_t *setting)
-{
-    gpio_group_ctrl_t *control = (gpio_group_ctrl_t*)dev->data;
-    int mod = cupkee_id(setting, OPT_GPIO_MOD_MAX, gpio_modes);
-
-    if (control && mod < OPT_GPIO_MOD_MAX) {
-        control->conf.mod = mod;
-        return VAL_TRUE;
-    }
-    return VAL_UNDEFINED;
-
-    (void) env;
+    return conf->pin_num ? 0: -1;
 }
 
 static val_t get_mode(cupkee_device_t *dev, env_t *env)
@@ -96,28 +82,23 @@ static val_t get_mode(cupkee_device_t *dev, env_t *env)
         return VAL_UNDEFINED;
     }
 
-    return val_mk_foreign_string((intptr_t)gpio_modes[control->conf.mod]);
-
     (void) env;
+
+    return val_mk_foreign_string((intptr_t)gpio_modes[control->conf.mod]);
 }
 
-static val_t set_speed(cupkee_device_t *dev, env_t *env, val_t *setting)
+static int set_mode(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
     gpio_group_ctrl_t *control = (gpio_group_ctrl_t*)dev->data;
-    if (!control || !val_is_number(setting)) {
-        return VAL_UNDEFINED;
-    }
-
-    int speed = val_2_double(setting);
-
-    if (speed > OPT_GPIO_SPEED_MAX || speed < OPT_GPIO_SPEED_MIN) {
-        return VAL_FALSE;
-    }
-
-    control->conf.speed = speed;
-    return VAL_TRUE;
+    int mod = cupkee_id(setting, OPT_GPIO_MOD_MAX, gpio_modes);
 
     (void) env;
+
+    if (control && mod < OPT_GPIO_MOD_MAX) {
+        control->conf.mod = mod;
+        return 0;
+    }
+    return -1;
 }
 
 static val_t get_speed(cupkee_device_t *dev, env_t *env)
@@ -130,6 +111,25 @@ static val_t get_speed(cupkee_device_t *dev, env_t *env)
     }
 
     (void) env;
+}
+
+static int set_speed(cupkee_device_t *dev, env_t *env, val_t *setting)
+{
+    gpio_group_ctrl_t *control = (gpio_group_ctrl_t*)dev->data;
+    if (!control || !val_is_number(setting)) {
+        return -CUPKEE_EINVAL;
+    }
+
+    (void) env;
+
+    int speed = val_2_double(setting);
+
+    if (speed > OPT_GPIO_SPEED_MAX || speed < OPT_GPIO_SPEED_MIN) {
+        return -CUPKEE_EINVAL;
+    }
+
+    control->conf.speed = speed;
+    return 0;
 }
 
 static device_config_handle_t config_handles[] = {
@@ -234,24 +234,21 @@ static int gpio_ignore(cupkee_device_t *dev, val_t *event)
     return CUPKEE_OK;
 }
 
-static val_t gpio_config(cupkee_device_t *dev, env_t *env, val_t *name, val_t *setting)
+static device_config_handle_t *gpio_config(cupkee_device_t *dev, val_t *name)
 {
     int id;
 
+    (void) dev;
+
     if (!name) {
-        // not support
-        return VAL_FALSE;
+        return NULL;
     }
 
     id = cupkee_id(name, CFG_GPIO_MAX, gpio_confs);
     if (id < CFG_GPIO_MAX) {
-        if (setting) {
-            return config_handles[id].setter(dev, env, setting);
-        } else {
-            return config_handles[id].getter(dev, env);
-        }
+        return &config_handles[id];
     } else {
-        return VAL_UNDEFINED;
+        return NULL;
     }
 }
 
@@ -268,14 +265,20 @@ static val_t gpio_write(cupkee_device_t *dev, val_t *data)
     }
 }
 
-static val_t gpio_read(cupkee_device_t *dev)
+static val_t gpio_read(cupkee_device_t *dev, int off)
 {
     gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
     uint32_t d;
 
+    (void) off;
+
     if (OPT_GPIO_MOD_READABLE(control->conf.mod) &&
         hw_gpio_read(control->group, &d) > 0) {
-        return val_mk_number(d);
+        if (off < 0 || off >= control->conf.pin_num) {
+            return val_mk_number(d);
+        } else {
+            return val_mk_number((d >> off) & 1);
+        }
     } else {
         return VAL_FALSE;
     }
@@ -300,7 +303,7 @@ static void gpio_add_pin(hw_gpio_conf_t *conf, uint8_t pin)
 /************************************************************************************
  * GPIO driver exports
  ***********************************************************************************/
-cupkee_driver_t cupkee_gpio_driver = {
+const cupkee_driver_t cupkee_driver_gpio = {
     .init    = gpio_init,
     .deinit  = gpio_deinit,
     .enable  = gpio_enable,
@@ -346,7 +349,7 @@ val_t gpio_native_pin(env_t *env, int ac, val_t *av)
     }
 }
 
-int gpio_setup(void)
+int dev_setup_gpio(void)
 {
     return 0;
 }
