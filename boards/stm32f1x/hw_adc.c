@@ -1,49 +1,31 @@
-/*******************************************************************************
- * dbg field
-*******************************************************************************/
-#include "hardware.h"
+/*
+MIT License
 
-static uint16_t dbg_adc_channels[18];
-static uint16_t dbg_adc_flags = 0;
+This file is part of cupkee project.
 
-uint16_t hw_dbg_adc_get_channel(int channel)
-{
-    return dbg_adc_channels[channel];
-}
+Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
 
-void hw_dbg_adc_set_channel(int channel, uint16_t value)
-{
-    dbg_adc_channels[channel] = value;
-}
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-void hw_dbg_adc_set_ready(void) {
-    dbg_adc_flags |= 1;
-}
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-void hw_dbg_adc_clr_ready(void) {
-    dbg_adc_flags &= ~1;
-}
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 
-int  hw_dbg_adc_test_ready(void) {
-    return dbg_adc_flags & 1;
-}
-
-void hw_dbg_adc_set_eoc(void) {
-    dbg_adc_flags |= 2;
-}
-
-void hw_dbg_adc_clr_eoc(void) {
-    dbg_adc_flags &= ~2;
-}
-
-int  hw_dbg_adc_test_eoc(void) {
-    return dbg_adc_flags & 2;
-}
-
-/*******************************************************************************
- * hw field
-*******************************************************************************/
 #include <bsp.h>
+#include "hardware.h"
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
@@ -77,6 +59,22 @@ static inline int hw_adc_check(int adc) {
     return (adc < ADC_MAX && (adc_blks[adc].flags & ADC_INUSED));
 }
 
+static inline int hw_adc_ready_test(void)
+{
+    return 0;
+}
+
+static inline int hw_adc_eoc_test(void)
+{
+    return 0;
+}
+
+static inline uint16_t hw_adc_channel_get(int ch)
+{
+    (void) ch;
+    return 0;
+}
+
 static inline void hw_adc_channel_set(hw_adc_t *blk, int channel)
 {
     int sel = (channel / 8) & 3;
@@ -106,7 +104,7 @@ static inline int hw_adc_wait_ready(hw_adc_t *blk)
     (void) blk;
 
 
-    if (hw_dbg_adc_test_ready()) {
+    if (hw_adc_ready_test()) {
         if (blk->flags & (1 << ADC_EVENT_READY)) {
             devices_event_post(ADC_DEVICE_ID, blk - adc_blks, ADC_EVENT_READY);
         }
@@ -147,7 +145,7 @@ static void hw_adc_load(hw_adc_t *blk)
     for (i = 0; i < ADC_CHANNEL_MAX; i++) {
         if (hw_adc_channel_test(blk, i)) {
             // hardware read convert value
-            adc_vals[i] = hw_dbg_adc_get_channel(i);
+            adc_vals[i] = hw_adc_channel_get(i);
             converted++;
         }
     }
@@ -162,7 +160,7 @@ static void hw_adc_load(hw_adc_t *blk)
 
 static inline int hw_adc_wait_convert(hw_adc_t *blk)
 {
-    if (hw_dbg_adc_test_eoc()) {
+    if (hw_adc_eoc_test()) {
         _TRACE("... adc convert complete\n");
         hw_adc_load(blk);
         return 1;

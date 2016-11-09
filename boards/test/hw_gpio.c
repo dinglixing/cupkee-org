@@ -175,7 +175,7 @@ int hw_gpio_write(int grp, uint32_t data)
     int i;
 
     for (i = 0; i < conf->pin_num; i++) {
-        uint8_t pin = conf->pins[i];
+        uint8_t pin = conf->pin_seq[i];
         uint8_t port = pin >> 4;
 
         dbg_gpio_pins[port][pin & 0xf] = (data & 1);
@@ -195,7 +195,7 @@ int hw_gpio_read(int grp, uint32_t *data)
     uint32_t d = 0;
 
     for (i = conf->pin_num - 1; i >= 0; i--) {
-        uint8_t pin = conf->pins[i];
+        uint8_t pin = conf->pin_seq[i];
         uint8_t port = pin >> 4;
 
         d <<= 1;

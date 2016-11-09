@@ -5,8 +5,13 @@
 #include "dev_gpio.h"
 #include "dev_adc.h"
 
-#define DEVICE_MAX  (16)
+#if 0
+#define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
+#else
+#define _TRACE(fmt, ...)    //
+#endif
 
+#define DEVICE_MAX  (16)
 
 struct driver_entry_t {
     const char *name;
@@ -157,6 +162,7 @@ static val_t device_config_all(cupkee_device_t *dev, env_t *env, val_t *setting)
             val_t key = val_mk_foreign_string((intptr_t)k);
             device_config_handle_t *handle = dev->driver->config(dev, &key);
 
+            _TRACE("set %s\n", k);
             if (handle && 0 != handle->setter(dev, env, v)) {
                 return VAL_FALSE;
             }
@@ -206,13 +212,13 @@ static inline val_t device_write(cupkee_device_t *dev, val_t *data)
     return dev->driver->write(dev, data);
 }
 
-static inline val_t device_read(cupkee_device_t *dev, int off)
+static inline val_t device_read(cupkee_device_t *dev, env_t *env, int off)
 {
     if (0 == (dev->flags & DEV_FL_ENBALE)) {
-        return VAL_FALSE;
+        return VAL_UNDEFINED;
     }
 
-    return dev->driver->read(dev, off);
+    return dev->driver->read(dev, env, off);
 }
 
 static inline val_t device_listen(cupkee_device_t *dev, val_t *e, val_t *cb)
@@ -232,16 +238,12 @@ static inline val_t device_ignore(cupkee_device_t *dev, val_t *e)
     }
 
     return dev->driver->ignore(dev, e) == CUPKEE_OK ?
-           VAL_TRUE : VAL_FALSE;
+        VAL_TRUE : VAL_FALSE;
 }
 
-static inline void device_get_elem(cupkee_device_t *dev, int id, val_t *elem)
+static inline void device_get_elem(cupkee_device_t *dev, env_t *env, int id, val_t *elem)
 {
-    (void) dev;
-    (void) id;
-
-    *elem = device_read(dev, id);
-    //val_set_undefined(elem);
+    *elem = device_read(dev, env, id);
 }
 
 static inline void device_get_prop(cupkee_device_t *dev, const char *name, val_t *elem)
@@ -274,7 +276,7 @@ static void device_elem(void *env, intptr_t devid, val_t *av, val_t *elem)
 
     if (!name) {
         if (val_is_number(av)) {
-            device_get_elem(dev, val_2_integer(av), elem);
+            device_get_elem(dev, env, val_2_integer(av), elem);
         } else {
             val_set_undefined(elem);
         }
@@ -367,7 +369,7 @@ val_t device_native_config(env_t *env, int ac, val_t *av)
     }
 
     av++; ac--;
-    if (ac && val_is_string(av)) {
+    if (ac && (val_is_number(av) || val_is_string(av))) {
         name = av++;
         ac--;
     }
@@ -446,9 +448,9 @@ val_t device_native_read(env_t *env, int ac, val_t *av)
     }
 
     if (ac > 1 && val_is_number(av + 1)) {
-        return device_read(dev, val_2_integer(av + 1));
+        return device_read(dev, env, val_2_integer(av + 1));
     } else {
-        return device_read(dev, -1);
+        return device_read(dev, env, -1);
     }
 
 }

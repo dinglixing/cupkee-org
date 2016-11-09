@@ -36,15 +36,13 @@ static const native_t native_entry[] = {
 
 // system initial scripts
 static char *initial = "\
-var led = (function() { \
-  var h = device('GPIO');\
-  var v = 0;\
-  config(h, 0, pin('a', 8));\
-  config(h, 1, 'out-pushpull');\
-  enable(h, 1);\
-  \
-  return def() {write(h, v++)}\
- })();\
+var h = device('GPIO');\
+var v = 0;\
+enable(h, {\
+  pin: pin('a', 8),\
+  mode: 'out-pushpull'\
+});\
+def led() {write(h, v++)}\
 setInterval(led, 1000);";
 
 int main(void)

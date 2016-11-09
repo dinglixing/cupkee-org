@@ -1,6 +1,31 @@
+/*
+MIT License
 
-#include "hardware.h"
+This file is part of cupkee project.
+
+Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include <bsp.h>
+#include "hardware.h"
 
 typedef struct hw_gpio_group_t{
     uint8_t inused;
@@ -116,7 +141,7 @@ static int hw_gpio_read_pin(uint16_t pin)
 
 static int hw_gpio_config_set(int grp, hw_gpio_conf_t *cfg)
 {
-    uint8_t ports = hw_gpio_port_used(cfg->pin_num, cfg->pins);
+    uint8_t ports = hw_gpio_port_used(cfg->pin_num, cfg->pin_seq);
     uint8_t cnf, mode;
 
     switch(cfg->mod) {
@@ -146,7 +171,7 @@ static int hw_gpio_config_set(int grp, hw_gpio_conf_t *cfg)
 
         hw_gpio_open_ports(ports ^ (ports & port_inused));
         for (i = 0; i < cfg->pin_num; i++) {
-            hw_gpio_setup_pin(cfg->pins[i], mode, cnf);
+            hw_gpio_setup_pin(cfg->pin_seq[i], mode, cnf);
         }
 
         port_inused |= ports;
@@ -168,16 +193,16 @@ static int hw_gpio_config_clr(int grp)
         }
         conf = gpio_cfgs[i];
         if (conf) {
-            port_inused |= hw_gpio_port_used(conf->pin_num, conf->pins);
+            port_inused |= hw_gpio_port_used(conf->pin_num, conf->pin_seq);
         }
     }
 
     conf = gpio_cfgs[grp];
     if (conf) {
-        uint8_t ports = hw_gpio_port_used(conf->pin_num, conf->pins);
+        uint8_t ports = hw_gpio_port_used(conf->pin_num, conf->pin_seq);
         hw_gpio_close_ports(ports ^ (ports & port_inused));
         for (i = 0; i < conf->pin_num; i++) {
-            hw_gpio_setup_pin(conf->pins[i], GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT);
+            hw_gpio_setup_pin(conf->pin_seq[i], GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT);
         }
         gpio_cfgs[grp] = NULL;
     }
@@ -308,7 +333,7 @@ int hw_gpio_write(int grp, uint32_t data)
     conf = gpio_cfgs[grp];
 
     for (i = 0; i < conf->pin_num; i++) {
-        hw_gpio_write_pin(conf->pins[i], data & 1);
+        hw_gpio_write_pin(conf->pin_seq[i], data & 1);
         data >>= 1;
     }
 
@@ -329,7 +354,7 @@ int hw_gpio_read(int grp, uint32_t *data)
 
     for (i = conf->pin_num - 1; i >= 0; i--) {
         d <<= 1;
-        if (hw_gpio_read_pin(conf->pins[i])) {
+        if (hw_gpio_read_pin(conf->pin_seq[i])) {
             d |= 1;
         }
     }

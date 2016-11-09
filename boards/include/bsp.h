@@ -1,3 +1,28 @@
+/*
+MIT License
+
+This file is part of cupkee project.
+
+Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 
 
 #ifndef __BSP_INC__
@@ -98,7 +123,7 @@ typedef struct hw_gpio_conf_t{
     uint8_t mod;
     uint8_t speed;
     uint8_t pin_num;
-    uint8_t pins[GPIO_GROUP_SIZE];
+    uint8_t pin_seq[GPIO_GROUP_SIZE];
 } hw_gpio_conf_t;
 
 int hw_gpio_group_alloc(void);
@@ -117,7 +142,9 @@ int hw_gpio_write(int grp, uint32_t data);
 /* ADC */
 #define ADC_DEVICE_ID                  (1)  //
 enum ADC_EVENT_TYPE {
-    ADC_EVENT_DATA = 0,
+    ADC_EVENT_READY = 0,
+    ADC_EVENT_ERROR,
+    ADC_EVENT_DATA,
     ADC_EVENT_MAX,
 };
 
@@ -131,8 +158,9 @@ enum ADC_EVENT_TYPE {
 /* board dependent end */
 
 typedef struct hw_adc_conf_t{
-    uint32_t channels;
     uint32_t interval;
+    int8_t   chn_num;
+    uint8_t  chn_seq[ADC_CHANNEL_MAX];
 } hw_adc_conf_t;
 
 int hw_adc_alloc(void);

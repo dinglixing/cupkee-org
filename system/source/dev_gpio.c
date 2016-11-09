@@ -26,19 +26,23 @@ static void gpio_add_pin(hw_gpio_conf_t *conf, uint8_t pin);
 static val_t get_pin(cupkee_device_t *dev, env_t *env)
 {
     gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
-    if (!control) {
+
+    if (control) {
+        array_t *a = _array_create(env, control->conf.pin_num);
+        int i;
+
+        if (!a) {
+            return VAL_UNDEFINED;
+        }
+
+        for (i = 0; i < control->conf.pin_num; i++) {
+            val_set_number(_array_elem(a, i), control->conf.pin_seq[i]);
+        }
+
+        return val_mk_array(a);
+    } else {
         return VAL_FALSE;
     }
-
-    hw_gpio_conf_t *conf = &control->conf;
-    val_t pins[GPIO_GROUP_MAX];
-    int i;
-
-    for (i = 0; i < conf->pin_num; i++) {
-        val_set_number(pins + i, conf->pins[i]);
-    }
-
-    return val_mk_array((void *)array_create(env, i, pins));
 }
 
 static int set_pin(cupkee_device_t *dev, env_t *env, val_t *setting)
@@ -265,12 +269,13 @@ static val_t gpio_write(cupkee_device_t *dev, val_t *data)
     }
 }
 
-static val_t gpio_read(cupkee_device_t *dev, int off)
+static val_t gpio_read(cupkee_device_t *dev, env_t *env, int off)
 {
     gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
     uint32_t d;
 
     (void) off;
+    (void) env;
 
     if (OPT_GPIO_MOD_READABLE(control->conf.mod) &&
         hw_gpio_read(control->group, &d) > 0) {
@@ -296,7 +301,7 @@ static void gpio_event_handle(env_t *env, uint8_t which, uint8_t event)
 static void gpio_add_pin(hw_gpio_conf_t *conf, uint8_t pin)
 {
     if (hw_gpio_pin_is_valid(pin) && conf->pin_num < GPIO_GROUP_SIZE) {
-        conf->pins[conf->pin_num++] = pin;
+        conf->pin_seq[conf->pin_num++] = pin;
     }
 }
 

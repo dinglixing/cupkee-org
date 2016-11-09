@@ -66,6 +66,10 @@ static void test_config(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('speed')\r",                                "2\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('other')\r",                                "undefined\r\n", 1));
 
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(0)\r",                                      "<array>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(1)\r",                                      "\"in-float\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(2)\r",                                      "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(3)\r",                                      "undefined\r\n", 1));
 
     // pins config
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'pin', pin('A', 0))\r",                    "true\r\n", 1));

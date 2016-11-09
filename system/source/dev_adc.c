@@ -30,6 +30,12 @@ SOFTWARE.
 #include "misc.h"
 #include "dev_adc.h"
 
+#if 0
+#define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
+#else
+#define _TRACE(fmt, ...)    //
+#endif
+
 typedef struct adc_ctrl_t {
     int           adc;
     val_t         *events_handle[ADC_EVENT_MAX];
@@ -41,39 +47,75 @@ static const char *adc_confs[] = {
     "channel", "interval"
 };
 static const char *adc_events[] = {
-    "data"
+    "ready", "error", "data"
 };
 
-static int set_channel(cupkee_device_t *dev, env_t *env, val_t *setting)
+static int adc_channel_add(adc_ctrl_t *control, val_t *v) {
+    int chn = val_2_integer(v);
+
+    if (chn >= ADC_CHANNEL_MAX) {
+        return -1;
+    }
+
+    if (control->conf.chn_num >= ADC_CHANNEL_MAX) {
+        return 0;
+    }
+
+    control->conf.chn_seq[control->conf.chn_num++] = chn;
+    return 1;
+}
+
+static int adc_set_channel(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
     adc_ctrl_t *control = (adc_ctrl_t*)dev->data;
 
     (void) env;
 
+    control->conf.chn_num = 0;
     if (val_is_number(setting)) {
-        int chn = val_2_integer(setting);
+        return (1 == adc_channel_add(control, setting)) ? 0 : CUPKEE_EINVAL;
+    } else
+    if (val_is_array(setting)) {
+        val_t *v;
+        int i = 0;
 
-        control->conf.channels = chn;
+        while (i < ADC_CHANNEL_MAX && NULL != (v = _array_element(setting, i++))) {
+            if (!val_is_number(v) || 0 > adc_channel_add(control, v)) {
+                control->conf.chn_num = 0;
+                return -CUPKEE_EINVAL;
+            }
+        }
+
         return 0;
     }
 
     return -CUPKEE_EINVAL;
 }
 
-static val_t get_channel(cupkee_device_t *dev, env_t *env)
+static val_t adc_get_channel(cupkee_device_t *dev, env_t *env)
 {
     adc_ctrl_t *control = (adc_ctrl_t*)dev->data;
 
-    (void) env;
+    if (control) {
+        array_t *a = _array_create(env, control->conf.chn_num);
+        int i;
 
-    if (!control) {
+        if (!a) {
+            return VAL_UNDEFINED;
+        }
+
+        for (i = 0; i < control->conf.chn_num; i++) {
+            val_set_number(_array_elem(a, i), control->conf.chn_seq[i]);
+        }
+
+        return val_mk_array(a);
+    } else {
         return VAL_UNDEFINED;
     }
 
-    return val_mk_number(control->conf.channels);
 }
 
-static int set_interval(cupkee_device_t *dev, env_t *env, val_t *setting)
+static int adc_set_interval(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
     adc_ctrl_t *control = (adc_ctrl_t*)dev->data;
 
@@ -89,7 +131,7 @@ static int set_interval(cupkee_device_t *dev, env_t *env, val_t *setting)
     return -CUPKEE_EINVAL;
 }
 
-static val_t get_interval(cupkee_device_t *dev, env_t *env)
+static val_t adc_get_interval(cupkee_device_t *dev, env_t *env)
 {
     adc_ctrl_t *control = (adc_ctrl_t*)dev->data;
 
@@ -103,8 +145,8 @@ static val_t get_interval(cupkee_device_t *dev, env_t *env)
 }
 
 static device_config_handle_t config_handles[] = {
-    {set_channel,  get_channel},
-    {set_interval, get_interval},
+    {adc_set_channel,  adc_get_channel},
+    {adc_set_interval, adc_get_interval},
 };
 
 /************************************************************************************
@@ -159,12 +201,13 @@ static int adc_disable(cupkee_device_t *dev)
 static int adc_listen(cupkee_device_t *dev, val_t *event, val_t *callback)
 {
     int event_id = cupkee_id(event, ADC_EVENT_MAX, adc_events);
+    adc_ctrl_t *control;
 
     if (event_id >= ADC_EVENT_MAX) {
         return -CUPKEE_EINVAL;
     }
-    adc_ctrl_t *control= (adc_ctrl_t*)dev->data;
 
+    control = (adc_ctrl_t*)dev->data;
     if (hw_adc_event_enable(control->adc, event_id)) {
         return -CUPKEE_ERROR;
     }
@@ -180,18 +223,20 @@ static int adc_listen(cupkee_device_t *dev, val_t *event, val_t *callback)
         *control->events_handle[event_id] = *callback;
     }
 
+    _TRACE("listen %s ok\n", adc_events[event_id]);
     return CUPKEE_OK;
 }
 
 static int adc_ignore(cupkee_device_t *dev, val_t *event)
 {
     int event_id = cupkee_id(event, ADC_EVENT_MAX, adc_events);
+    adc_ctrl_t *control;
 
     if (event_id >= ADC_EVENT_MAX) {
         return -CUPKEE_EINVAL;
     }
-    adc_ctrl_t *control= (adc_ctrl_t*)dev->data;
 
+    control = (adc_ctrl_t*)dev->data;
     if (hw_adc_event_disable(control->adc, event_id)) {
         return -CUPKEE_ERROR;
     }
@@ -230,20 +275,68 @@ static val_t adc_write(cupkee_device_t *dev, val_t *data)
     return VAL_FALSE;
 }
 
-static val_t adc_read(cupkee_device_t *dev, int off)
+static val_t adc_read_all(adc_ctrl_t *control, env_t *env)
 {
-    adc_ctrl_t *control= (adc_ctrl_t*)dev->data;
+    array_t *a = _array_create(env, control->conf.chn_num);
+    int i;
 
-    (void) control;
-    (void) off;
+    if (!a) {
+        return VAL_UNDEFINED;
+    }
 
-    return VAL_UNDEFINED;
+    for (i = 0; i < control->conf.chn_num; i++) {
+        uint32_t v;
+
+        if (hw_adc_read(control->adc, control->conf.chn_seq[i], &v)) {
+            val_set_number(_array_elem(a, i), v);
+        } else {
+            val_set_undefined(_array_elem(a, i));
+        }
+    }
+
+    return val_mk_array(a);
+}
+
+static val_t adc_read(cupkee_device_t *dev, env_t *env, int ch)
+{
+    adc_ctrl_t *control = (adc_ctrl_t*)dev->data;
+    uint32_t v;
+
+    if (ch < 0) { // read all
+        return adc_read_all(control, env);
+    }
+
+    if (ch < control->conf.chn_num && hw_adc_read(control->adc, control->conf.chn_seq[ch], &v)) {
+        return val_mk_number(v);
+    } else {
+        return VAL_UNDEFINED;
+    }
 }
 
 static void adc_event_handle(env_t *env, uint8_t which, uint8_t event)
 {
-    if (which < ADC_MAX && event < ADC_EVENT_MAX) {
-        cupkee_do_callback(env, controls[which].events_handle[ADC_EVENT_DATA], 0, NULL);
+    _TRACE("get adc(%u) event: %u\n", which, event);
+
+    if (which < ADC_MAX) {
+        adc_ctrl_t *control = &controls[which];
+        val_t param;
+
+        switch(event) {
+        case ADC_EVENT_READY:
+            cupkee_do_callback(env, control->events_handle[ADC_EVENT_READY], 0, NULL);
+            break;
+        case ADC_EVENT_ERROR:
+            val_set_number(&param, CUPKEE_ERROR);
+            cupkee_do_callback(env, control->events_handle[ADC_EVENT_ERROR], 1, &param);
+            break;
+        case ADC_EVENT_DATA:
+            param = adc_read_all(control, env);
+            cupkee_do_callback(env, control->events_handle[ADC_EVENT_DATA], 1, &param);
+            break;
+        default:
+            // TODO: 
+            break;
+        }
     }
 }
 

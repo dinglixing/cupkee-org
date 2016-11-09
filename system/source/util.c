@@ -28,19 +28,19 @@ val_t cupkee_error(env_t *env, int code)
 
 int cupkee_id(val_t *in, int max, const char **names)
 {
-    int id;
-
     if (val_is_number(in)) {
-        id = val_2_double(in);
+        return val_2_double(in);
     } else {
         const char *str = val_2_cstring(in);
-
-        for (id = 0; id < max && names[id]; id++) {
-            if (!strcmp(str, names[id])) {
-                break;
+        if (str) {
+            int id;
+            for (id = 0; id < max && names[id]; id++) {
+                if (!strcmp(str, names[id])) {
+                    return id;
+                }
             }
         }
     }
-    return id;
+    return max;
 }
 
