@@ -49,12 +49,10 @@ void hw_setup(void)
     hw_memory_init();
 
     hw_gpio_setup();
-    hw_adc_setup();
-
     hw_usb_setup();     // usb be used as console
-
+    hw_usart_setup();
+    hw_adc_setup();
     hw_systick_setup();
-
     hw_storage_setup();
 }
 
@@ -94,6 +92,7 @@ void hw_poll(void)
     static uint32_t system_ticks_count_pre = 0;
 
     hw_usb_poll();
+    hw_usart_poll();
 
     if (system_ticks_count_pre != system_ticks_count) {
         system_ticks_count_pre = system_ticks_count;

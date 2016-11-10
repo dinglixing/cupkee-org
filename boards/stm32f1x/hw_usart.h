@@ -24,31 +24,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __HARDWARE_INC__
-#define __HARDWARE_INC__
+#ifndef __HW_USART_INC__
+#define __HW_USART_INC__
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <libopencm3/cm3/systick.h>
-#include <libopencm3/cm3/cortex.h>
-#include <libopencm3/cm3/nvic.h>
-#include <libopencm3/cm3/vector.h>
-#include <libopencm3/stm32/desig.h>
-#include <libopencm3/stm32/rcc.h>
-#include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/flash.h>
-#include <libopencm3/stm32/desig.h>
-#include <libopencm3/usb/usbd.h>
-#include <libopencm3/usb/cdc.h>
+int  hw_usart_setup(void);
+void hw_usart_poll(void);
 
-#include "system.h"
-#include "hw_usb.h"
-#include "hw_misc.h"
-#include "hw_gpio.h"
-#include "hw_adc.h"
-#include "hw_usart.h"
-
-#endif /* __HARDWARE_INC__ */
+#endif /* __HW_USART_INC__ */
 
