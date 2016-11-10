@@ -347,7 +347,7 @@ device('GPIO').enable({\
     //
 }
 
-CU_pSuite test_gpio_entry(void)
+CU_pSuite test_device_gpio(void)
 {
     CU_pSuite suite = CU_add_suite("gpio", test_setup, test_clean);
 

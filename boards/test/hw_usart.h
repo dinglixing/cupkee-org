@@ -24,11 +24,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __HW_ADC_INC__
-#define __HW_ADC_INC__
+#ifndef __HW_USART_INC__
+#define __HW_USART_INC__
 
-int  hw_adc_setup(void);
-void hw_adc_poll(void);
+int  hw_usart_setup(void);
+void hw_usart_poll(void);
 
-#endif /* __HW_ADC_INC__ */
+#endif /* __HW_USART_INC__ */
 

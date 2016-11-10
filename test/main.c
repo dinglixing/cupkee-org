@@ -82,10 +82,11 @@ int main(int argc, const char *argv[])
     }
 
     // add test suite here:
-    test_hello_entry();
-    test_misc_entry();
-    test_gpio_entry();
-    test_adc_entry();
+    test_hello();
+    test_misc();
+    test_device_gpio();
+    test_device_adc();
+    test_device_usart();
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();

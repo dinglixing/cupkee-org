@@ -108,8 +108,10 @@ enum GPIO_EVENT_TYPE {
 #define OPT_GPIO_MOD_OUTPUT_OPENDRAIN   3       // output or dual
 #define OPT_GPIO_MOD_DUAL               4       // input
 #define OPT_GPIO_MOD_MAX                5
-#define OPT_GPIO_MOD_READABLE(mod)      ((mod) == OPT_GPIO_MOD_DUAL || (mod) < OPT_GPIO_MOD_OUTPUT_PUSHPULL)
-#define OPT_GPIO_MOD_WRITEABLE(mod)     ((mod) >= OPT_GPIO_MOD_OUTPUT_PUSHPULL)
+
+#define GPIO_READABLE(mod)      ((mod) == OPT_GPIO_MOD_DUAL || (mod) < OPT_GPIO_MOD_OUTPUT_PUSHPULL)
+#define GPIO_WRITEABLE(mod)     ((mod) >= OPT_GPIO_MOD_OUTPUT_PUSHPULL)
+
 /* board dependent start */
 #define GPIO_PORT_MAX                   7
 #define GPIO_PIN_MAX                    16
@@ -173,6 +175,49 @@ int hw_adc_event_enable(int adc, int event);
 int hw_adc_event_disable(int adc, int event);
 
 int hw_adc_read (int adc, int channel, uint32_t *data);
+
+/* USART */
+#define DEVICE_USART_ID                 (2)  //
+enum USART_EVENT_TYPE {
+    USART_EVENT_DATA = 0,
+    USART_EVENT_DRAIN,
+    USART_EVENT_ERROR,
+    USART_EVENT_MAX,
+};
+
+#define CFG_USART_BAUDRATE                0
+#define CFG_USART_DATABITS                1
+#define CFG_USART_STOPBITS                2
+#define CFG_USART_PARITY                  3
+#define CFG_USART_MAX                     4
+
+#define OPT_USART_PARITY_NONE             0
+#define OPT_USART_PARITY_ODD              1
+#define OPT_USART_PARITY_EVEN             2
+#define OPT_USART_PARITY_MAX              3
+
+/* board dependent start */
+#define USART_INSTANCE_MAX                1
+/* board dependent end */
+
+typedef struct hw_usart_conf_t{
+    uint32_t baudrate;
+    uint8_t  databits;
+    uint8_t  stopbits;
+    uint8_t  parity;
+} hw_usart_conf_t;
+
+int hw_usart_alloc(void);
+int hw_usart_release(int adc);
+void hw_usart_conf_reset(hw_usart_conf_t *conf);
+
+int hw_usart_enable (int instance, hw_usart_conf_t *conf);
+int hw_usart_disable(int instance);
+int hw_usart_event_enable(int instance, int event);
+int hw_usart_event_disable(int instance, int event);
+
+int hw_usart_send(int instance, int size, uint8_t *data);
+int hw_usart_recv(int instance, int size, uint8_t *data);
 
 #endif /* __BSP_INC__ */
 

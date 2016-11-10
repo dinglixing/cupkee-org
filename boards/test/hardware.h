@@ -55,6 +55,9 @@ int  hw_dbg_adc_test_ready(void);
 void hw_dbg_adc_set_eoc(void);
 void hw_dbg_adc_clr_eoc(void);
 int  hw_dbg_adc_test_eoc(void);
+// ADC
+void hw_dbg_usart_sbuf_set_space(int instance, int space);
+void hw_dbg_usart_sbuf_set_full(int instance);
 
 /******************************************************************************
  * Hardware interface not in bsp.h
@@ -63,5 +66,6 @@ int  hw_dbg_adc_test_eoc(void);
 #include "hw_console.h"
 #include "hw_gpio.h"
 #include "hw_adc.h"
+#include "hw_usart.h"
 
 #endif /* __HW_MOCK_INC__ */

@@ -24,11 +24,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __HW_ADC_INC__
-#define __HW_ADC_INC__
+#ifndef __DEV_UASRT_INC__
+#define __DEV_UASRT_INC__
 
-int  hw_adc_setup(void);
-void hw_adc_poll(void);
+#include "util.h"
 
-#endif /* __HW_ADC_INC__ */
+int dev_setup_usart(void);
+
+extern const cupkee_driver_t cupkee_driver_usart;
+
+#endif /* __DEV_UASRT_INC__ */
 

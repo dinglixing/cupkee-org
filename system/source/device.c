@@ -1,9 +1,36 @@
+/*
+MIT License
+
+This file is part of cupkee project.
+
+Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include <cupkee.h>
 
 #include "util.h"
 #include "device.h"
 #include "dev_gpio.h"
 #include "dev_adc.h"
+#include "dev_usart.h"
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
@@ -23,8 +50,9 @@ static cupkee_device_t *device_free = NULL;
 static cupkee_device_t devices[DEVICE_MAX];
 
 static const struct driver_entry_t drivers[] = {
-    {"GPIO", &cupkee_driver_gpio},
-    {"ADC",  &cupkee_driver_adc},
+    {"GPIO",  &cupkee_driver_gpio},
+    {"ADC",   &cupkee_driver_adc},
+    {"USART", &cupkee_driver_usart},
 };
 static int device_is_true(intptr_t dev);
 static void device_elem(void *env, intptr_t devid, val_t *av, val_t *elem);
@@ -322,6 +350,7 @@ void devices_setup(void)
 
     dev_setup_gpio();
     dev_setup_adc();
+    dev_setup_usart();
 
     return;
 }
@@ -452,7 +481,6 @@ val_t device_native_read(env_t *env, int ac, val_t *av)
     } else {
         return device_read(dev, env, -1);
     }
-
 }
 
 val_t device_native_listen(env_t *env, int ac, val_t *av)
@@ -471,6 +499,7 @@ val_t device_native_listen(env_t *env, int ac, val_t *av)
     if (!val_is_string(event) && !val_is_number(event)) {
         return VAL_FALSE;
     }
+
     if (!val_is_function(cb)) {
         return VAL_FALSE;
     }

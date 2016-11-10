@@ -46,6 +46,7 @@ void hw_setup(void)
 {
     hw_gpio_setup();
     hw_adc_setup();
+    hw_usart_setup();
 }
 
 void hw_poll(void)
@@ -59,6 +60,7 @@ void hw_poll(void)
 
     hw_gpio_poll();
     hw_adc_poll();
+    hw_usart_poll();
 }
 
 void hw_halt(void)

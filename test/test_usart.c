@@ -47,7 +47,7 @@ static void test_device(void)
 
     // create device 'gpio'
     CU_ASSERT(0 == test_cupkee_run_with_reply("var h\r",                                            "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('ADC')\r",                                "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('USART')\r",                              "<object>\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("h = device('other')\r",                              "undefined\r\n", 1));
 }
 
@@ -58,38 +58,80 @@ static void test_config(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("var e, h, c\r",                                      "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('ADC'))\r",                              "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('USART'))\r",                              "<object>\r\n", 1));
 
     // get device default configs
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel').length()\r",                     "0\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('baudrate')\r",                             "9600\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('databits')\r",                             "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('stopbits')\r",                             "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity')\r",                               "\"none\"\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(0)\r",                                      "9600\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(1)\r",                                      "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(2)\r",                                      "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(3)\r",                                      "\"none\"\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(4)\r",                                      "undefined\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('other')\r",                                "undefined\r\n", 1));
 
-    // channel set
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'channel', 1)\r",                          "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("c = h.config('channel')\r",                          "<array>\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("c[0]\r",                                             "1\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel', 16)\r",                          "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')[0]\r",                           "16\r\n", 1));
+    test_reply_show(1);
+    test_reply_show(0);
 
-    // mode config
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'interval', 1)\r",                         "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "1\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval', 10)\r",                         "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "10\r\n", 1));
+    // config baudrate
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('baudrate', 115200)\r",                     "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(0)\r",                                      "115200\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(0, 38400)\r",                               "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('baudrate')\r",                             "38400\r\n", 1));
+
+    // config databits
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('databits', 5)\r",                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('databits')\r",                             "5\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(1, 8)\r",                                   "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(1)\r",                                      "8\r\n", 1));
+
+    // config stopbits
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('stopbits', 2)\r",                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('stopbits')\r",                             "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(2, 1)\r",                                   "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(2)\r",                                      "1\r\n", 1));
+
+    // config parity
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity', 0)\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(3)\r",                                      "\"none\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity', 1)\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(3)\r",                                      "\"odd\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity', 2)\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(3)\r",                                      "\"even\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity', 3)\r",                            "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity')\r",                               "\"even\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(3, 'none')\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity')\r",                               "\"none\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(3, 'odd')\r",                               "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity')\r",                               "\"odd\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(3, 'even')\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity')\r",                               "\"even\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config(3, 'other')\r",                             "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity')\r",                               "\"even\"\r\n", 1));
 
     // config set is forbid if enabled
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, true)\r",                                  "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel', 0)\r",                           "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')[0]\r",                           "16\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval', 0)\r",                          "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "10\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "true\r\n", 1));
 
-    // disable & enable adc
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('baudrate', 115200)\r",                     "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('databits', 5)\r",                          "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('stopbits', 2)\r",                          "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity', 0)\r",                            "false\r\n", 1));
+
+    // disable & enable
+    CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, 0)\r",                                     "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "false\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('baudrate', 115200)\r",                     "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('databits', 5)\r",                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('stopbits', 2)\r",                          "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('parity', 0)\r",                            "true\r\n", 1));
+
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, 1)\r",                                     "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "true\r\n", 1));
 }
@@ -100,28 +142,49 @@ static void test_write(void)
 
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var h;\r",                                           "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('ADC'))\r",                              "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var h, d, l, state;\r",                              "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("(h = device('USART'))\r",                            "<object>\r\n", 1));
 
-    test_reply_show(1);
-    test_reply_show(0);
 
-    // channel set
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'channel', 1)\r",                          "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')[0]\r",                           "1\r\n", 1));
-
-    // interval set
-    CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'interval', 1)\r",                         "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "1\r\n", 1));
-
-    // enable device
-    CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, true)\r",                                  "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, {\
+  baudrate: 115200,\
+  databits: 8,\
+  stopbits: 1,\
+  parity: 0})\r",                                                                                   "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "true\r\n", 1));
 
-    // write, always false
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 1)\r",                                      "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 2)\r",                                      "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 3)\r",                                      "false\r\n", 1));
+    hw_dbg_usart_sbuf_set_space(0, 10);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 'hello')\r",                                "5\r\n", 1));
+    hw_dbg_usart_sbuf_set_space(0, 10);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 'hello', 2)\r",                             "2\r\n", 1));
+    hw_dbg_usart_sbuf_set_space(0, 0);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 'hello')\r",                                "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 'hello', 2)\r",                             "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 'hello', function(err, n, data) {\
+    if (!err) state = [n, data]\
+})\r",                                                                                              "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("state[0] == 0\r",                                    "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("state[1] == 'hello'\r",                              "true\r\n", 1));
+    hw_dbg_usart_sbuf_set_space(0, 2);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, 'hello', function(err, n, data) {\
+    if (!err) state = [n, data]\
+})\r",                                                                                              "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("state[0] == 2\r",                                    "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("state[1] == 'hello'\r",                              "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = Buffer('hello world')\r",                        "<buffer>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("l = d.length()\r",                                   "11\r\n", 1));
+    hw_dbg_usart_sbuf_set_space(0, 5);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("write(h, d, function(err, n, data) {\
+    if (!err) state = n\
+})\r",                                                                                              "5\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("state == 5\r",                                       "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = d.slice(state)\r",                               "<buffer>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.length())\r",                                      "6\r\n", 1));
+    hw_dbg_usart_sbuf_set_space(0, 6);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.write(d, 10)\r",                                   "6\r\n", 1));
+
+    return;
 }
 
 static void test_read(void)
@@ -330,18 +393,18 @@ static void test_unref(void)
     // not support
 }
 
-CU_pSuite test_device_adc(void)
+CU_pSuite test_device_usart(void)
 {
-    CU_pSuite suite = CU_add_suite("adc", test_setup, test_clean);
+    CU_pSuite suite = CU_add_suite("usart", test_setup, test_clean);
 
     if (suite) {
         CU_add_test(suite, "device",    test_device);
         CU_add_test(suite, "config",    test_config);
         CU_add_test(suite, "write",     test_write);
+#if 0
         CU_add_test(suite, "read",      test_read);
         CU_add_test(suite, "event",     test_event);
         CU_add_test(suite, "unref",     test_unref);
-#if 0
 #endif
     }
 

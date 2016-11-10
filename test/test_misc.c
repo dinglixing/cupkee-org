@@ -174,7 +174,7 @@ static void test_timeout(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "8\r\n", 1));
 }
 
-CU_pSuite test_misc_entry()
+CU_pSuite test_misc()
 {
     CU_pSuite suite = CU_add_suite("misc", test_setup, test_clean);
 

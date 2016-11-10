@@ -49,9 +49,9 @@ void hw_setup(void)
     hw_memory_init();
 
     hw_gpio_setup();
+    hw_adc_setup();
 
-    /* setup usb: to support console */
-    hw_usb_setup();
+    hw_usb_setup();     // usb be used as console
 
     hw_systick_setup();
 
@@ -101,6 +101,7 @@ void hw_poll(void)
         systick_event_post();
 
         hw_gpio_poll();
+        hw_adc_poll();
     }
 }
 
