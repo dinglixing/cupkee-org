@@ -24,8 +24,14 @@
 ## SOFTWARE.
 ##
 
+elf_NAMES = cupkee
 
-ARCH = pc
-MCU  = x86
+cupkee_SRCS = ${notdir ${wildcard ${BASE_DIR}/nosys/*.c}}
 
-BOARD_SRC_DIR = test
+cupkee_CPPFLAGS = -I${BSP_DIR}/include
+cupkee_CFLAGS   =
+cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -lbsp
+
+include ${MAKE_DIR}/cupkee.ruls.mk
+
+VPATH = ${BASE_DIR}/nosys

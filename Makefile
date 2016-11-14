@@ -63,6 +63,9 @@ lang:
 main: bsp sys lang
 	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk
 
+nosys: build bsp
+	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/nosys.mk
+
 bin: main
 	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk bin
 
@@ -83,11 +86,8 @@ test: build bsp sys lang
 clean:
 	@rm -rf ${BUILD_DIR}
 
-do:
-	@rm -rf ${BUILD_DIR}/cupkee.elf
-
-load: do main
+load:
 	openocd -fopenocd/interface/jlink.cfg -fopenocd/target/stm32f1x.cfg \
 		-c "program ${BUILD_DIR}/cupkee.elf verify reset exit"
 
-.PHONY: clean load build bin hex list serc
+.PHONY: clean load build bin hex list serc main bsp lang sys nosys

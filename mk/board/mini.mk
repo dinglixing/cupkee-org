@@ -25,7 +25,7 @@
 ##
 
 
-ARCH = pc
-MCU  = x86
+ARCH = cortex-m3
+MCU  = stm32f103c8
 
-BOARD_SRC_DIR = test
+BOARD_SRC_DIR = stm32f1x

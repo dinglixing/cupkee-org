@@ -152,6 +152,7 @@ static int hw_gpio_config_set(int grp, hw_gpio_conf_t *cfg)
     case OPT_GPIO_MOD_DUAL:              cnf = GPIO_CNF_OUTPUT_OPENDRAIN; break;
     default: return -1;
     }
+
     if (cfg->mod >= OPT_GPIO_MOD_OUTPUT_PUSHPULL) {
         if (cfg->speed <= 2) {
             mode = GPIO_MODE_OUTPUT_2_MHZ;
