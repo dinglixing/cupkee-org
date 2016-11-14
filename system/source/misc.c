@@ -50,7 +50,6 @@ void print_error(int error)
 
     case ERR_NotEnoughMemory:   console_puts("Error: Not enought memory\r\n"); break;
     case ERR_NotImplemented:    console_puts("Error: Not implemented\r\n"); break;
-    case ERR_StaticNumberOverrun: console_puts("Error: ..\r\n"); break;
     case ERR_StackOverflow:     console_puts("Error: Stack overflow\r\n"); break;
     case ERR_ResourceOutLimit:  console_puts("Error: Resource out of limit\r\n"); break;
 
@@ -62,9 +61,6 @@ void print_error(int error)
     case ERR_InvalidByteCode:   console_puts("Error: Invalid Byte code\r\n"); break;
     case ERR_InvalidInput:      console_puts("Error: Invalid input\r\n"); break;
     case ERR_InvalidCallor:     console_puts("Error: Invalid callor\r\n"); break;
-    case ERR_NotDefinedId:      console_puts("Error: Not defined id\r\n"); break;
-    case ERR_NotDefinedProp:    console_puts("Error: Not defined proprity\r\n"); break;
-    case ERR_HasNoneElement:    console_puts("Error: Not defined element\r\n"); break;
     default: console_puts("Error: unknown error\r\n");
     }
 }
