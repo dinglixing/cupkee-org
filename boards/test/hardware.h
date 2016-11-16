@@ -55,9 +55,15 @@ int  hw_dbg_adc_test_ready(void);
 void hw_dbg_adc_set_eoc(void);
 void hw_dbg_adc_clr_eoc(void);
 int  hw_dbg_adc_test_eoc(void);
-// ADC
-void hw_dbg_usart_sbuf_set_space(int instance, int space);
-void hw_dbg_usart_sbuf_set_full(int instance);
+// USART
+void hw_dbg_usart_set_input(const char *data);
+void hw_dbg_usart_enable_out(int n);
+int hw_dbg_usart_out_count(void);
+int hw_dbg_usart_in_count(void);
+int hw_dbg_usart_has_data(int i);
+int hw_dbg_usart_not_busy(int i);
+uint8_t hw_dbg_usart_in(int i);
+void hw_dbg_usart_out(int i, uint8_t d);
 
 /******************************************************************************
  * Hardware interface not in bsp.h

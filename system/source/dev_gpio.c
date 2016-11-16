@@ -256,35 +256,48 @@ static device_config_handle_t *gpio_config(cupkee_device_t *dev, val_t *name)
     }
 }
 
-static val_t gpio_write(cupkee_device_t *dev, val_t *data)
+static val_t gpio_write(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
-    gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
-    uint32_t d = val_2_double(data);
+    gpio_group_ctrl_t *control = (gpio_group_ctrl_t*)dev->data;
+    uint32_t d;
+    int off;
 
-    if (GPIO_WRITEABLE(control->conf.mod) &&
-        val_is_number(data) && hw_gpio_write(control->group, d) > 0) {
+    (void) env;
+
+    if (!val_is_number(av)) {
+        return VAL_FALSE;
+    }
+    d = val_2_double(av);
+
+    if (ac > 1 && val_is_number(av + 1)) {
+        off = val_2_integer(av + 1);
+    } else {
+        off = -1;
+    }
+
+    if (hw_gpio_write(control->group, off, d) > 0) {
         return VAL_TRUE;
     } else {
         return VAL_FALSE;
     }
 }
 
-static val_t gpio_read(cupkee_device_t *dev, env_t *env, int off)
+static val_t gpio_read(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
     gpio_group_ctrl_t *control= (gpio_group_ctrl_t*)dev->data;
     uint32_t d;
+    int off;
 
     (void) env;
 
-    if (GPIO_READABLE(control->conf.mod) && hw_gpio_read(control->group, &d) > 0) {
-        if (off < 0) {
-            return val_mk_number(d);
-        } else
-        if (off >= control->conf.pin_num) {
-            return VAL_UNDEFINED;
-        } else {
-            return val_mk_number((d >> off) & 1);
-        }
+    if (ac > 0 && val_is_number(av)) {
+        off = val_2_integer(av);
+    } else {
+        off = -1;
+    }
+
+    if (hw_gpio_read(control->group, off, &d) > 0) {
+        return val_mk_number(d);
     } else {
         return VAL_FALSE;
     }

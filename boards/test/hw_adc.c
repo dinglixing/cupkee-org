@@ -87,7 +87,7 @@ int  hw_dbg_adc_test_eoc(void) {
 
 #define ADC_EVENT_MASK  0x0f
 
-#define ADC_INVALID_VAL 0xffff
+#define ADC_INVALID_VAL HW_INVALID_VAL
 
 typedef struct hw_adc_t{
     uint8_t flags;
@@ -97,7 +97,7 @@ typedef struct hw_adc_t{
 } hw_adc_t;
 
 static hw_adc_t       adc_blks[ADC_MAX];
-static uint16_t       adc_vals[ADC_CHANNEL_MAX];
+static uint32_t       adc_vals[ADC_CHANNEL_MAX];
 
 static inline int hw_adc_check(int adc) {
     return (adc < ADC_MAX && (adc_blks[adc].flags & ADC_INUSED));
@@ -351,18 +351,18 @@ int hw_adc_disable(int adc)
     return -1;
 }
 
-int hw_adc_read(int adc, int ch, uint32_t *data)
+int hw_adc_read(int adc, int off, uint32_t *data)
 {
     if (!hw_adc_check(adc)) {
         return -1;
     }
 
-    if (ch < ADC_CHANNEL_MAX && adc_vals[ch] != ADC_INVALID_VAL) {
-        *data = adc_vals[ch];
+    if (off < ADC_CHANNEL_MAX) {
+        *data = adc_vals[off];
         return 1;
+    } else {
+        return 0;
     }
-
-    return 0;
 }
 
 int hw_adc_event_enable(int adc, int event)

@@ -69,8 +69,8 @@ static void test_config(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'channel', 1)\r",                          "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("c = h.config('channel')\r",                          "<array>\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("c[0]\r",                                             "1\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel', 16)\r",                          "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')[0]\r",                           "16\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel', 6)\r",                           "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')[0]\r",                           "6\r\n", 1));
 
     // mode config
     CU_ASSERT(0 == test_cupkee_run_with_reply("config(h, 'interval', 1)\r",                         "true\r\n", 1));
@@ -82,7 +82,7 @@ static void test_config(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h, true)\r",                                  "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel', 0)\r",                           "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')[0]\r",                           "16\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('channel')[0]\r",                           "6\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval', 0)\r",                          "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("h.config('interval')\r",                             "10\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("enable(h)\r",                                        "true\r\n", 1));

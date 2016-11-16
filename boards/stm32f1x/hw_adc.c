@@ -27,18 +27,12 @@ SOFTWARE.
 #include <bsp.h>
 #include "hardware.h"
 
-#if 0
-#define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
-#else
-#define _TRACE(fmt, ...)    //
-#endif
-
 #define ADC_INUSED      0x80
 #define ADC_ENABLE      0x40
 
 #define ADC_IDEL        0
 #define ADC_READY       0x20
-#define ADC_WIP         0x10      // work in process
+#define ADC_BUSY        0x10      // work in process
 #define ADC_STATE_MASK  0x30
 
 #define ADC_EVENT_MASK  0x0f
@@ -47,9 +41,11 @@ SOFTWARE.
 
 typedef struct hw_adc_t{
     uint8_t flags;
-    uint8_t channels[3];
+    uint8_t chn_cur;
+    uint8_t chn_num;
+    uint8_t chn_seq[5];
     uint32_t interval;
-    uint32_t count;
+    uint32_t sleep;
 } hw_adc_t;
 
 static hw_adc_t       adc_blks[ADC_MAX];
@@ -61,50 +57,22 @@ static inline int hw_adc_check(int adc) {
 
 static inline int hw_adc_ready_test(void)
 {
-    return 0;
+    return 1;
 }
 
-static inline int hw_adc_eoc_test(void)
+static inline int hw_adc_convert_test(void)
 {
-    return 0;
+    return adc_eoc(ADC1);
 }
 
-static inline uint16_t hw_adc_channel_get(int ch)
-{
-    (void) ch;
-    return 0;
-}
-
-static inline void hw_adc_channel_set(hw_adc_t *blk, int channel)
-{
-    int sel = (channel / 8) & 3;
-    int bit = channel & 7;
-
-    blk->channels[sel] |= 1 << bit;
-}
-
-static inline int hw_adc_channel_test(hw_adc_t *blk, int channel)
-{
-    int sel = (channel / 8) & 3;
-    int bit = channel & 7;
-
-    return blk->channels[sel] & (1 << bit);
-}
-
-static void hw_adc_on(hw_adc_t *blk)
+static inline int hw_adc_ready_check(hw_adc_t *blk)
 {
     (void) blk;
-
-    _TRACE("... adc on\n");
-    // hardware setting code here
-}
-
-static inline int hw_adc_wait_ready(hw_adc_t *blk)
-{
-    (void) blk;
-
 
     if (hw_adc_ready_test()) {
+
+        adc_set_regular_sequence(ADC1, blk->chn_num, blk->chn_seq);
+
         if (blk->flags & (1 << ADC_EVENT_READY)) {
             devices_event_post(ADC_DEVICE_ID, blk - adc_blks, ADC_EVENT_READY);
         }
@@ -115,11 +83,53 @@ static inline int hw_adc_wait_ready(hw_adc_t *blk)
     }
 }
 
+static void hw_adc_on(hw_adc_t *blk)
+{
+    int i;
+
+    _TRACE("... adc on\n");
+
+    blk->chn_cur = ADC_CHANNEL_MAX;
+
+    rcc_periph_clock_enable(RCC_ADC1);
+    // hardware setting code here
+    for (i = 0; i < blk->chn_num; i++) {
+        int ch = blk->chn_seq[i];
+
+        if (ch == 8) {
+            rcc_periph_clock_enable(RCC_GPIOB);
+            gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, GPIO0);
+        }
+        if (ch == 9) {
+            rcc_periph_clock_enable(RCC_GPIOB);
+            gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, GPIO1);
+        }
+    }
+
+    adc_power_off(ADC1);
+
+    adc_disable_scan_mode(ADC1);
+    adc_disable_external_trigger_regular(ADC1);
+
+    adc_set_right_aligned(ADC1);
+    adc_set_single_conversion_mode(ADC1);
+    adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+
+    adc_power_on(ADC1);
+
+    adc_reset_calibration(ADC1);
+
+    adc_calibrate(ADC1);
+
+}
+
 static void hw_adc_off(hw_adc_t *blk)
 {
     (void) blk;
 
-    // hardware setting code here
+    /* hardware code here */
+    adc_power_on(ADC1);
+    rcc_periph_clock_disable(RCC_ADC1);
 
     _TRACE("... adc off\n");
     blk->flags &= ~ADC_STATE_MASK;
@@ -127,40 +137,36 @@ static void hw_adc_off(hw_adc_t *blk)
 
 static int hw_adc_start(hw_adc_t *blk)
 {
-    if (blk->count == 0) {
-        // hardware setting code here
-        _TRACE("... adc convert start\n");
-        return blk->channels[0] || blk->channels[1] || blk->channels[2];
-    } else {
-        _TRACE("... adc interval: %u\n", blk->count);
-        blk->count--;
+    if (blk->sleep != 0) {
+        _TRACE("... adc wait: %u\n", blk->sleep);
+        blk->sleep--;
         return 0;
     }
+
+    _TRACE("... adc convert start\n");
+    adc_start_conversion_direct(ADC1);
+
+    return 1;
 }
 
 static void hw_adc_load(hw_adc_t *blk)
 {
-    int i, converted = 0;
+    adc_vals[blk->chn_seq[blk->chn_cur++]] = adc_read_regular(ADC1);
 
-    for (i = 0; i < ADC_CHANNEL_MAX; i++) {
-        if (hw_adc_channel_test(blk, i)) {
-            // hardware read convert value
-            adc_vals[i] = hw_adc_channel_get(i);
-            converted++;
+    if (blk->chn_cur >= blk->chn_num) {
+        if (blk->flags & (1 << ADC_EVENT_DATA)) {
+            _TRACE("post adc event: data\n");
+            devices_event_post(ADC_DEVICE_ID, blk - adc_blks, ADC_EVENT_DATA);
         }
+        blk->chn_cur = 0;
     }
 
-    if (converted && (blk->flags & (1 << ADC_EVENT_DATA))) {
-        _TRACE("post adc event: data\n");
-        devices_event_post(ADC_DEVICE_ID, blk - adc_blks, ADC_EVENT_DATA);
-    }
-
-    blk->count = blk->interval;
+    blk->sleep = blk->interval;
 }
 
 static inline int hw_adc_wait_convert(hw_adc_t *blk)
 {
-    if (hw_adc_eoc_test()) {
+    if (hw_adc_convert_test()) {
         _TRACE("... adc convert complete\n");
         hw_adc_load(blk);
         return 1;
@@ -174,11 +180,14 @@ static int hw_adc_config_set(hw_adc_t *blk, hw_adc_conf_t *cfg)
 {
     int i;
 
-    blk->interval = cfg->interval;
+    blk->chn_cur = 0;
+    blk->chn_num = cfg->chn_num;
     for (i = 0; i < cfg->chn_num; i++) {
-        hw_adc_channel_set(blk, cfg->chn_seq[i]);
+        blk->chn_seq[i] = cfg->chn_seq[i];
     }
-    blk->count = blk->interval;
+
+    blk->interval = cfg->interval;
+    blk->sleep = blk->interval;
 
     hw_adc_on(blk);
 
@@ -187,20 +196,10 @@ static int hw_adc_config_set(hw_adc_t *blk, hw_adc_conf_t *cfg)
 
 static int hw_adc_config_clr(hw_adc_t *blk)
 {
-    int i;
-
     hw_adc_off(blk);
 
-    for (i = 0; i < ADC_CHANNEL_MAX; i++) {
-        if (hw_adc_channel_test(blk, i)) {
-            adc_vals[i] = ADC_INVALID_VAL;
-        }
-    }
-
+    blk->chn_num = 0;
     blk->interval = 0;
-    blk->channels[0] = 0;
-    blk->channels[1] = 0;
-    blk->channels[2] = 0;
 
     return 0;
 }
@@ -212,9 +211,8 @@ int hw_adc_setup(void)
     // hardware setup code here
     for (i = 0; i < ADC_MAX; i++) {
         adc_blks[i].flags = 0;
-        adc_blks[i].channels[0] = 0;
-        adc_blks[i].channels[1] = 0;
-        adc_blks[i].channels[2] = 0;
+        adc_blks[i].chn_cur = 0;
+        adc_blks[i].chn_num = 0;
     }
 
     for (i = 0; i < ADC_CHANNEL_MAX; i++) {
@@ -234,18 +232,18 @@ void hw_adc_poll(void)
         if (blk->flags & ADC_INUSED && blk->flags & ADC_ENABLE) {
             switch(blk->flags & ADC_STATE_MASK) {
             case ADC_IDEL:
-                if (hw_adc_wait_ready(blk)) {
+                if (hw_adc_ready_check(blk)) {
                     blk->flags |= ADC_READY;
                 }
                 break;
             case ADC_READY:
                 if (hw_adc_start(blk)) {
-                    blk->flags |= ADC_WIP;
+                    blk->flags |= ADC_BUSY;
                 }
                 break;
-            case (ADC_READY | ADC_WIP):
+            case (ADC_READY | ADC_BUSY):
                 if (hw_adc_wait_convert(blk)) {
-                    blk->flags &= ~ADC_WIP;
+                    blk->flags &= ~ADC_BUSY;
                 }
                 break;
             default:
@@ -263,9 +261,6 @@ int hw_adc_alloc(void)
     for (i = 0; i < ADC_MAX; i++) {
         if (!(adc_blks[i].flags & ADC_INUSED)) {
             adc_blks[i].flags = ADC_INUSED;
-            adc_blks[i].channels[0] = 0;
-            adc_blks[i].channels[1] = 0;
-            adc_blks[i].channels[2] = 0;
             return i;
         }
     }
@@ -325,12 +320,14 @@ int hw_adc_disable(int adc)
 
 int hw_adc_read(int adc, int ch, uint32_t *data)
 {
+    hw_adc_t *blk;
     if (!hw_adc_check(adc)) {
         return -1;
     }
 
-    if (ch < ADC_CHANNEL_MAX && adc_vals[ch] != ADC_INVALID_VAL) {
-        *data = adc_vals[ch];
+    blk = adc_blks + adc;
+    if (ch < blk->chn_num && adc_vals[blk->chn_seq[ch]] != ADC_INVALID_VAL) {
+        *data = adc_vals[blk->chn_seq[ch]];
         return 1;
     }
 

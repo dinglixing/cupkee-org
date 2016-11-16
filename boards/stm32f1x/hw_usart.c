@@ -24,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
 /*******************************************************************************
  * hw field
 *******************************************************************************/
@@ -37,17 +36,15 @@ SOFTWARE.
 #define _TRACE(fmt, ...)    //
 #endif
 
-#define USART_INUSED      0x80
-#define USART_ENABLE      0x40
+#define USART_INUSED        0x80
+#define USART_ENABLE        0x40
 
-#define USART_STATE_MASK  0x30
+#define USART_STATE_MASK    0x30
 
-#define USART_EVENT_MASK  0x0f
-#define USART_BUF_SIZE  64
+#define USART_EVENT_MASK    0x0f
+#define USART_BUF_SIZE      32
 
 typedef struct hw_usart_t{
-    uint8_t flags;
-
     uint8_t send_bgn;
     uint8_t send_len;
     uint8_t recv_bgn;
@@ -56,35 +53,129 @@ typedef struct hw_usart_t{
     uint8_t recv_buf[USART_BUF_SIZE];
 } hw_usart_t;
 
-static hw_usart_t usart_buffs[USART_INSTANCE_MAX];
-static uint8_t    usart_flags[USART_INSTANCE_MAX];
+static hw_usart_t       usart_buffs[USART_INSTANCE_MAX];
+static uint8_t          usart_flags[USART_INSTANCE_MAX];
+static const uint32_t   usart_bases[] = {USART1, USART2, USART3, UART4, UART5};
 
 static inline int hw_usart_verify(unsigned instance) {
     return (instance < USART_INSTANCE_MAX && (usart_flags[instance] & USART_INUSED));
 }
 
+static inline int hw_usart_is_enable(int instance) {
+    return usart_flags[instance] & USART_ENABLE;
+}
+
+static inline int hw_usart_has_data(int instance) {
+    uint32_t base = usart_bases[instance];
+
+    return USART_SR(base) & USART_SR_RXNE;
+}
+
+static inline int hw_usart_not_busy(int instance) {
+    uint32_t base = usart_bases[instance];
+
+    return USART_SR(base) & USART_SR_TXE;
+}
+
+static inline uint8_t hw_usart_in(int instance) {
+    uint32_t base = usart_bases[instance];
+
+    return USART_DR(base);
+}
+
+static inline void hw_usart_out(int instance, uint8_t d) {
+    uint32_t base = usart_bases[instance];
+
+    USART_DR(base) = d;
+}
+
 static int hw_usart_config_set(int instance, hw_usart_conf_t *cfg)
 {
-    /* instance setup code here */
-    /* ...                      */
+    uint32_t base = usart_bases[instance];
+
+    rcc_periph_clock_enable(RCC_GPIOA);
+    rcc_periph_clock_enable(RCC_AFIO);
+    rcc_periph_clock_enable(RCC_USART1);
+
+	usart_set_baudrate(base, cfg->baudrate);
+	usart_set_databits(base, 8);
+	usart_set_stopbits(base, USART_STOPBITS_1);
+	usart_set_mode(base, USART_MODE_TX_RX);
+	usart_set_parity(base, USART_PARITY_NONE);
+	usart_set_flow_control(base, USART_FLOWCONTROL_NONE);
+
+    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+            GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART1_TX);
+    gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+            GPIO_CNF_INPUT_PULL_UPDOWN, GPIO_USART1_RX);
+
+    usart_enable(base);
 
     return 0;
 }
 
 static int hw_usart_config_clr(int instance)
 {
-    /* instance reset code here */
-    /* ...                      */
+    uint32_t base = usart_bases[instance];
+
+    rcc_periph_clock_disable(RCC_USART1);
+    usart_disable(base);
 
     return 0;
+}
+
+static void hw_usart_check_recv(int i)
+{
+    int recv = 0;
+    hw_usart_t *usart = &usart_buffs[i];
+
+    while(hw_usart_has_data(i)) {
+        uint8_t data = hw_usart_in(i);
+
+        if (usart->recv_len < USART_BUF_SIZE) {
+            int tail = usart->recv_bgn + usart->recv_len;
+            if (tail >= USART_BUF_SIZE) {
+                tail -= USART_BUF_SIZE;
+            }
+            usart->recv_buf[tail] = data;
+            usart->recv_len++;
+        }
+        recv++;
+    }
+
+    if (recv && (usart_flags[i] & (1 << USART_EVENT_DATA))) {
+        devices_event_post(DEVICE_USART_ID, i, USART_EVENT_DATA);
+    }
+}
+
+static void hw_usart_check_send(int i)
+{
+    hw_usart_t *usart = &usart_buffs[i];
+
+    while (hw_usart_not_busy(i)) {
+        int head;
+
+        if (usart->send_len == 0) {
+            return;
+        }
+
+        head = usart->send_bgn;
+        hw_usart_out(i, usart->send_buf[head++]);
+
+        if (head >= USART_BUF_SIZE) {
+            usart->send_bgn = 0;
+        } else {
+            usart->send_bgn = head;
+        }
+        if ((0 == --usart->send_len) && (usart_flags[i] & (1 << USART_EVENT_DRAIN))) {
+            devices_event_post(DEVICE_USART_ID, i, USART_EVENT_DRAIN);
+        }
+    }
 }
 
 int hw_usart_setup(void)
 {
     int i;
-
-    /* usart setup code here    */
-    /* ...                      */
 
     for (i = 0; i < USART_INSTANCE_MAX; i++) {
         usart_flags[i] = 0;
@@ -99,6 +190,16 @@ int hw_usart_setup(void)
 
 void hw_usart_poll(void)
 {
+    int i;
+
+    for (i = 0; i < USART_INSTANCE_MAX; i++) {
+        if (!hw_usart_is_enable(i)) {
+            continue;
+        }
+
+        hw_usart_check_recv(i);
+        hw_usart_check_send(i);
+    }
 }
 
 int hw_usart_alloc(void)
@@ -171,14 +272,91 @@ int hw_usart_disable(int instance)
     return -1;
 }
 
-int hw_usart_read(int instance, int size, uint8_t *buf)
+void hw_usart_recv_load(int instance, int size, uint8_t *buf)
 {
-    return -1;
+    hw_usart_t *buff;
+    int tail;
+
+    if (!hw_usart_verify(instance)) {
+        return;
+    }
+    buff = &usart_buffs[instance];
+
+    if (size <= 0) {
+        return;
+    } else
+    if (size > buff->recv_len) {
+        buff->recv_len = 0;
+        return;
+    }
+
+    buff->recv_len -= size;
+    tail = buff->recv_bgn + size;
+
+    if (tail < USART_BUF_SIZE) {
+        if (buf) {
+            _TRACE("copy from %d: %d\n", buff->recv_bgn, size);
+            memcpy(buf, buff->recv_buf + buff->recv_bgn, size);
+        }
+        buff->recv_bgn = tail;
+    } else {
+        int wrap = tail - USART_BUF_SIZE;
+        if (buf) {
+            if (wrap) {
+                size -= wrap;
+                memcpy(buf + size, buff->recv_buf, wrap);
+            }
+            memcpy(buf, buff->recv_buf + buff->recv_bgn, size);
+        }
+        buff->recv_bgn = wrap;
+    }
+
+    return;
 }
 
-int hw_usart_write(int instance, int size, uint8_t *buf)
+int hw_usart_recv_len(int instance)
 {
-    return -1;
+    hw_usart_t *buff;
+
+    if (!hw_usart_verify(instance)) {
+        return -1;
+    }
+    buff = &usart_buffs[instance];
+
+    return buff->recv_len;
+}
+
+int hw_usart_send(int instance, int size, uint8_t *data)
+{
+    hw_usart_t *buff;
+    int space, tail, wrap = 0;
+
+    if (!hw_usart_verify(instance)) {
+        return -1;
+    }
+    buff = &usart_buffs[instance];
+
+    space = USART_BUF_SIZE - buff->send_len;
+    if (size > space) {
+        size = space;
+    }
+
+    if (size == 0) {
+        return 0;
+    }
+
+    tail = buff->send_bgn + buff->send_len;
+    buff->send_len += size;
+
+    if (tail < USART_BUF_SIZE && tail + size > USART_BUF_SIZE) {
+        wrap = tail + size - USART_BUF_SIZE;
+        size -= wrap;
+
+        memcpy(usart_buffs[instance].send_buf, data + size, wrap);
+    }
+    memcpy(usart_buffs[instance].send_buf + tail, data, size);
+
+    return size + wrap;
 }
 
 int hw_usart_event_enable(int instance, int event)

@@ -40,6 +40,8 @@ SOFTWARE.
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/flash.h>
 #include <libopencm3/stm32/desig.h>
+#include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/adc.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
@@ -49,6 +51,12 @@ SOFTWARE.
 #include "hw_gpio.h"
 #include "hw_adc.h"
 #include "hw_usart.h"
+
+#if 0
+#define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
+#else
+#define _TRACE(fmt, ...)    //
+#endif
 
 #endif /* __HARDWARE_INC__ */
 

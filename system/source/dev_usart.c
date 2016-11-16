@@ -30,7 +30,7 @@ SOFTWARE.
 #include "misc.h"
 #include "dev_usart.h"
 
-#if 1
+#if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
 #else
 #define _TRACE(fmt, ...)    //
@@ -58,6 +58,8 @@ static int usart_baudrate_set(cupkee_device_t *dev, env_t *env, val_t *setting)
     usart_ctrl_t *control = (usart_ctrl_t *) dev->data;
     hw_usart_conf_t *conf = &control->conf;
 
+    (void) env;
+
     if (!val_is_number(setting)) {
         return -CUPKEE_EINVAL;
     }
@@ -72,6 +74,8 @@ static val_t usart_baudrate_get(cupkee_device_t *dev, env_t *env)
     usart_ctrl_t *control = (usart_ctrl_t *) dev->data;
     hw_usart_conf_t *conf = &control->conf;
 
+    (void) env;
+
     return val_mk_number(conf->baudrate);
 }
 
@@ -79,6 +83,8 @@ static int usart_databits_set(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
     usart_ctrl_t *control = (usart_ctrl_t *) dev->data;
     hw_usart_conf_t *conf = &control->conf;
+
+    (void) env;
 
     if (!val_is_number(setting)) {
         return -CUPKEE_EINVAL;
@@ -94,6 +100,8 @@ static val_t usart_databits_get(cupkee_device_t *dev, env_t *env)
     usart_ctrl_t *control = (usart_ctrl_t *) dev->data;
     hw_usart_conf_t *conf = &control->conf;
 
+    (void) env;
+
     return val_mk_number(conf->databits);
 }
 
@@ -101,6 +109,8 @@ static int usart_stopbits_set(cupkee_device_t *dev, env_t *env, val_t *setting)
 {
     usart_ctrl_t *control = (usart_ctrl_t *) dev->data;
     hw_usart_conf_t *conf = &control->conf;
+
+    (void) env;
 
     if (!val_is_number(setting)) {
         return -CUPKEE_EINVAL;
@@ -116,6 +126,8 @@ static val_t usart_stopbits_get(cupkee_device_t *dev, env_t *env)
     usart_ctrl_t *control = (usart_ctrl_t *) dev->data;
     hw_usart_conf_t *conf = &control->conf;
 
+    (void) env;
+
     return val_mk_number(conf->stopbits);
 }
 
@@ -124,6 +136,8 @@ static int usart_parity_set(cupkee_device_t *dev, env_t *env, val_t *setting)
     usart_ctrl_t *control = (usart_ctrl_t *) dev->data;
     hw_usart_conf_t *conf = &control->conf;
     int parity = cupkee_id(setting, OPT_USART_PARITY_MAX, usart_parity_opts);
+
+    (void) env;
 
     if (parity >= OPT_USART_PARITY_MAX) {
         return -CUPKEE_EINVAL;
@@ -139,7 +153,9 @@ static val_t usart_parity_get(cupkee_device_t *dev, env_t *env)
     usart_ctrl_t *control = (usart_ctrl_t *) dev->data;
     hw_usart_conf_t *conf = &control->conf;
 
-    return val_mk_foreign_string(usart_parity_opts[conf->parity]);
+    (void) env;
+
+    return val_mk_foreign_string((intptr_t)usart_parity_opts[conf->parity]);
 }
 
 static device_config_handle_t config_handles[] = {
@@ -267,23 +283,123 @@ static device_config_handle_t *usart_config(cupkee_device_t *dev, val_t *name)
     }
 }
 
-static val_t usart_write(cupkee_device_t *dev, val_t *data)
+static val_t usart_write(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
-    (void) dev;
-    (void) data;
+    usart_ctrl_t *control = (usart_ctrl_t*)dev->data;
+    val_t cb_param[3];
+    void *addr;
+    int   size, n;
+    int   err = 0;
 
+    if (device_param_stream(ac, av, &addr, &size)) {
+        cb_param[2] = *av++; ac--;
+    } else {
+        err = CUPKEE_EINVAL;
+        goto DO_ERROR;
+    }
+
+    if (device_param_int(ac, av, &n)) {
+        ac--; av++;
+        if (n < 0) {
+            err = CUPKEE_EINVAL;
+            goto DO_ERROR;
+        } else
+        if (n > size) {
+            n = size;
+        }
+    } else {
+        n = size;
+    }
+
+    n = hw_usart_send(control->instance, n, addr);
+    if (n < 0) {
+        err = CUPKEE_EHARDWARE;
+        goto DO_ERROR;
+    }
+
+    if (ac > 0) {
+        val_set_undefined(cb_param);
+        val_set_number(cb_param + 1, n);
+        cupkee_do_callback(env, av, 3, cb_param);
+    }
+    return val_mk_number(n);
+
+DO_ERROR:
+    if (ac) {
+        cupkee_do_callback_error(env, av, err);
+    }
     return VAL_FALSE;
 }
 
-static val_t usart_read(cupkee_device_t *dev, env_t *env, int n)
+static void usart_read_data(int instance, env_t *env, val_t *cb, int n)
+{
+    type_buffer_t *buffer = buffer_create(env, n);
+
+    if (!buffer) {
+        cupkee_do_callback_error(env, cb, CUPKEE_ERESOURCE);
+        return;
+    } else {
+        val_t cb_param[2];
+
+        hw_usart_recv_load(instance, n, buffer->buf);
+
+        val_set_undefined(cb_param);
+        val_set_buffer(cb_param + 1, buffer);
+        cupkee_do_callback(env, cb, 2, cb_param);
+    }
+}
+
+static void usart_post_data(int instance, env_t *env, val_t *cb)
+{
+    int n = hw_usart_recv_len(instance);
+    type_buffer_t *buffer = buffer_create(env, n);
+
+    if (buffer) {
+        val_t param;
+
+        hw_usart_recv_load(instance, n, buffer->buf);
+
+        val_set_buffer(&param, buffer);
+        cupkee_do_callback(env, cb, 1, &param);
+    }
+}
+
+static val_t usart_read(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
     usart_ctrl_t *control = (usart_ctrl_t*)dev->data;
-    uint32_t v;
+    int   size, n, err;
 
-    if (n <= 0) {
-        return val_mk_number(0);
+    size = hw_usart_recv_len(control->instance);
+    if (size < 0) {
+        err = CUPKEE_EHARDWARE;
+        goto DO_ERROR;
     }
-    return VAL_UNDEFINED;
+
+    if (device_param_int(ac, av, &n)) {
+        ac--; av++;
+        if (n < 0) {
+            err = CUPKEE_EINVAL;
+            goto DO_ERROR;
+        }
+    } else {
+        n = 1;
+    }
+
+    if (ac && val_is_function(av)) {
+        if (n > size) {
+            n = size;
+        }
+        usart_read_data(control->instance, env, av, n);
+    } else {
+        hw_usart_recv_load(control->instance, n, NULL);
+    }
+    return VAL_TRUE;
+
+DO_ERROR:
+    if (ac) {
+        cupkee_do_callback_error(env, av, err);
+    }
+    return VAL_FALSE;
 }
 
 static void usart_event_handle(env_t *env, uint8_t which, uint8_t event)
@@ -296,7 +412,7 @@ static void usart_event_handle(env_t *env, uint8_t which, uint8_t event)
 
         switch(event) {
         case USART_EVENT_DATA:
-            cupkee_do_callback(env, control->events_handle[USART_EVENT_DATA], 0, NULL);
+            usart_post_data(which, env, control->events_handle[USART_EVENT_DATA]);
             break;
         case USART_EVENT_DRAIN:
             cupkee_do_callback(env, control->events_handle[USART_EVENT_DRAIN], 0, NULL);

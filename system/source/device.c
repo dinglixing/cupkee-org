@@ -231,22 +231,22 @@ static inline int device_disable(cupkee_device_t *dev)
     return err;
 }
 
-static inline val_t device_write(cupkee_device_t *dev, val_t *data)
+static inline val_t device_write(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
     if (0 == (dev->flags & DEV_FL_ENBALE)) {
         return VAL_FALSE;
     }
 
-    return dev->driver->write(dev, data);
+    return dev->driver->write(dev, env, ac, av);
 }
 
-static inline val_t device_read(cupkee_device_t *dev, env_t *env, int off)
+static inline val_t device_read(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
     if (0 == (dev->flags & DEV_FL_ENBALE)) {
         return VAL_UNDEFINED;
     }
 
-    return dev->driver->read(dev, env, off);
+    return dev->driver->read(dev, env, ac, av);
 }
 
 static inline val_t device_listen(cupkee_device_t *dev, val_t *e, val_t *cb)
@@ -271,7 +271,8 @@ static inline val_t device_ignore(cupkee_device_t *dev, val_t *e)
 
 static inline void device_get_elem(cupkee_device_t *dev, env_t *env, int id, val_t *elem)
 {
-    *elem = device_read(dev, env, id);
+    val_t index = val_mk_number(id);
+    *elem = device_read(dev, env, 1, &index);
 }
 
 static inline void device_get_prop(cupkee_device_t *dev, const char *name, val_t *elem)
@@ -463,7 +464,7 @@ val_t device_native_write(env_t *env, int ac, val_t *av)
         return VAL_UNDEFINED;
     }
 
-    return device_write(dev, av+1);
+    return device_write(dev, env, ac - 1, av + 1);
 }
 
 val_t device_native_read(env_t *env, int ac, val_t *av)
@@ -476,11 +477,7 @@ val_t device_native_read(env_t *env, int ac, val_t *av)
         return VAL_UNDEFINED;
     }
 
-    if (ac > 1 && val_is_number(av + 1)) {
-        return device_read(dev, env, val_2_integer(av + 1));
-    } else {
-        return device_read(dev, env, -1);
-    }
+    return device_read(dev, env, ac - 1, av + 1);
 }
 
 val_t device_native_listen(env_t *env, int ac, val_t *av)

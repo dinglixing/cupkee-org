@@ -97,6 +97,9 @@ void print_value(val_t *v)
     if (val_is_object(v)) {
         console_puts("<object>\r\n");
     } else
+    if (val_is_buffer(v)) {
+        console_puts("<buffer>\r\n");
+    } else
     if (val_is_array(v)) {
         console_puts("<array>\r\n");
     } else {

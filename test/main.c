@@ -29,6 +29,7 @@ SOFTWARE.
 
 static const native_t native_entry[] = {
     /* cupkee native */
+    {"Buffer",          buffer_native_create},
     {"sysinfos",        native_sysinfos},
     {"systicks",        native_systicks},
 

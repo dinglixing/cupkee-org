@@ -230,13 +230,12 @@ void hw_gpio_poll(void)
 {
     int i;
 
-    //console_puts("gpio pull\r\n");
     for (i = 0; i < GPIO_GROUP_MAX; i++) {
         hw_gpio_group_t *grp = gpio_grps + i;
 
         if (grp->listen) {
             uint32_t d;
-            if (hw_gpio_read(i, &d) > 0) {
+            if (hw_gpio_read(i, -1, &d) > 0) {
                 if (d != grp->last) {
                     devices_event_post(GPIO_DEVICE_ID, i, GPIO_EVENT_CHANGE);
                     grp->last = d;
@@ -323,44 +322,67 @@ int hw_gpio_disable(int grp)
     return -1;
 }
 
-int hw_gpio_write(int grp, uint32_t data)
+int hw_gpio_write(int grp, int off, uint32_t data)
 {
     hw_gpio_conf_t *conf;
-    int i;
 
     if (hw_gpio_group_check(grp)) {
         return -1;
     }
-    conf = gpio_cfgs[grp];
 
-    for (i = 0; i < conf->pin_num; i++) {
-        hw_gpio_write_pin(conf->pin_seq[i], data & 1);
-        data >>= 1;
+    conf = gpio_cfgs[grp];
+    if (!GPIO_WRITEABLE(conf->mod)) {
+        return -1;
+    }
+
+    if (off < 0) {
+        int i;
+        for (i = 0; i < conf->pin_num; i++) {
+            hw_gpio_write_pin(conf->pin_seq[i], data & 1);
+            data >>= 1;
+        }
+    } else
+    if (off < conf->pin_num) {
+        hw_gpio_write_pin(conf->pin_seq[off], data);
+    } else {
+        return 0;
     }
 
     return 1;
 }
 
-int hw_gpio_read(int grp, uint32_t *data)
+int hw_gpio_read(int grp, int off, uint32_t *data)
 {
     hw_gpio_conf_t *conf;
-    int i;
     uint32_t d;
 
     if (hw_gpio_group_check(grp)) {
         return -1;
     }
     conf = gpio_cfgs[grp];
-    d = 0;
-
-    for (i = conf->pin_num - 1; i >= 0; i--) {
-        d <<= 1;
-        if (hw_gpio_read_pin(conf->pin_seq[i])) {
-            d |= 1;
-        }
+    if (!GPIO_READABLE(conf->mod)) {
+        return -1;
     }
-    *data = d;
 
+    d = 0;
+    if (off < 0) {
+        int i;
+        for (i = conf->pin_num - 1; i >= 0; i--) {
+            d <<= 1;
+            if (hw_gpio_read_pin(conf->pin_seq[i])) {
+                d |= 1;
+            }
+        }
+    } else
+    if (off < conf->pin_num){
+        if (hw_gpio_read_pin(conf->pin_seq[off])) {
+            d = 1;
+        }
+    } else {
+        return 0;
+    }
+
+    *data = d;
     return 1;
 }
 

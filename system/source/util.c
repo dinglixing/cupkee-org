@@ -26,6 +26,13 @@ val_t cupkee_error(env_t *env, int code)
     return val_mk_number(code);
 }
 
+void cupkee_do_callback_error(env_t *env, val_t *cb, int code)
+{
+    val_t err = cupkee_error(env, code);
+
+    cupkee_do_callback(env, cb, 1, &err);
+}
+
 int cupkee_id(val_t *in, int max, const char **names)
 {
     if (val_is_number(in)) {

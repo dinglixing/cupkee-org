@@ -32,11 +32,11 @@ SOFTWARE.
 
 #define SYSTEM_TICKS_PRE_SEC    1000
 #define SYSTEM_STACK_SIZE       (8 * 1024)
+#define HW_INVALID_VAL          0xffffffff
 
 /* PWM configurables */
 
 /* CAPTURE configurables */
-
 
 /* DAC configurables */
 
@@ -138,8 +138,8 @@ int hw_gpio_disable(int grp);
 int hw_gpio_event_enable(int grp, int event);
 int hw_gpio_event_disable(int grp, int event);
 
-int hw_gpio_read (int grp, uint32_t *data);
-int hw_gpio_write(int grp, uint32_t data);
+int hw_gpio_read (int instance, int off, uint32_t *data);
+int hw_gpio_write(int instance, int off, uint32_t data);
 
 /* ADC */
 #define ADC_DEVICE_ID                  (1)  //
@@ -155,7 +155,7 @@ enum ADC_EVENT_TYPE {
 #define CFG_ADC_MAX                     2
 
 /* board dependent start */
-#define ADC_CHANNEL_MAX                 18
+#define ADC_CHANNEL_MAX                 8
 #define ADC_MAX                         1
 /* board dependent end */
 
@@ -174,7 +174,7 @@ int hw_adc_disable(int adc);
 int hw_adc_event_enable(int adc, int event);
 int hw_adc_event_disable(int adc, int event);
 
-int hw_adc_read (int adc, int channel, uint32_t *data);
+int hw_adc_read (int adc, int off, uint32_t *data);
 
 /* USART */
 #define DEVICE_USART_ID                 (2)  //
@@ -217,7 +217,8 @@ int hw_usart_event_enable(int instance, int event);
 int hw_usart_event_disable(int instance, int event);
 
 int hw_usart_send(int instance, int size, uint8_t *data);
-int hw_usart_recv(int instance, int size, uint8_t *data);
+int hw_usart_recv_len(int instance);
+void hw_usart_recv_load(int instance, int size, uint8_t *buf);
 
 #endif /* __BSP_INC__ */
 

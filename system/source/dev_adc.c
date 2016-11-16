@@ -267,10 +267,12 @@ static device_config_handle_t *adc_config(cupkee_device_t *dev, val_t *name)
     }
 }
 
-static val_t adc_write(cupkee_device_t *dev, val_t *data)
+static val_t adc_write(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
     (void) dev;
-    (void) data;
+    (void) env;
+    (void) ac;
+    (void) av;
 
     return VAL_FALSE;
 }
@@ -288,29 +290,37 @@ static val_t adc_read_all(adc_ctrl_t *control, env_t *env)
         uint32_t v;
 
         if (hw_adc_read(control->adc, control->conf.chn_seq[i], &v)) {
-            val_set_number(_array_elem(a, i), v);
-        } else {
-            val_set_undefined(_array_elem(a, i));
+            if (v != HW_INVALID_VAL) {
+                val_set_number(_array_elem(a, i), v);
+                continue;
+            }
         }
+        val_set_undefined(_array_elem(a, i));
     }
 
     return val_mk_array(a);
 }
 
-static val_t adc_read(cupkee_device_t *dev, env_t *env, int ch)
+static val_t adc_read(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
     adc_ctrl_t *control = (adc_ctrl_t*)dev->data;
     uint32_t v;
+    int off = -1;
 
-    if (ch < 0) { // read all
+    if (ac > 0 && val_is_number(av)) {
+        off = val_2_integer(av);
+    }
+
+    if (off < 0) {
         return adc_read_all(control, env);
     }
 
-    if (ch < control->conf.chn_num && hw_adc_read(control->adc, control->conf.chn_seq[ch], &v)) {
-        return val_mk_number(v);
-    } else {
-        return VAL_UNDEFINED;
+    if (off < control->conf.chn_num && hw_adc_read(control->adc, control->conf.chn_seq[off], &v) > 0) {
+        if (v != HW_INVALID_VAL) {
+            return val_mk_number(v);
+        }
     }
+    return VAL_UNDEFINED;
 }
 
 static void adc_event_handle(env_t *env, uint8_t which, uint8_t event)
