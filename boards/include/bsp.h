@@ -220,5 +220,74 @@ int hw_usart_send(int instance, int size, uint8_t *data);
 int hw_usart_recv_len(int instance);
 void hw_usart_recv_load(int instance, int size, uint8_t *buf);
 
+// new here
+enum hw_device_type_t {
+    HW_DEVICE_MAP = 0,
+    HW_DEVICE_SERIAL,
+    HW_DEVICE_BLOCK
+};
+
+enum hw_config_type_t {
+    HW_CONFIG_BOOL = 0,
+    HW_CONFIG_NUM,
+    HW_CONFIG_OPT,
+};
+
+#define DEVICE_EVENT_ERR    0
+#define DEVICE_EVENT_DATA   1
+#define DEVICE_EVENT_DRAIN  2
+#define DEVICE_EVENT_READY  3
+#define DEVICE_EVENT_MAX    4
+
+typedef struct hw_driver_t {
+    int (*request) (int);
+    int (*release) (int);
+    int (*get_err) (int);
+    int (*enable)  (int);
+    int (*disable) (int);
+    int (*config_set) (int, int, int);
+    int (*config_get) (int, int, int*);
+    void (*listen) (int, int);
+    void (*ignore) (int, int);
+    union {
+        struct {
+            int (*set) (int, int, uint32_t);
+            int (*get) (int, int, uint32_t*);
+            int (*size)(int);
+        } map;
+        struct {
+            int (*recv) (int, int, void *);
+            int (*send) (int, int, void *);
+            int (*received) (int);          // serial only
+        } serial;
+        struct {
+            int (*read)  (int, int, int, void *);
+            int (*write) (int, int, int, void *);
+        } block;
+    } io;
+} hw_driver_t;
+
+typedef struct hw_config_desc_t {
+    uint8_t  type;
+    uint8_t  opt_num;
+    uint16_t opt_start;
+} hw_config_desc_t;
+
+typedef struct hw_device_desc_t {
+    const char *name;
+    uint8_t id;
+    uint8_t type;
+    uint8_t inst_num;
+    uint8_t conf_num;
+    uint8_t event_num;
+    uint8_t reserved[3];
+    const hw_config_desc_t *conf_descs;
+    const char            **conf_names;
+    const char            **opt_names;
+} hw_device_desc_t;
+
+const hw_device_desc_t *hw_device_take(const char *name, int inst, const hw_driver_t **driver);
+const hw_device_desc_t *hw_device_descript(int i);
+
 #endif /* __BSP_INC__ */
 

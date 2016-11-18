@@ -24,28 +24,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __TEST_INC__
-#define __TEST_INC__
+#ifndef __HW_DEVICE_SERIAL_INC__
+#define __HW_DEVICE_SERIAL_INC__
 
-#include "CUnit.h"
-#include "CUnit_Basic.h"
+void hw_device_serial_setup(void);
+void hw_device_serial_poll(void);
 
-#include "hardware.h"
-#include "cupkee.h"
+extern const hw_driver_t      hw_device_serial_driver;
+extern const hw_device_desc_t hw_device_serial_desc;
 
-int  test_cupkee_reset(void);
-int  test_cupkee_start(const char *init);
+#endif /* __HW_DEVICE_SERIAL_INC__ */
 
-void test_reply_show(int on);
-int  test_cupkee_run_with_reply(const char *input, const char *expected, int try);
-int  test_cupkee_run_without_reply(const char *input, int try_max);
-
-CU_pSuite test_hello(void);
-CU_pSuite test_misc(void);
-CU_pSuite test_devices(void);
-
-CU_pSuite test_device_gpio(void);
-CU_pSuite test_device_adc(void);
-CU_pSuite test_device_usart(void);
-
-#endif /* __TEST_INC__ */

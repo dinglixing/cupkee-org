@@ -52,6 +52,7 @@ static const native_t native_entry[] = {
     {"listen",          device_native_listen},
     {"ignore",          device_native_ignore},
 
+    {"xxx",             device_native_create},
     /* user native */
 };
 
@@ -72,7 +73,6 @@ int test_cupkee_start(const char *init)
     return test_cupkee_run_with_reply("\r", NULL, 1);
 }
 
-
 int main(int argc, const char *argv[])
 {
     (void) argc;
@@ -85,9 +85,12 @@ int main(int argc, const char *argv[])
     // add test suite here:
     test_hello();
     test_misc();
+
     test_device_gpio();
     test_device_adc();
     test_device_usart();
+
+    test_devices();
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();

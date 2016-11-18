@@ -1,15 +1,35 @@
+/*
+MIT License
 
-/*******************************************************************************
- * hw field
-*******************************************************************************/
+This file is part of cupkee project.
+
+Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include <bsp.h>
-
+#include "hardware.h"
 
 /*******************************************************************************
  * dbg field
 *******************************************************************************/
-#include "hardware.h"
-
 #define MEMORY_SIZE     (32 * 1024)
 
 static char memory_buf[MEMORY_SIZE];
@@ -38,15 +58,58 @@ void hw_dbg_reset(void)
 }
 
 /*******************************************************************************
- * bsp interface
+ * dbg field end
 *******************************************************************************/
+
+static const hw_device_desc_t *hw_device_descs [] = {
+    &hw_device_map_desc,
+    &hw_device_serial_desc,
+};
+static const hw_driver_t *hw_drivers [] = {
+    &hw_device_map_driver,
+    &hw_device_serial_driver,
+};
+
 uint32_t system_ticks_count = 0;
+
+const hw_device_desc_t *hw_device_descript(int i)
+{
+    int max = sizeof(hw_device_descs) / sizeof(hw_device_desc_t *);
+
+    if (i < 0 || i >= max) {
+        return NULL;
+    }
+    return hw_device_descs[i];
+}
+
+const hw_device_desc_t *hw_device_take(const char *name, int inst, const hw_driver_t **driver)
+{
+    int i, max = sizeof(hw_device_descs) / sizeof(hw_device_desc_t *);
+
+    _TRACE("request %s[%d]\n", name, inst);
+    for (i = 0; i < max; i++) {
+        const hw_device_desc_t *desc = hw_device_descs[i];
+        if (!strcmp(name, desc->name)) {
+            if (hw_drivers[i]->request(inst)) {
+                if (driver) {
+                    *driver = hw_drivers[i];
+                }
+                return desc;
+            }
+            break;
+        }
+    }
+    return NULL;
+}
 
 void hw_setup(void)
 {
     hw_gpio_setup();
     hw_adc_setup();
     hw_usart_setup();
+
+    hw_device_map_setup();
+    hw_device_serial_setup();
 }
 
 void hw_poll(void)
@@ -58,6 +121,10 @@ void hw_poll(void)
         systick_event_post();
     }
 
+    hw_device_map_poll();
+    hw_device_serial_poll();
+
+    // delete
     hw_gpio_poll();
     hw_adc_poll();
     hw_usart_poll();

@@ -36,7 +36,7 @@ void cupkee_do_callback_error(env_t *env, val_t *cb, int code)
 int cupkee_id(val_t *in, int max, const char **names)
 {
     if (val_is_number(in)) {
-        return val_2_double(in);
+        return val_2_integer(in);
     } else {
         const char *str = val_2_cstring(in);
         if (str) {

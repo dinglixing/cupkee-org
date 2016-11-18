@@ -71,12 +71,6 @@ int  hw_dbg_adc_test_eoc(void) {
 *******************************************************************************/
 #include <bsp.h>
 
-#if 0
-#define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
-#else
-#define _TRACE(fmt, ...)    //
-#endif
-
 #define ADC_INUSED      0x80
 #define ADC_ENABLE      0x40
 

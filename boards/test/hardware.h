@@ -33,7 +33,8 @@ SOFTWARE.
 
 /******************************************************************************
  * Debug api
-******************************************************************************/
+*/
+
 // MISC
 void hw_dbg_reset(void);
 void hw_dbg_set_systicks(uint32_t x);
@@ -65,13 +66,41 @@ int hw_dbg_usart_not_busy(int i);
 uint8_t hw_dbg_usart_in(int i);
 void hw_dbg_usart_out(int i, uint8_t d);
 
+// Map device dbg
+void hw_dbg_map_set(int inst, int off, uint32_t v);
+int  hw_dbg_map_off_get(int inst);
+uint32_t hw_dbg_map_val_get(int inst);
+void hw_dbg_map_set_size(int inst, int size);
+void hw_dbg_map_event_triger(int inst, int event);
+
+void hw_dbg_serial_event_triger(int inst, int event);
+void hw_dbg_serial_set_input(const char *data);
+void hw_dbg_serial_set_send(int n);
+
+#if 0
+#define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
+#else
+#define _TRACE(fmt, ...)    //
+#endif
+
+/* Debug api end
+******************************************************************************/
+
+#include <bsp.h>
+#include "system.h"
+
 /******************************************************************************
  * Hardware interface not in bsp.h
 ******************************************************************************/
-#include "system.h"
 #include "hw_console.h"
+
+#include "hw_device_map.h"
+#include "hw_device_serial.h"
+
+// will delete
 #include "hw_gpio.h"
 #include "hw_adc.h"
 #include "hw_usart.h"
+
 
 #endif /* __HW_MOCK_INC__ */

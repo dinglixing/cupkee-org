@@ -91,5 +91,11 @@ static inline int device_param_int(int ac, val_t *av, int *n) {
     }
 }
 
+// new here
+void device_setup(void);
+void xxx_event_proc(env_t *env, int event);
+
+
+
 #endif /* __DEVICE_INC__ */
 
