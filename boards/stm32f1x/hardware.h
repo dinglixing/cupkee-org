@@ -45,6 +45,32 @@ SOFTWARE.
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
+#include <bsp.h>
+
+#define PIN_DEVICE_NAME     "pin"
+#define PIN_DEVICE_ID       0
+#define PIN_EVENT_NUM       2
+#define PIN_CONFIG_NUM      1
+#define PIN_INSTANCE_NUM    1
+
+#define KEY_DEVICE_NAME     "key"
+#define KEY_DEVICE_ID       1
+#define KEY_EVENT_NUM       2
+#define KEY_CONFIG_NUM      0
+#define KEY_INSTANCE_NUM    1
+
+#define ADC_DEVICE_NAME     "adc"
+#define ADC_DEVICE_ID       2
+#define ADC_EVENT_NUM       2
+#define ADC_CONFIG_NUM      2
+#define ADC_INSTANCE_NUM    1
+
+#define USART_DEVICE_NAME     "usart"
+#define USART_DEVICE_ID       3
+#define USART_EVENT_NUM       3
+#define USART_CONFIG_NUM      3
+#define USART_INSTANCE_NUM    1
+
 #include "system.h"
 #include "hw_usb.h"
 #include "hw_misc.h"

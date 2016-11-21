@@ -40,29 +40,15 @@ static const native_t native_entry[] = {
 
     {"scripts",         native_scripts},
 
-    {"pin",             gpio_native_pin},
-    {"device",          native_device},
-    {"enable",          device_native_enable},
-    {"config",          device_native_config},
-    {"write",           device_native_write},
-    {"read",            device_native_read},
-    {"listen",          device_native_listen},
-    {"ignore",          device_native_ignore},
+    {"led",             device_native_led},
+    {"device",          device_native_create},
 
     /* user native */
 
 };
 
 // system initial scripts
-static char *initial = "\
-var h = device('GPIO');\
-var v = 0;\
-enable(h, {\
-  pin: pin('a', 8),\
-  mode: 'out-pushpull'\
-});\
-def led() {write(h, v++)}\
-setInterval(led, 1000);";
+static char *initial = "setInterval(led, 1000);";
 
 int main(void)
 {

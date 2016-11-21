@@ -185,7 +185,10 @@ static void test_map_read(void)
 
     hw_dbg_map_set(0, -1, 3);
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.read()\r",                                   "3\r\n", 1));
+
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(0)\r",                                  "undefined\r\n", 1));
+    test_reply_show(1);
+    test_reply_show(0);
 }
 
 static void test_map_write(void)
@@ -261,7 +264,7 @@ d.enable({\
 
 }
 
-static void test_serial_read(void)
+static void test_stream_read(void)
 {
     test_cupkee_reset();
 
@@ -270,7 +273,7 @@ static void test_serial_read(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("var d, v, s = '12345'\r",                      "undefined\r\n", 1));
 
     // create device
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d = xxx('serial'))\r",                         "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = xxx('stream'))\r",                         "<object>\r\n", 1));
 
     // get default configure
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate'))\r",                      "0\r\n", 1));
@@ -284,7 +287,7 @@ static void test_serial_read(void)
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(5)\r",                                  "true\r\n", 1));
 
-    hw_dbg_serial_set_input("12345");
+    hw_dbg_stream_set_input("12345");
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("\
@@ -302,7 +305,7 @@ d.read(5, function(err, data) {\
     test_reply_show(0);
 }
 
-static void test_serial_write(void)
+static void test_stream_write(void)
 {
     test_cupkee_reset();
 
@@ -311,7 +314,7 @@ static void test_serial_write(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("var d, v, buf, info\r",                       "undefined\r\n", 1));
 
     // create device
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d = xxx('serial'))\r",                         "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = xxx('stream'))\r",                         "<object>\r\n", 1));
 
     // set & get configure
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(0, 9600))\r",                         "true\r\n", 1));
@@ -340,7 +343,7 @@ d.write('hello', function(err, n, data) {\
     CU_ASSERT(0 == test_cupkee_run_with_reply("info[0] == 0\r",                               "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("info[1] == 'hello'\r",                         "true\r\n", 1));
 
-    hw_dbg_serial_set_send(5);
+    hw_dbg_stream_set_send(5);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("\
 d.write(buf, function(err, n, data) {\
@@ -351,66 +354,70 @@ d.write(buf, function(err, n, data) {\
     CU_ASSERT(0 == test_cupkee_run_with_reply("info[1].length()\r",                           "100\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("info[1] == buf\r",                             "true\r\n", 1));
 
-    hw_dbg_serial_set_send(50);
+    hw_dbg_stream_set_send(50);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("\
 d.write(buf, 16, function(err, n, data) {\
     if (!err) info = [n, data]\
 })\r",                                                                                        "16\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("info[0]\r",                                    "16\r\n", 1));
-    test_reply_show(1);
-    test_reply_show(0);
 }
 
-static void test_serial_event(void)
+static void test_stream_event(void)
 {
     test_cupkee_reset();
 
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var d, v, e\r",                                "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d = xxx('map', 1))\r",                         "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var d, v, e, s\r",                             "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = xxx('stream')\r",                          "<object>\r\n", 1));
 
     // enable & listen
     CU_ASSERT(0 == test_cupkee_run_with_reply("\
 d.enable({\
-  bool: true,\
-  number: 8,\
-  option: 'x'\
+  baudrate: 19200 \
 }, function(err, dev) { \
   if (!err) { \
+    dev.listen('error', function(err) { \
+      e = err; \
+    });\
     dev.listen('data', function(data) { \
       v = data; \
     });\
-    dev.listen('error', function(err) { \
-      e = err; \
+    dev.listen('drain', function() { \
+      s = true; \
     });\
   }\
 })\r",                                                                                        "true\r\n", 1));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",                                          "undefined\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                          "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("s\r",                                          "undefined\r\n", 1));
 
-    hw_dbg_map_event_triger(1, DEVICE_EVENT_ERR);
+    hw_dbg_stream_set_error(0, 8);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("e > 0\r",                                      "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("e == 8\r",                                     "true\r\n", 1));
 
-    // support combine read
-    hw_dbg_map_set(1, -1, 5);
-    hw_dbg_map_event_triger(1, DEVICE_EVENT_DATA);
+    // trigger data event
+    hw_dbg_stream_set_input("12345");
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("v == 5\r",                                     "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                          "<buffer>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v.length()\r",                                 "5\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v[0] == 49\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v[1] == 50\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v[2] == 51\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v[3] == 52\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v[4] == 53\r",                                 "true\r\n", 1));
 
-    // support combine read
-    hw_dbg_map_set_size(1, 8);
-    hw_dbg_map_set(1, 0, 3);
-    hw_dbg_map_event_triger(1, DEVICE_EVENT_DATA);
+    // trigger drain event
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write('hello')\r",                           "5\r\n", 1));
+    hw_dbg_stream_set_send(50);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("v\r",                                          "<array>\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("v.length()\r",                                 "8\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("v[0]\r",                                       "3\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("s\r",                                          "true\r\n", 1));
 
+    test_reply_show(1);
+    test_reply_show(0);
 }
 
 CU_pSuite test_devices(void)
@@ -426,9 +433,9 @@ CU_pSuite test_devices(void)
         CU_add_test(suite, "map write",     test_map_write);
         CU_add_test(suite, "map event",     test_map_event);
 
-        CU_add_test(suite, "serial read",   test_serial_read);
-        CU_add_test(suite, "serial write",  test_serial_write);
-        CU_add_test(suite, "serial event",  test_serial_event);
+        CU_add_test(suite, "stream read",   test_stream_read);
+        CU_add_test(suite, "stream write",  test_stream_write);
+        CU_add_test(suite, "stream event",  test_stream_event);
 #if 0
 #endif
     }

@@ -28,12 +28,10 @@ SOFTWARE.
 #include <string.h>
 
 #include <bsp.h>
+#include "key.h"
 
 void systick_event_post(void);
 void devices_event_post(int dev, int which, int event);
-void led_on(void);
-void led_off(void);
-void led_toggle(void);
 
 typedef struct event_info_t {
     int dev;
@@ -42,17 +40,12 @@ typedef struct event_info_t {
 } event_info_t;
 
 static uint32_t systicks = 0;
-static int led, led_data = 0;
-static hw_gpio_conf_t led_conf;
 static event_info_t event_queue[4];
 static int event_len = 0;
 
 static char command_buf[80];
 static int command_len = 0;
 static int command_done = 1;
-
-static int usart;
-static int adc;
 
 void systick_event_post(void)
 {
@@ -102,34 +95,10 @@ static void console_drain_handle(void)
 {
 }
 
-void led_on(void)
-{
-    led_data = 1;
-    hw_gpio_write(led, -1, led_data);
-}
-
-void led_off(void)
-{
-    led_data = 0;
-    hw_gpio_write(led, -1, led_data);
-}
-
-void led_toggle(void)
-{
-    hw_gpio_write(led, 0, (++led_data) & 1);
-}
-
 static void nosys_setup(void)
 {
 
     hw_setup();
-
-    hw_gpio_conf_reset(&led_conf);
-    led_conf.pin_num = 1;
-    led_conf.pin_seq[0] = 0x2d;
-    led_conf.mod = OPT_GPIO_MOD_OUTPUT_PUSHPULL;
-    led = hw_gpio_group_alloc();
-    hw_gpio_enable(led, &led_conf);
 
     hw_console_set_callback(console_input_handle, console_drain_handle);
 }
@@ -143,42 +112,8 @@ static void event_proc(void)
 
         snprintf(buf, 64, "from: [%d:%d] event %d\r\n", e->dev, e->which, e->event);
         hw_console_sync_puts(buf);
-
-        if (e->dev == ADC_DEVICE_ID) {
-            uint32_t v;
-            hw_adc_read(adc, 0, &v);
-            snprintf(buf, 64, "adc: [%lx]\r\n", v);
-            hw_console_sync_puts(buf);
-        }
     }
     event_len = 0;
-}
-
-static void command_adc_start(void)
-{
-    hw_adc_conf_t adc_conf;
-
-    adc = hw_adc_alloc();
-    adc_conf.chn_num = 1;
-    adc_conf.chn_seq[0] = 8;
-    adc_conf.interval = 50;
-    hw_adc_enable(adc, &adc_conf);
-    hw_adc_event_enable(adc, ADC_EVENT_READY);
-    hw_adc_event_enable(adc, ADC_EVENT_DATA);
-}
-
-static void command_usart_start(void)
-{
-    hw_usart_conf_t usart_conf;
-
-    usart = hw_usart_alloc();
-    usart_conf.baudrate = 9600;
-    usart_conf.databits = 8;
-    usart_conf.stopbits = 1;
-    usart_conf.parity = 0;
-    hw_usart_enable(usart, &usart_conf);
-    hw_usart_event_enable(usart, USART_EVENT_DATA);
-    hw_usart_event_enable(usart, USART_EVENT_DRAIN);
 }
 
 static void command_proc(void)
@@ -191,24 +126,23 @@ static void command_proc(void)
         hw_console_sync_puts("hi\r\n");
     } else
     if (!strcmp("led\r", command_buf)) {
-        led_toggle();
+        hw_led_toggle();
+        hw_console_sync_puts("led toggle\r\n");
     } else
-    if (!strcmp("adcs\r", command_buf)) {
-        command_adc_start();
+    if (!strcmp("key_enable\r", command_buf)) {
+        if (key_enable()) {
+            hw_console_sync_puts("ok\r\n");
+        } else {
+            hw_console_sync_puts("fail\r\n");
+        }
     } else
-    if (!strcmp("adcv\r", command_buf)) {
-        uint32_t v;
-        char buf[64];
-
-        hw_adc_read(adc, 0, &v);
-        snprintf(buf, 64, "ADC0: %u[%x]\r\n", v, v);
-        hw_console_sync_puts(buf);
+    if (!strcmp("adc_enable\r", command_buf)) {
     } else
-    if (!strcmp("usart\r", command_buf)) {
-        command_usart_start();
+    if (!strcmp("adc_show\r", command_buf)) {
     } else
-    if (!strcmp("send\r", command_buf)) {
-        hw_usart_send(usart, 5, (uint8_t *)"hello");
+    if (!strcmp("usart_enable\r", command_buf)) {
+    } else
+    if (!strcmp("usart_send\r", command_buf)) {
     }
 
     command_done = 1;

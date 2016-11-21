@@ -40,7 +40,7 @@ static int      dbg_off[INSTANCE_NUM];
 static int      dbg_event_flags[INSTANCE_NUM];
 static int      dbg_size[INSTANCE_NUM];
 
-static void device_set_error(int inst, int error);
+static void device_set_error(int id, int inst, int error);
 
 void hw_dbg_map_set(int inst, int off, uint32_t v)
 {
@@ -66,7 +66,7 @@ void hw_dbg_map_set_size(int inst, int size)
 void hw_dbg_map_event_triger(int inst, int event)
 {
     if (event == DEVICE_EVENT_ERR) {
-        device_set_error(inst, 17);
+        device_set_error(0, inst, 17);
     } else {
         dbg_event_flags[inst] |= 1 << event;
     }
@@ -117,20 +117,24 @@ static inline int device_is_work(int inst) {
     }
 }
 
-static void device_set_error(int inst, int error)
+static void device_set_error(int id, int inst, int error)
 {
     device_error[inst] = error;
+
+    (void) id;
 
     if (device_event_settings[inst] & 1) {
         devices_event_post(DEVICE_ID, inst, 0);
     }
 }
 
-static int device_get_error(int inst)
+static int device_get_error(int id, int inst)
 {
     if (inst >= INSTANCE_NUM) {
         return 0;
     }
+
+    (void) id;
 
     return device_error[inst];
 }
@@ -147,8 +151,9 @@ static int device_reset(int inst)
     return 1;
 }
 
-static int device_enable(int inst)
+static int device_enable(int id, int inst)
 {
+    (void) id;
     if (device_is_inused(inst)) {
         uint8_t b = 1 << inst;
 
@@ -161,8 +166,9 @@ static int device_enable(int inst)
     return 0;
 }
 
-static int device_disable(int inst)
+static int device_disable(int id, int inst)
 {
+    (void) id;
     if (device_is_inused(inst)) {
         uint8_t b = 1 << inst;
 
@@ -178,8 +184,9 @@ static int device_disable(int inst)
 
 // 0: fail
 // 1: ok
-static int device_request(int inst)
+static int device_request(int id, int inst)
 {
+    (void) id;
     if (inst < INSTANCE_NUM) {
         int used = device_used & (1 << inst);
 
@@ -203,10 +210,11 @@ static int device_request(int inst)
 
 // 0: fail
 // other: ok
-static int device_release(int inst)
+static int device_release(int id, int inst)
 {
+    (void) id;
     if (device_is_inused(inst)) {
-        device_disable(inst);
+        device_disable(id, inst);
         device_used &= ~(1 << inst);
         return 1;
     } else {
@@ -214,8 +222,9 @@ static int device_release(int inst)
     }
 }
 
-static int device_config_set(int inst, int which, int setting)
+static int device_config_set(int id, int inst, int which, int setting)
 {
+    (void) id;
     if (device_is_inused(inst) && which < CONFIG_NUM) {
         device_config_settings[inst][which] = setting;
         return 1;
@@ -223,8 +232,9 @@ static int device_config_set(int inst, int which, int setting)
     return 0;
 }
 
-static int device_config_get(int inst, int which, int *setting)
+static int device_config_get(int id, int inst, int which, int *setting)
 {
+    (void) id;
     if (device_is_inused(inst) && which < CONFIG_NUM && setting) {
         *setting = device_config_settings[inst][which];
         return 1;
@@ -232,22 +242,25 @@ static int device_config_get(int inst, int which, int *setting)
     return 0;
 }
 
-static void device_listen(int inst, int event)
+static void device_listen(int id, int inst, int event)
 {
+    (void) id;
     if (device_is_inused(inst) && event < EVENT_NUM) {
         device_event_settings[inst] |= 1 << event;
     }
 }
 
-static void device_ignore(int inst, int event)
+static void device_ignore(int id, int inst, int event)
 {
+    (void) id;
     if (device_is_inused(inst) && event < EVENT_NUM) {
         device_event_settings[inst] &= ~(1 << event);
     }
 }
 
-static int device_get(int inst, int off, uint32_t *v)
+static int device_get(int id, int inst, int off, uint32_t *v)
 {
+    (void) id;
     if (dbg_off[inst] == off) {
         *v = dbg_val[inst];
         return 1;
@@ -255,16 +268,19 @@ static int device_get(int inst, int off, uint32_t *v)
     return 0;
 }
 
-static int device_set(int inst, int off, uint32_t val)
+static int device_set(int id, int inst, int off, uint32_t val)
 {
+    (void) id;
+
     dbg_off[inst] = off;
     dbg_val[inst] = val;
 
     return 1;
 }
 
-static int device_size(int inst)
+static int device_size(int id, int inst)
 {
+    (void) id;
     return dbg_size[inst];
 }
 
@@ -293,7 +309,7 @@ void hw_device_map_poll(void)
     }
 }
 
-const hw_driver_t hw_device_map_driver = {
+const hw_driver_t hw_driver_map = {
     .request = device_request,
     .release = device_release,
     .get_err = device_get_error,
@@ -308,7 +324,7 @@ const hw_driver_t hw_device_map_driver = {
     .io.map.size = device_size,
 };
 
-const hw_device_desc_t hw_device_map_desc = {
+const hw_device_t hw_device_map = {
     .name = DEVICE_NAME,
     .id   = DEVICE_ID,
     .type = HW_DEVICE_MAP,

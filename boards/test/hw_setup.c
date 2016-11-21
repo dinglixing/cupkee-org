@@ -61,36 +61,36 @@ void hw_dbg_reset(void)
  * dbg field end
 *******************************************************************************/
 
-static const hw_device_desc_t *hw_device_descs [] = {
-    &hw_device_map_desc,
-    &hw_device_serial_desc,
+static const hw_device_t *hw_devices[] = {
+    &hw_device_map,
+    &hw_device_stream,
 };
 static const hw_driver_t *hw_drivers [] = {
-    &hw_device_map_driver,
-    &hw_device_serial_driver,
+    &hw_driver_map,
+    &hw_driver_stream,
 };
 
 uint32_t system_ticks_count = 0;
 
-const hw_device_desc_t *hw_device_descript(int i)
+const hw_device_t *hw_device_descript(int i)
 {
-    int max = sizeof(hw_device_descs) / sizeof(hw_device_desc_t *);
+    int max = sizeof(hw_devices) / sizeof(hw_device_t *);
 
     if (i < 0 || i >= max) {
         return NULL;
     }
-    return hw_device_descs[i];
+    return hw_devices[i];
 }
 
-const hw_device_desc_t *hw_device_take(const char *name, int inst, const hw_driver_t **driver)
+const hw_device_t *hw_device_take(const char *name, int inst, const hw_driver_t **driver)
 {
-    int i, max = sizeof(hw_device_descs) / sizeof(hw_device_desc_t *);
+    int i, max = sizeof(hw_devices) / sizeof(hw_device_t *);
 
     _TRACE("request %s[%d]\n", name, inst);
     for (i = 0; i < max; i++) {
-        const hw_device_desc_t *desc = hw_device_descs[i];
+        const hw_device_t *desc = hw_devices[i];
         if (!strcmp(name, desc->name)) {
-            if (hw_drivers[i]->request(inst)) {
+            if (hw_drivers[i]->request(desc->id, inst)) {
                 if (driver) {
                     *driver = hw_drivers[i];
                 }
@@ -104,12 +104,8 @@ const hw_device_desc_t *hw_device_take(const char *name, int inst, const hw_driv
 
 void hw_setup(void)
 {
-    hw_gpio_setup();
-    hw_adc_setup();
-    hw_usart_setup();
-
     hw_device_map_setup();
-    hw_device_serial_setup();
+    hw_device_stream_setup();
 }
 
 void hw_poll(void)
@@ -122,12 +118,7 @@ void hw_poll(void)
     }
 
     hw_device_map_poll();
-    hw_device_serial_poll();
-
-    // delete
-    hw_gpio_poll();
-    hw_adc_poll();
-    hw_usart_poll();
+    hw_device_stream_poll();
 }
 
 void hw_halt(void)
@@ -175,14 +166,4 @@ int hw_memory_alloc(void **p, int size, int align)
 
     return size;
 }
-
-void hw_led_on(void)
-{}
-
-void hw_led_off(void)
-{}
-
-void hw_led_toggle(void)
-{}
-
 

@@ -27,383 +27,662 @@ SOFTWARE.
 #include <bsp.h>
 #include "hardware.h"
 
-typedef struct hw_gpio_group_t{
-    uint8_t inused;
-    uint8_t enable;
-    uint8_t listen;
-    uint8_t  last;
-} hw_gpio_group_t;
+#define PIN_DEVICE_MOD          0
+#define PIN_DEVICE_MOD_OUT      0
+#define PIN_DEVICE_MOD_IN       1
+#define PIN_DEVICE_MOD_DUAL     2
 
-static hw_gpio_group_t gpio_grps[GPIO_GROUP_MAX];
-static hw_gpio_conf_t *gpio_cfgs[GPIO_GROUP_MAX];
-static uint8_t port_inused = 0;
-static const uint32_t hw_gpio_ports[] = {
+static const uint32_t hw_gpio_port_rcc[7] = {
+    RCC_GPIOA, RCC_GPIOB, RCC_GPIOC, RCC_GPIOD, RCC_GPIOE, RCC_GPIOF, RCC_GPIOF
+};
+/*
+static const uint32_t hw_gpio_port_base[7] = {
     GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF, GPIOF
 };
+*/
 
-static int hw_gpio_group_check(int grp)
+
+static uint16_t hw_gpio_pin_state[7];
+
+static void hw_led_setup(void)
 {
-    if (grp >= 0 && grp < GPIO_GROUP_MAX && gpio_grps[grp].inused) {
+    hw_gpio_use(0, 8);
+
+    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
+}
+
+void hw_led_set(void)
+{
+    gpio_set(GPIOA, GPIO8);
+}
+
+void hw_led_clear(void)
+{
+    gpio_clear(GPIOA, GPIO8);
+}
+
+void hw_led_toggle(void)
+{
+    gpio_toggle(GPIOA, GPIO8);
+}
+
+/******************************************************************
+ * GPIO device: PIN
+ ******************************************************************/
+static const char *pin_device_config_names[] = {
+    "dir"
+};
+static const char *pin_device_opt_names[] = {
+    "out", "in", "dual"
+};
+static const hw_config_desc_t pin_device_config_descs[] = {
+    {
+        .type = HW_CONFIG_OPT,
+        .opt_num = 3,
+        .opt_start = 0,
+    }
+};
+
+static uint8_t pin_device_used = 0;
+static uint8_t pin_device_work = 0;
+static uint8_t pin_device_event_settings[PIN_INSTANCE_NUM];
+static uint32_t pin_device_value[PIN_INSTANCE_NUM];
+static int pin_device_error[PIN_INSTANCE_NUM];
+static int pin_device_config_settings[PIN_INSTANCE_NUM][PIN_CONFIG_NUM];
+static int pin_device_get(int id, int inst, int off, uint32_t *v);
+
+static inline int pin_device_is_inused(int inst) {
+    return (inst < PIN_INSTANCE_NUM) ? pin_device_used & (1 << inst) : 0;
+}
+
+static inline int pin_device_is_work(int inst) {
+    return (inst < PIN_INSTANCE_NUM) ?
+        (pin_device_used & pin_device_work) & (1 << inst) : 0;
+}
+
+static inline void pin_device_set_inused(int inst) {
+    pin_device_used |= (1 << inst);
+}
+
+static inline void pin_device_set_work(int inst) {
+    pin_device_work |= (1 << inst);
+}
+
+static inline void pin_device_clr_inused(int inst) {
+    pin_device_used &= ~(1 << inst);
+}
+
+static inline void pin_device_clr_work(int inst) {
+    pin_device_work &= ~(1 << inst);
+}
+
+static void pin_device_set_error(int inst, int error)
+{
+    pin_device_error[inst] = error;
+
+    if (pin_device_event_settings[inst] & 1) {
+        devices_event_post(PIN_DEVICE_ID, inst, 0);
+    }
+}
+
+static int pin_device_get_error(int id, int inst)
+{
+    (void) id;
+    if (inst >= PIN_INSTANCE_NUM) {
         return 0;
     }
-    return -1;
+
+    return pin_device_error[inst];
 }
 
-static uint8_t hw_gpio_port_used(int n, uint8_t *pins)
+static int pin_device_setup(int inst)
 {
-    uint8_t ports = 0;
-    int i;
+    (void) inst;
+    uint8_t cnf, mod;
 
-    for (i = 0; i < n; i++) {
-        uint8_t port = (pins[i] >> 4) & 0xf;
-        ports |= 1 << port;
-    }
-
-    return ports;
-}
-
-static void hw_gpio_open_ports(uint8_t ports)
-{
-    if (!ports) {
-        return;
-    }
-
-    if (ports & 1)   rcc_periph_clock_enable(RCC_GPIOA);
-    if (ports & 2)   rcc_periph_clock_enable(RCC_GPIOB);
-    if (ports & 4)   rcc_periph_clock_enable(RCC_GPIOC);
-    if (ports & 8)   rcc_periph_clock_enable(RCC_GPIOD);
-    if (ports & 16)  rcc_periph_clock_enable(RCC_GPIOE);
-    if (ports & 32)  rcc_periph_clock_enable(RCC_GPIOF);
-    if (ports & 64)  rcc_periph_clock_enable(RCC_GPIOG);
-}
-
-static void hw_gpio_close_ports(uint8_t ports)
-{
-    if (!ports) {
-        return;
-    }
-
-    if (ports & 1)   rcc_periph_clock_disable(RCC_GPIOA);
-    if (ports & 2)   rcc_periph_clock_disable(RCC_GPIOB);
-    if (ports & 4)   rcc_periph_clock_disable(RCC_GPIOC);
-    if (ports & 8)   rcc_periph_clock_disable(RCC_GPIOD);
-    if (ports & 16)  rcc_periph_clock_disable(RCC_GPIOE);
-    if (ports & 32)  rcc_periph_clock_disable(RCC_GPIOF);
-    if (ports & 64)  rcc_periph_clock_disable(RCC_GPIOG);
-}
-
-static void hw_gpio_setup_pin(uint16_t pin, uint8_t mode, uint8_t cnf)
-{
-    uint32_t port;
-
-    port = (pin >> 4) & 0xf;
-    if (port < GPIO_PORT_MAX) {
-        port = hw_gpio_ports[port];
-    } else {
-        return;
-    }
-    pin  = 1 << (pin & 0xf);
-
-    gpio_set_mode(port, mode, cnf, pin);
-}
-
-static void hw_gpio_write_pin(uint16_t pin, int d)
-{
-    uint32_t port;
-
-    port = (pin >> 4) & 0xf;
-    if (port < GPIO_PORT_MAX) {
-        port = hw_gpio_ports[port];
-    } else {
-        return;
-    }
-    pin  = 1 << (pin & 0xf);
-
-    if (d) {
-        gpio_set(port, pin);
-    } else {
-        gpio_clear(port, pin);
-    }
-}
-
-static int hw_gpio_read_pin(uint16_t pin)
-{
-    uint32_t port;
-
-    port = (pin >> 4) & 0xf;
-    if (port < GPIO_PORT_MAX) {
-        port = hw_gpio_ports[port];
-        pin  = 1 << (pin & 0xf);
-        return gpio_port_read(port) & pin;
-    }
-    return 0;
-}
-
-static int hw_gpio_config_set(int grp, hw_gpio_conf_t *cfg)
-{
-    uint8_t ports = hw_gpio_port_used(cfg->pin_num, cfg->pin_seq);
-    uint8_t cnf, mode;
-
-    switch(cfg->mod) {
-    case OPT_GPIO_MOD_INPUT_FLOAT:       cnf = GPIO_CNF_INPUT_FLOAT; break;
-    case OPT_GPIO_MOD_INPUT_PULL_UPDOWN: cnf = GPIO_CNF_INPUT_PULL_UPDOWN; break;
-    case OPT_GPIO_MOD_OUTPUT_PUSHPULL:   cnf = GPIO_CNF_OUTPUT_PUSHPULL; break;
-    case OPT_GPIO_MOD_OUTPUT_OPENDRAIN:
-    case OPT_GPIO_MOD_DUAL:              cnf = GPIO_CNF_OUTPUT_OPENDRAIN; break;
+    switch(pin_device_config_settings[inst][0]) {
+    case PIN_DEVICE_MOD_OUT:
+        mod = GPIO_MODE_OUTPUT_2_MHZ;
+        cnf = GPIO_CNF_OUTPUT_PUSHPULL;
+        break;
+    case PIN_DEVICE_MOD_IN:
+        mod = GPIO_MODE_INPUT;
+        cnf = GPIO_CNF_INPUT_PULL_UPDOWN;
+        break;
+    case PIN_DEVICE_MOD_DUAL:
+        mod = GPIO_MODE_OUTPUT_2_MHZ;
+        cnf = GPIO_CNF_OUTPUT_OPENDRAIN;
+        break;
     default: return -1;
     }
 
-    if (cfg->mod >= OPT_GPIO_MOD_OUTPUT_PUSHPULL) {
-        if (cfg->speed <= 2) {
-            mode = GPIO_MODE_OUTPUT_2_MHZ;
-        } else
-        if (cfg->speed <= 10) {
-            mode = GPIO_MODE_OUTPUT_10_MHZ;
-        } else {
-            mode = GPIO_MODE_OUTPUT_50_MHZ;
-        }
+    if (hw_gpio_use(2, GPIO2 | GPIO3)) {
+        gpio_set_mode(GPIOC, mod, cnf, GPIO2 | GPIO3);
+        return 1;
     } else {
-        mode = GPIO_MODE_INPUT;
+        pin_device_set_error(inst, 1);
+        return 0;
     }
-    // hardware setting code here
-
-    if (ports) {
-        int i;
-
-        hw_gpio_open_ports(ports ^ (ports & port_inused));
-        for (i = 0; i < cfg->pin_num; i++) {
-            hw_gpio_setup_pin(cfg->pin_seq[i], mode, cnf);
-        }
-
-        port_inused |= ports;
-    }
-    gpio_cfgs[grp] = cfg;
-
-    return 0;
 }
 
-static int hw_gpio_config_clr(int grp)
+static int pin_device_reset(int inst)
+{
+    (void) inst;
+
+    return hw_gpio_release(2, GPIO2 | GPIO3);
+}
+
+static void pin_device_monitor(void)
 {
     int i;
-    hw_gpio_conf_t *conf;
 
-    port_inused = 0;
-    for (i = 0; i < GPIO_GROUP_MAX; i++) {
-        if (i == grp) {
-            continue;
-        }
-        conf = gpio_cfgs[i];
-        if (conf) {
-            port_inused |= hw_gpio_port_used(conf->pin_num, conf->pin_seq);
+    for (i = 0; i < PIN_INSTANCE_NUM; i++) {
+        if (pin_device_is_work(i)
+            && (pin_device_event_settings[i] & (1 << DEVICE_EVENT_DATA))) {
+
+            uint32_t v;
+            pin_device_get(0, i, -1, &v);
+            if (pin_device_value[i] != v) {
+                pin_device_value[i] = v;
+                devices_event_post(PIN_DEVICE_ID, i, DEVICE_EVENT_DATA);
+            }
         }
     }
+}
 
-    conf = gpio_cfgs[grp];
-    if (conf) {
-        uint8_t ports = hw_gpio_port_used(conf->pin_num, conf->pin_seq);
-        hw_gpio_close_ports(ports ^ (ports & port_inused));
-        for (i = 0; i < conf->pin_num; i++) {
-            hw_gpio_setup_pin(conf->pin_seq[i], GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT);
+static int pin_device_enable(int id, int inst)
+{
+    (void) id;
+    if (pin_device_is_inused(inst)) {
+        if (!pin_device_is_work(inst)) {
+            pin_device_set_work(inst);
+
+            return pin_device_setup(inst);
         }
-        gpio_cfgs[grp] = NULL;
+        return 1;
+    }
+    return 0;
+}
+
+static int pin_device_disable(int id, int inst)
+{
+    (void) id;
+    if (pin_device_is_inused(inst)) {
+        if (pin_device_is_work(inst)) {
+            pin_device_clr_work(inst);
+
+            return pin_device_reset(inst);
+        } else {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// 0: fail
+// 1: ok
+static int pin_device_request(int id, int inst)
+{
+    (void) id;
+    if (inst < PIN_INSTANCE_NUM) {
+        if (pin_device_is_inused(inst)) {
+            return 0;
+        } else {
+            int c;
+
+            pin_device_error[inst] = 0;
+            pin_device_event_settings[inst] = 0;
+            pin_device_set_inused(inst);
+            pin_device_clr_work(inst);
+
+            for (c = 0; c < PIN_CONFIG_NUM; c++) {
+                pin_device_config_settings[inst][c] = 0;
+            }
+
+            return 1;
+        }
     }
 
     return 0;
 }
+
+// 0: fail
+// other: ok
+static int pin_device_release(int id, int inst)
+{
+    if (pin_device_is_inused(inst)) {
+        pin_device_disable(id, inst);
+        pin_device_clr_inused(inst);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+static int pin_device_config_set(int id, int inst, int which, int setting)
+{
+    (void) id;
+    if (pin_device_is_inused(inst) && which < PIN_CONFIG_NUM) {
+        pin_device_config_settings[inst][which] = setting;
+        return 1;
+    }
+    return 0;
+}
+
+static int pin_device_config_get(int id, int inst, int which, int *setting)
+{
+    (void) id;
+    if (pin_device_is_inused(inst) && which < PIN_CONFIG_NUM && setting) {
+        *setting = pin_device_config_settings[inst][which];
+        return 1;
+    }
+    return 0;
+}
+
+static void pin_device_listen(int id, int inst, int event)
+{
+    (void) id;
+    if (pin_device_is_inused(inst)
+        && event < PIN_EVENT_NUM
+        && (pin_device_config_settings[inst][PIN_DEVICE_MOD] >= PIN_DEVICE_MOD_IN)) {
+
+        pin_device_event_settings[inst] |= 1 << event;
+        if (event == DEVICE_EVENT_DATA) {
+            pin_device_get(id, inst, -1, pin_device_value + inst);
+        }
+    }
+}
+
+static void pin_device_ignore(int id, int inst, int event)
+{
+    (void) id;
+    if (pin_device_is_inused(inst) && event < PIN_EVENT_NUM) {
+        pin_device_event_settings[inst] &= ~(1 << event);
+    }
+}
+
+static int pin_device_get(int id, int inst, int off, uint32_t *v)
+{
+    uint32_t data;
+
+    (void) id;
+    (void) inst;
+
+    data = gpio_port_read(GPIOC);
+
+    if (off < 0) {
+        data = (data >> 2) & 0x3;
+    } else {
+        data = (data >> (2 + off)) & 1;
+    }
+
+    *v = data;
+    return 1;
+}
+
+static int pin_device_set(int id, int inst, int off, uint32_t val)
+{
+    (void) id;
+    (void) inst;
+
+    if (off < 0) {
+        uint16_t set = (val & 3) << 2;
+        uint16_t clr = ((~val) & 3) << 2;
+        if (set)
+            gpio_set(GPIOC, set);
+        if (clr)
+            gpio_clear(GPIOC, clr);
+    } else {
+        uint16_t pin = 1 << off;
+        if (val) {
+            gpio_set(GPIOC, pin);
+        } else {
+            gpio_clear(GPIOC, pin);
+        }
+    }
+
+    return 1;
+}
+
+static int pin_device_size(int id, int inst)
+{
+    (void) id;
+    (void) inst;
+    return 2;
+}
+
+const hw_driver_t hw_driver_pin = {
+    .request = pin_device_request,
+    .release = pin_device_release,
+    .get_err = pin_device_get_error,
+    .enable  = pin_device_enable,
+    .disable = pin_device_disable,
+    .config_set = pin_device_config_set,
+    .config_get = pin_device_config_get,
+    .listen = pin_device_listen,
+    .ignore = pin_device_ignore,
+    .io.map = {
+        .get = pin_device_get,
+        .set = pin_device_set,
+        .size = pin_device_size,
+    }
+};
+
+const hw_device_t hw_device_pin = {
+    .name = PIN_DEVICE_NAME,
+    .id   = PIN_DEVICE_ID,
+    .type = HW_DEVICE_MAP,
+    .inst_num   = PIN_INSTANCE_NUM,
+    .conf_num   = PIN_CONFIG_NUM,
+    .event_num  = PIN_EVENT_NUM,
+    .conf_names = pin_device_config_names,
+    .conf_descs = pin_device_config_descs,
+    .opt_names  = pin_device_opt_names,
+};
+
+/******************************************************************
+ * GPIO device: KEY
+ ******************************************************************/
+static uint8_t key_device_used = 0;
+static uint8_t key_device_work = 0;
+static uint8_t key_device_event_settings[KEY_INSTANCE_NUM];
+static uint32_t key_device_value[KEY_INSTANCE_NUM];
+static int key_device_error[KEY_INSTANCE_NUM];
+static int key_device_get(int id, int inst, int off, uint32_t *v);
+
+static inline int key_device_is_inused(int inst) {
+    return (inst < KEY_INSTANCE_NUM) ? key_device_used & (1 << inst) : 0;
+}
+
+static inline int key_device_is_work(int inst) {
+    return (inst < KEY_INSTANCE_NUM) ?
+        (key_device_used & key_device_work) & (1 << inst) : 0;
+}
+
+static inline void key_device_set_inused(int inst) {
+    key_device_used |= (1 << inst);
+}
+
+static inline void key_device_set_work(int inst) {
+    key_device_work |= (1 << inst);
+}
+
+static inline void key_device_clr_inused(int inst) {
+    key_device_used &= ~(1 << inst);
+}
+
+static inline void key_device_clr_work(int inst) {
+    key_device_work &= ~(1 << inst);
+}
+
+static void key_device_set_error(int inst, int error)
+{
+    key_device_error[inst] = error;
+
+    if (key_device_event_settings[inst] & 1) {
+        devices_event_post(KEY_DEVICE_ID, inst, 0);
+    }
+}
+
+static int key_device_get_error(int id, int inst)
+{
+    (void) id;
+    if (inst >= KEY_INSTANCE_NUM) {
+        return 0;
+    }
+
+    return key_device_error[inst];
+}
+
+static int key_device_setup(int inst)
+{
+    (void) inst;
+    uint8_t cnf, mod;
+
+    mod = GPIO_MODE_OUTPUT_2_MHZ;
+    cnf = GPIO_CNF_OUTPUT_PUSHPULL;
+
+    if (hw_gpio_use(0, GPIO0)) {
+        gpio_set_mode(GPIOA, mod, cnf, GPIO0);
+        return 1;
+    } else {
+        key_device_set_error(inst, 1);
+        return 0;
+    }
+}
+
+static int key_device_reset(int inst)
+{
+    (void) inst;
+
+    return hw_gpio_release(0, GPIO0);
+}
+
+static void key_device_monitor(void)
+{
+    int i;
+
+    for (i = 0; i < KEY_INSTANCE_NUM; i++) {
+        if (key_device_is_work(i)
+            && (key_device_event_settings[i] & (1 << DEVICE_EVENT_DATA))) {
+            uint32_t v;
+            key_device_get(0, i, -1, &v);
+            if (key_device_value[i] != v) {
+                key_device_value[i] = v;
+                devices_event_post(KEY_DEVICE_ID, i, DEVICE_EVENT_DATA);
+            }
+        }
+    }
+}
+
+static int key_device_enable(int id, int inst)
+{
+    (void) id;
+    if (key_device_is_inused(inst)) {
+        if (!key_device_is_work(inst)) {
+            key_device_set_work(inst);
+
+            return key_device_setup(inst);
+        }
+        return 1;
+    }
+    return 0;
+}
+
+static int key_device_disable(int id, int inst)
+{
+    (void) id;
+    if (key_device_is_inused(inst)) {
+        if (key_device_is_work(inst)) {
+            key_device_clr_work(inst);
+
+            return key_device_reset(inst);
+        } else {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// 0: fail
+// 1: ok
+static int key_device_request(int id, int inst)
+{
+    (void) id;
+
+    if (inst < KEY_INSTANCE_NUM) {
+        if (key_device_is_inused(inst)) {
+            return 0;
+        } else {
+            key_device_error[inst] = 0;
+            key_device_event_settings[inst] = 0;
+
+            key_device_clr_work(inst);
+            key_device_set_inused(inst);
+
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+// 0: fail
+// other: ok
+static int key_device_release(int id, int inst)
+{
+    if (key_device_is_inused(inst)) {
+        key_device_disable(id, inst);
+        key_device_clr_inused(inst);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+static int key_device_config_set(int id, int inst, int which, int setting)
+{
+    (void) id;
+    (void) inst;
+    (void) which;
+    (void) setting;
+    return 0;
+}
+
+static int key_device_config_get(int id, int inst, int which, int *setting)
+{
+    (void) id;
+    (void) inst;
+    (void) which;
+    (void) setting;
+    return 0;
+}
+
+static void key_device_listen(int id, int inst, int event)
+{
+    (void) id;
+    if (key_device_is_inused(inst) && event < KEY_EVENT_NUM) {
+        key_device_event_settings[inst] |= 1 << event;
+        if (event == DEVICE_EVENT_DATA) {
+            key_device_get(id, inst, -1, key_device_value + inst);
+        }
+    } else {
+    }
+}
+
+static void key_device_ignore(int id, int inst, int event)
+{
+    (void) id;
+    if (key_device_is_inused(inst) && event < PIN_EVENT_NUM) {
+        pin_device_event_settings[inst] &= ~(1 << event);
+    }
+}
+
+static int key_device_get(int id, int inst, int off, uint32_t *v)
+{
+    uint32_t data;
+
+    (void) id;
+    (void) inst;
+    (void) off;
+
+    data = gpio_port_read(GPIOA);
+    *v = data & 1;
+
+    return 1;
+}
+
+static int key_device_set(int id, int inst, int off, uint32_t data)
+{
+    (void) id;
+    (void) inst;
+    (void) off;
+    (void) data;
+
+    return 0;
+}
+
+static int key_device_size(int id, int inst)
+{
+    (void) id;
+    (void) inst;
+    return 1;
+}
+
+const hw_driver_t hw_driver_key = {
+    .request = key_device_request,
+    .release = key_device_release,
+    .get_err = key_device_get_error,
+    .enable  = key_device_enable,
+    .disable = key_device_disable,
+    .config_set = key_device_config_set,
+    .config_get = key_device_config_get,
+    .listen = key_device_listen,
+    .ignore = key_device_ignore,
+    .io.map = {
+        .get = key_device_get,
+        .set = key_device_set,
+        .size = key_device_size,
+    }
+};
+
+const hw_device_t hw_device_key = {
+    .name = KEY_DEVICE_NAME,
+    .id   = KEY_DEVICE_ID,
+    .type = HW_DEVICE_MAP,
+    .inst_num   = KEY_INSTANCE_NUM,
+    .conf_num   = KEY_CONFIG_NUM,
+    .event_num  = KEY_EVENT_NUM,
+    .conf_names = NULL,
+    .conf_descs = NULL,
+    .opt_names  = NULL,
+};
 
 int hw_gpio_setup(void)
 {
     int i;
-
-    port_inused = 0;
-    for (i = 0; i < GPIO_GROUP_MAX; i++) {
-        gpio_grps[i].inused = 0;
-        gpio_grps[i].enable = 0;
-        gpio_grps[i].listen = 0;
-        gpio_grps[i].last   = 0;
+    for (i = 0; i < 7; i++) {
+        hw_gpio_pin_state[i] = 0;
     }
+
+    hw_led_setup();
+    pin_device_used = 0;
+    pin_device_work = 0;
+    key_device_used = 0;
+    key_device_work = 0;
 
     return 0;
 }
 
 void hw_gpio_poll(void)
 {
-    int i;
-
-    for (i = 0; i < GPIO_GROUP_MAX; i++) {
-        hw_gpio_group_t *grp = gpio_grps + i;
-
-        if (grp->listen) {
-            uint32_t d;
-            if (hw_gpio_read(i, -1, &d) > 0) {
-                if (d != grp->last) {
-                    devices_event_post(GPIO_DEVICE_ID, i, GPIO_EVENT_CHANGE);
-                    grp->last = d;
-                }
-            }
-        }
-    }
+    pin_device_monitor();
+    key_device_monitor();
 }
 
-int hw_gpio_group_alloc(void)
+int hw_gpio_use(int port, uint16_t pins)
 {
-    int i;
-
-    for (i = 0; i < GPIO_GROUP_MAX; i++) {
-        if (gpio_grps[i].inused == 0) {
-
-            gpio_grps[i].inused = 1;
-            gpio_grps[i].enable = 0;
-            gpio_grps[i].last = 0;
-
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-int hw_gpio_group_release(int grp)
-{
-    if (hw_gpio_group_check(grp)) {
-        gpio_grps[grp].inused = 0;
+    if (port >= 7 || (hw_gpio_pin_state[port] & pins)) {
         return 0;
     }
-    return -1;
-}
-
-void hw_gpio_conf_reset(hw_gpio_conf_t *conf)
-{
-    conf->pin_num = 0;
-    conf->mod = OPT_GPIO_MOD_INPUT_FLOAT;
-    conf->speed = OPT_GPIO_SPEED_MIN;
-}
-
-int hw_gpio_pin_is_valid(uint8_t pin)
-{
-    int port = pin >> 4;
-
-    pin &= 0x0f;
-
-    if (port < 8) {
-        return 1;
+    if (!hw_gpio_pin_state[port]) {
+        rcc_periph_clock_enable(hw_gpio_port_rcc[port]);
     }
-
-    return 0;
-}
-
-int hw_gpio_enable(int grp, hw_gpio_conf_t *cfg)
-{
-    if (hw_gpio_group_check(grp)) {
-        return -1;
-    }
-
-    if (!gpio_grps[grp].enable) {
-        if (0 == hw_gpio_config_set(grp, cfg)) {
-            gpio_grps[grp].enable = 1;
-            return 0;
-        }
-    }
-    return -1;
-}
-
-int hw_gpio_disable(int grp)
-{
-    if (hw_gpio_group_check(grp)) {
-        return -1;
-    }
-
-    if (gpio_grps[grp].enable) {
-        if (0 == hw_gpio_config_clr(grp)) {
-            gpio_grps[grp].enable = 0;
-            return 0;
-        }
-    }
-    return -1;
-}
-
-int hw_gpio_write(int grp, int off, uint32_t data)
-{
-    hw_gpio_conf_t *conf;
-
-    if (hw_gpio_group_check(grp)) {
-        return -1;
-    }
-
-    conf = gpio_cfgs[grp];
-    if (!GPIO_WRITEABLE(conf->mod)) {
-        return -1;
-    }
-
-    if (off < 0) {
-        int i;
-        for (i = 0; i < conf->pin_num; i++) {
-            hw_gpio_write_pin(conf->pin_seq[i], data & 1);
-            data >>= 1;
-        }
-    } else
-    if (off < conf->pin_num) {
-        hw_gpio_write_pin(conf->pin_seq[off], data);
-    } else {
-        return 0;
-    }
-
+    hw_gpio_pin_state[port] |= pins;
     return 1;
 }
 
-int hw_gpio_read(int grp, int off, uint32_t *data)
+int hw_gpio_release(int port, uint16_t pins)
 {
-    hw_gpio_conf_t *conf;
-    uint32_t d;
-
-    if (hw_gpio_group_check(grp)) {
-        return -1;
-    }
-    conf = gpio_cfgs[grp];
-    if (!GPIO_READABLE(conf->mod)) {
-        return -1;
-    }
-
-    d = 0;
-    if (off < 0) {
-        int i;
-        for (i = conf->pin_num - 1; i >= 0; i--) {
-            d <<= 1;
-            if (hw_gpio_read_pin(conf->pin_seq[i])) {
-                d |= 1;
-            }
-        }
-    } else
-    if (off < conf->pin_num){
-        if (hw_gpio_read_pin(conf->pin_seq[off])) {
-            d = 1;
-        }
-    } else {
+    if (port >= 7) {
         return 0;
     }
 
-    *data = d;
+    hw_gpio_pin_state[port] &= ~pins;
+    if (!hw_gpio_pin_state[port]) {
+        rcc_periph_clock_disable(hw_gpio_port_rcc[port]);
+    }
     return 1;
 }
 
-int hw_gpio_event_enable(int grp, int event)
-{
-    if (hw_gpio_group_check(grp) || event >= GPIO_EVENT_MAX) {
-        return -1;
-    }
 
-    gpio_grps[grp].listen |= (1 << event);
-
-    return 0;
-}
-
-int hw_gpio_event_disable(int grp, int event)
-{
-    if (hw_gpio_group_check(grp) || event >= GPIO_EVENT_MAX) {
-        return -1;
-    }
-
-    gpio_grps[grp].listen &= ~(1 << event);
-
-    return 0;
-}

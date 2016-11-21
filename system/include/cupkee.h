@@ -67,25 +67,14 @@ val_t native_set_interval(env_t *env, int ac, val_t *av);
 val_t native_clear_timeout(env_t *env, int ac, val_t *av);
 val_t native_clear_interval(env_t *env, int ac, val_t *av);
 
-// Device
-
-val_t native_device(env_t *env, int ac, val_t *av);
-val_t native_unref(env_t *env, int ac, val_t *av);
-
-val_t device_native_enable(env_t *env, int ac, val_t *av);
-val_t device_native_config(env_t *env, int ac, val_t *av);
-
-val_t device_native_read(env_t *env, int ac, val_t *av);
-val_t device_native_write(env_t *env, int ac, val_t *av);
-
-val_t device_native_listen(env_t *env, int ac, val_t *av);
-val_t device_native_ignore(env_t *env, int ac, val_t *av);
+/*
+ * Device api
+ */
+val_t device_native_create(env_t *env, int ac, val_t *av);
+val_t device_native_led(env_t *env, int ac, val_t *av);
 
 // Device special api
-val_t gpio_native_pin(env_t *env, int ac, val_t *av);
 
-// device new here
-val_t device_native_create(env_t *env, int ac, val_t *av);
 
 #endif /* __CUPKEE_INC__ */
 

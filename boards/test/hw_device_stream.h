@@ -24,11 +24,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __HW_ADC_INC__
-#define __HW_ADC_INC__
+#ifndef __HW_DEVICE_STREAM_INC__
+#define __HW_DEVICE_STREAM_INC__
 
-int  hw_adc_setup(void);
-void hw_adc_poll(void);
+void hw_device_stream_setup(void);
+void hw_device_stream_poll(void);
 
-#endif /* __HW_ADC_INC__ */
+extern const hw_driver_t hw_driver_stream;
+extern const hw_device_t hw_device_stream;
+
+#endif /* __HW_DEVICE_STREAM_INC__ */
 

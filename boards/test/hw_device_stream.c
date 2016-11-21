@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include "hardware.h"
-#define DEVICE_NAME          "serial"
+#define DEVICE_NAME          "stream"
 #define DEVICE_ID            1
 #define EVENT_NUM            3
 #define CONFIG_NUM           3
@@ -48,33 +48,28 @@ typedef struct hw_buf_t{
 /*******************************************************************************
  * dbg field
 *******************************************************************************/
-static void device_set_error(int inst, int error);
+static void device_set_error(int id, int inst, int error);
 
 static void *dbg_input_data = NULL;
 static int  dbg_input_len = 0;
 static int  dbg_input_pos = 0;
 static int  dbg_send_allow = 0;
-static int  dbg_event_flags[INSTANCE_NUM];
 
-void hw_dbg_serial_set_input(const char *data)
+void hw_dbg_stream_set_input(const char *data)
 {
     dbg_input_len = strlen(data);
     dbg_input_pos = 0;
     dbg_input_data = (void *)data;
 }
 
-void hw_dbg_serial_set_send(int n)
+void hw_dbg_stream_set_send(int n)
 {
     dbg_send_allow = n;
 }
 
-void hw_dbg_serial_event_triger(int inst, int event)
+void hw_dbg_stream_set_error(int inst, int err)
 {
-    if (event == DEVICE_EVENT_ERR) {
-        device_set_error(inst, 17);
-    } else {
-        dbg_event_flags[inst] |= 1 << event;
-    }
+    device_set_error(0, inst, err);
 }
 
 /*******************************************************************************
@@ -259,8 +254,9 @@ static void device_check_send(int i)
     }
 }
 
-static void device_set_error(int inst, int error)
+static void device_set_error(int id, int inst, int error)
 {
+    (void) id;
     device_error[inst] = error;
 
     if (device_event_settings[inst] & 1) {
@@ -268,8 +264,9 @@ static void device_set_error(int inst, int error)
     }
 }
 
-static int device_get_error(int inst)
+static int device_get_error(int id, int inst)
 {
+    (void) id;
     if (inst >= INSTANCE_NUM) {
         return 0;
     }
@@ -289,8 +286,9 @@ static int device_reset(int inst)
     return 1;
 }
 
-static int device_enable(int inst)
+static int device_enable(int id, int inst)
 {
+    (void) id;
     if (device_is_inused(inst)) {
         uint8_t b = 1 << inst;
 
@@ -306,8 +304,9 @@ static int device_enable(int inst)
     return 0;
 }
 
-static int device_disable(int inst)
+static int device_disable(int id, int inst)
 {
+    (void) id;
     if (device_is_inused(inst)) {
         uint8_t b = 1 << inst;
 
@@ -323,8 +322,9 @@ static int device_disable(int inst)
 
 // 0: fail
 // 1: ok
-static int device_request(int inst)
+static int device_request(int id, int inst)
 {
+    (void) id;
     if (inst < INSTANCE_NUM) {
         int used = device_used & (1 << inst);
 
@@ -348,10 +348,11 @@ static int device_request(int inst)
 
 // 0: fail
 // other: ok
-static int device_release(int inst)
+static int device_release(int id, int inst)
 {
+    (void) id;
     if (device_is_inused(inst)) {
-        device_disable(inst);
+        device_disable(id, inst);
         device_used &= ~(1 << inst);
         return 1;
     } else {
@@ -359,8 +360,9 @@ static int device_release(int inst)
     }
 }
 
-static int device_config_set(int inst, int which, int setting)
+static int device_config_set(int id, int inst, int which, int setting)
 {
+    (void) id;
     if (device_is_inused(inst) && which < CONFIG_NUM) {
         device_config_settings[inst][which] = setting;
         return 1;
@@ -368,8 +370,9 @@ static int device_config_set(int inst, int which, int setting)
     return 0;
 }
 
-static int device_config_get(int inst, int which, int *setting)
+static int device_config_get(int id, int inst, int which, int *setting)
 {
+    (void) id;
     if (device_is_inused(inst) && which < CONFIG_NUM && setting) {
         *setting = device_config_settings[inst][which];
         return 1;
@@ -377,22 +380,25 @@ static int device_config_get(int inst, int which, int *setting)
     return 0;
 }
 
-static void device_listen(int inst, int event)
+static void device_listen(int id, int inst, int event)
 {
+    (void) id;
     if (device_is_inused(inst) && event < EVENT_NUM) {
         device_event_settings[inst] |= 1 << event;
     }
 }
 
-static void device_ignore(int inst, int event)
+static void device_ignore(int id, int inst, int event)
 {
+    (void) id;
     if (device_is_inused(inst) && event < EVENT_NUM) {
         device_event_settings[inst] &= ~(1 << event);
     }
 }
 
-static int device_recv(int inst, int n, void *buf)
+static int device_recv(int id, int inst, int n, void *buf)
 {
+    (void) id;
     if (device_is_work(inst)) {
         hw_buf_t *b = &device_buf[inst][BUF_RECV];
 
@@ -401,8 +407,9 @@ static int device_recv(int inst, int n, void *buf)
     return 0;
 }
 
-static int device_send(int inst, int n, void *data)
+static int device_send(int id, int inst, int n, void *data)
 {
+    (void) id;
     if (device_is_work(inst)) {
         hw_buf_t *b = &device_buf[inst][BUF_SEND];
         return buf_puts(b, n, data);
@@ -410,8 +417,9 @@ static int device_send(int inst, int n, void *data)
     return 0;
 }
 
-static int device_received(int inst)
+static int device_received(int id, int inst)
 {
+    (void) id;
     if (device_is_work(inst)) {
         hw_buf_t *b = &device_buf[inst][BUF_RECV];
         return b->len;
@@ -419,13 +427,13 @@ static int device_received(int inst)
     return 0;
 }
 
-void hw_device_serial_setup(void)
+void hw_device_stream_setup(void)
 {
     device_used = 0;
     device_work = 0;
 }
 
-void hw_device_serial_poll(void)
+void hw_device_stream_poll(void)
 {
     int i;
 
@@ -437,7 +445,7 @@ void hw_device_serial_poll(void)
     }
 }
 
-const hw_driver_t hw_device_serial_driver = {
+const hw_driver_t hw_driver_stream = {
     .request = device_request,
     .release = device_release,
     .get_err = device_get_error,
@@ -448,15 +456,15 @@ const hw_driver_t hw_device_serial_driver = {
     .listen = device_listen,
     .ignore = device_ignore,
 
-    .io.serial.send = device_send,
-    .io.serial.recv = device_recv,
-    .io.serial.received = device_received,
+    .io.stream.send = device_send,
+    .io.stream.recv = device_recv,
+    .io.stream.received = device_received,
 };
 
-const hw_device_desc_t hw_device_serial_desc = {
+const hw_device_t hw_device_stream = {
     .name = DEVICE_NAME,
     .id   = DEVICE_ID,
-    .type = HW_DEVICE_SERIAL,
+    .type = HW_DEVICE_STREAM,
     .inst_num   = INSTANCE_NUM,
     .conf_num   = CONFIG_NUM,
     .event_num  = EVENT_NUM,

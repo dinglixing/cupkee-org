@@ -24,167 +24,377 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/*******************************************************************************
- * hw field
-*******************************************************************************/
-#include <bsp.h>
 #include "hardware.h"
 
-#if 0
-#define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
-#else
-#define _TRACE(fmt, ...)    //
-#endif
+#define CONF_BAUDRATE        0
+#define CONF_STOPBITS        1
+#define CONF_PARITY          2
 
-#define USART_INUSED        0x80
-#define USART_ENABLE        0x40
+#define BUF_SEND             0
+#define BUF_RECV             1
+#define BUF_SIZE             32
 
-#define USART_STATE_MASK    0x30
+typedef struct hw_buf_t{
+    uint16_t bgn;
+    uint16_t len;
+    uint8_t buf[BUF_SIZE];
+} hw_buf_t;
 
-#define USART_EVENT_MASK    0x0f
-#define USART_BUF_SIZE      32
+static const char *device_config_names[] = {
+    "baudrate", "stopbits", "parity"
+};
+static const char *device_opt_names[] = {
+    "1", "2", "none", "odd", "even"
+};
 
-typedef struct hw_usart_t{
-    uint8_t send_bgn;
-    uint8_t send_len;
-    uint8_t recv_bgn;
-    uint8_t recv_len;
-    uint8_t send_buf[USART_BUF_SIZE];
-    uint8_t recv_buf[USART_BUF_SIZE];
-} hw_usart_t;
+static const hw_config_desc_t device_config_descs[] = {
+    {
+        .type = HW_CONFIG_NUM,
+    },
+    {
+        .type = HW_CONFIG_OPT,
+        .opt_num = 2,
+        .opt_start = 0,
+    },
+    {
+        .type = HW_CONFIG_OPT,
+        .opt_num = 3,
+        .opt_start = 2,
+    }
+};
 
-static hw_usart_t       usart_buffs[USART_INSTANCE_MAX];
-static uint8_t          usart_flags[USART_INSTANCE_MAX];
-static const uint32_t   usart_bases[] = {USART1, USART2, USART3, UART4, UART5};
+static uint8_t device_used = 0;
+static uint8_t device_work = 0;
+static int device_error[USART_INSTANCE_NUM];
+static int device_config_settings[USART_INSTANCE_NUM][USART_CONFIG_NUM];
+static int device_event_settings[USART_INSTANCE_NUM];
+static hw_buf_t device_buf[USART_INSTANCE_NUM][2];
 
-static inline int hw_usart_verify(unsigned instance) {
-    return (instance < USART_INSTANCE_MAX && (usart_flags[instance] & USART_INUSED));
+static inline void buf_init(hw_buf_t *b) {
+    b->len = 0;
+    b->bgn = 0;
 }
 
-static inline int hw_usart_is_enable(int instance) {
-    return usart_flags[instance] & USART_ENABLE;
-}
-
-static inline int hw_usart_has_data(int instance) {
-    uint32_t base = usart_bases[instance];
-
-    return USART_SR(base) & USART_SR_RXNE;
-}
-
-static inline int hw_usart_not_busy(int instance) {
-    uint32_t base = usart_bases[instance];
-
-    return USART_SR(base) & USART_SR_TXE;
-}
-
-static inline uint8_t hw_usart_in(int instance) {
-    uint32_t base = usart_bases[instance];
-
-    return USART_DR(base);
-}
-
-static inline void hw_usart_out(int instance, uint8_t d) {
-    uint32_t base = usart_bases[instance];
-
-    USART_DR(base) = d;
-}
-
-static int hw_usart_config_set(int instance, hw_usart_conf_t *cfg)
-{
-    uint32_t base = usart_bases[instance];
-
-    rcc_periph_clock_enable(RCC_GPIOA);
-    rcc_periph_clock_enable(RCC_AFIO);
-    rcc_periph_clock_enable(RCC_USART1);
-
-	usart_set_baudrate(base, cfg->baudrate);
-	usart_set_databits(base, 8);
-	usart_set_stopbits(base, USART_STOPBITS_1);
-	usart_set_mode(base, USART_MODE_TX_RX);
-	usart_set_parity(base, USART_PARITY_NONE);
-	usart_set_flow_control(base, USART_FLOWCONTROL_NONE);
-
-    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-            GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART1_TX);
-    gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-            GPIO_CNF_INPUT_PULL_UPDOWN, GPIO_USART1_RX);
-
-    usart_enable(base);
-
-    return 0;
-}
-
-static int hw_usart_config_clr(int instance)
-{
-    uint32_t base = usart_bases[instance];
-
-    rcc_periph_clock_disable(RCC_USART1);
-    usart_disable(base);
-
-    return 0;
-}
-
-static void hw_usart_check_recv(int i)
-{
-    int recv = 0;
-    hw_usart_t *usart = &usart_buffs[i];
-
-    while(hw_usart_has_data(i)) {
-        uint8_t data = hw_usart_in(i);
-
-        if (usart->recv_len < USART_BUF_SIZE) {
-            int tail = usart->recv_bgn + usart->recv_len;
-            if (tail >= USART_BUF_SIZE) {
-                tail -= USART_BUF_SIZE;
-            }
-            usart->recv_buf[tail] = data;
-            usart->recv_len++;
+static inline void buf_push(hw_buf_t *b, uint8_t d) {
+    if (b->len < BUF_SIZE) {
+        int tail = b->bgn + b->len++;
+        if (tail >= BUF_SIZE) {
+            tail -= BUF_SIZE;
         }
+        b->buf[tail] = d;
+    }
+}
+
+static inline uint8_t buf_shift(hw_buf_t *b) {
+    uint8_t d = b->buf[b->bgn++];
+    if (b->bgn >= BUF_SIZE) {
+        b->bgn = 0;
+    }
+    b->len--;
+    return d;
+}
+
+static inline int buf_gets(hw_buf_t *b, int n, void *buf) {
+    if (n > b->len) {
+        n = b->len;
+    }
+
+    if (n) {
+        int tail = b->bgn + b->len;
+        if (tail < BUF_SIZE) {
+            memcpy(buf, b->buf + b->bgn, n);
+            b->bgn = tail;
+        } else {
+            int wrap = tail - BUF_SIZE;
+            int size = n;
+            if (wrap) {
+                size -= wrap;
+                memcpy(buf + size, b->buf, wrap);
+            }
+            memcpy(buf, b->buf + b->bgn, size);
+            b->bgn = wrap;
+        }
+        b->len -= n;
+    }
+
+    return n;
+}
+
+static inline int buf_puts(hw_buf_t *b, int n, void *buf) {
+    if (n + b->len > BUF_SIZE) {
+        n = BUF_SIZE - b->len;
+    }
+
+    if (n) {
+        int tail = b->bgn + b->len;
+        int wrap = 0;
+
+        b->len += n;
+        if (tail >= BUF_SIZE) {
+            tail -= BUF_SIZE;
+        } else
+        if (tail + n >= BUF_SIZE) {
+            wrap = tail + n - BUF_SIZE;
+            n -= wrap;
+
+            memcpy(b->buf, buf + n, wrap);
+        }
+        memcpy(b->buf + tail, buf, n);
+
+        return n + wrap;
+    }
+    return 0;
+}
+
+static inline int device_is_inused(int inst) {
+    if (inst < USART_INSTANCE_NUM) {
+        return device_used & (1 << inst);
+    } else {
+        return 0;
+    }
+}
+
+static inline int device_is_work(int inst) {
+    if (inst < USART_INSTANCE_NUM) {
+        return (device_used & device_work) & (1 << inst);
+    } else {
+        return 0;
+    }
+}
+
+static inline int device_has_data(int inst) {
+    (void) inst;
+    return 0;
+}
+
+static inline int device_not_busy(int inst) {
+    (void) inst;
+    return 0;
+}
+
+static inline uint8_t device_in(int inst) {
+    (void) inst;
+    return 0;
+}
+
+static inline void device_out(int inst, uint8_t d)
+{
+    (void) inst;
+    (void) d;
+}
+
+static void device_check_recv(int i)
+{
+    hw_buf_t *b = &device_buf[i][BUF_RECV];
+    int recv = 0;
+
+    while(device_has_data(i)) {
+        buf_push(b, device_in(i));
         recv++;
     }
 
-    if (recv && (usart_flags[i] & (1 << USART_EVENT_DATA))) {
-        devices_event_post(DEVICE_USART_ID, i, USART_EVENT_DATA);
+    if (recv && (device_event_settings[i] & (1 << DEVICE_EVENT_DATA))) {
+        devices_event_post(USART_DEVICE_ID, i, DEVICE_EVENT_DATA);
     }
 }
 
-static void hw_usart_check_send(int i)
+static void device_check_send(int i)
 {
-    hw_usart_t *usart = &usart_buffs[i];
+    hw_buf_t *b = &device_buf[i][BUF_SEND];
+    int send = 0;
 
-    while (hw_usart_not_busy(i)) {
-        int head;
-
-        if (usart->send_len == 0) {
+    while (device_not_busy(i)) {
+        if (b->len <= 0) {
+            if (send && (device_event_settings[i] & (1 << DEVICE_EVENT_DRAIN))) {
+                devices_event_post(USART_DEVICE_ID, i, DEVICE_EVENT_DRAIN);
+            }
             return;
         }
 
-        head = usart->send_bgn;
-        hw_usart_out(i, usart->send_buf[head++]);
+        device_out(i, buf_shift(b));
+        send++;
+    }
+}
 
-        if (head >= USART_BUF_SIZE) {
-            usart->send_bgn = 0;
-        } else {
-            usart->send_bgn = head;
+static void device_set_error(int inst, int error)
+{
+    device_error[inst] = error;
+
+    if (device_event_settings[inst] & 1) {
+        devices_event_post(USART_DEVICE_ID, inst, 0);
+    }
+}
+
+static int device_get_error(int id, int inst)
+{
+    (void) id;
+    if (inst >= USART_INSTANCE_NUM) {
+        return 0;
+    }
+
+    return device_error[inst];
+}
+
+static int device_setup(int inst)
+{
+    (void) inst;
+    if (0) {
+        device_set_error(inst, 1);
+    }
+    return 1;
+}
+
+static int device_reset(int inst)
+{
+    (void) inst;
+    return 1;
+}
+
+static int device_enable(int id, int inst)
+{
+    (void) id;
+    if (device_is_inused(inst)) {
+        uint8_t b = 1 << inst;
+
+        if (!(device_work & b)) {
+            buf_init(&device_buf[inst][BUF_RECV]);
+            buf_init(&device_buf[inst][BUF_SEND]);
+
+            device_work |= b;
+            return device_setup(inst);
         }
-        if ((0 == --usart->send_len) && (usart_flags[i] & (1 << USART_EVENT_DRAIN))) {
-            devices_event_post(DEVICE_USART_ID, i, USART_EVENT_DRAIN);
+        return 1;
+    }
+    return 0;
+}
+
+static int device_disable(int id, int inst)
+{
+    (void) id;
+    if (device_is_inused(inst)) {
+        uint8_t b = 1 << inst;
+
+        if (device_work & b) {
+            device_work &= ~b;
+            return device_reset(inst);
+        } else {
+            return 1;
         }
     }
+    return 0;
+}
+
+// 0: fail
+// 1: ok
+static int device_request(int id, int inst)
+{
+    (void) id;
+    if (inst < USART_INSTANCE_NUM) {
+        int used = device_used & (1 << inst);
+
+        if (!used) {
+            int c;
+
+            device_error[inst] = 0;
+            device_event_settings[inst] = 0;
+            device_used |= 1 << inst;
+            device_work &= ~(1 << inst);
+            for (c = 0; c < USART_CONFIG_NUM; c++) {
+                device_config_settings[inst][c] = 0;
+            }
+
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+// 0: fail
+// other: ok
+static int device_release(int id, int inst)
+{
+    (void) id;
+    if (device_is_inused(inst)) {
+        device_disable(id, inst);
+        device_used &= ~(1 << inst);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+static int device_config_set(int id, int inst, int which, int setting)
+{
+    (void) id;
+    if (device_is_inused(inst) && which < USART_CONFIG_NUM) {
+        device_config_settings[inst][which] = setting;
+        return 1;
+    }
+    return 0;
+}
+
+static int device_config_get(int id, int inst, int which, int *setting)
+{
+    (void) id;
+    if (device_is_inused(inst) && which < USART_CONFIG_NUM && setting) {
+        *setting = device_config_settings[inst][which];
+        return 1;
+    }
+    return 0;
+}
+
+static void device_listen(int id, int inst, int event)
+{
+    (void) id;
+    if (device_is_inused(inst) && event < USART_EVENT_NUM) {
+        device_event_settings[inst] |= 1 << event;
+    }
+}
+
+static void device_ignore(int id, int inst, int event)
+{
+    (void) id;
+    if (device_is_inused(inst) && event < USART_EVENT_NUM) {
+        device_event_settings[inst] &= ~(1 << event);
+    }
+}
+
+static int device_recv(int id, int inst, int n, void *buf)
+{
+    (void) id;
+    if (device_is_work(inst)) {
+        hw_buf_t *b = &device_buf[inst][BUF_RECV];
+
+        return buf_gets(b, n, buf);
+    }
+    return 0;
+}
+
+static int device_send(int id, int inst, int n, void *data)
+{
+    (void) id;
+    if (device_is_work(inst)) {
+        hw_buf_t *b = &device_buf[inst][BUF_SEND];
+        return buf_puts(b, n, data);
+    }
+    return 0;
+}
+
+static int device_received(int id, int inst)
+{
+    (void) id;
+    if (device_is_work(inst)) {
+        hw_buf_t *b = &device_buf[inst][BUF_RECV];
+        return b->len;
+    }
+    return 0;
 }
 
 int hw_usart_setup(void)
 {
-    int i;
-
-    for (i = 0; i < USART_INSTANCE_MAX; i++) {
-        usart_flags[i] = 0;
-        usart_buffs[i].recv_bgn = 0;
-        usart_buffs[i].recv_len = 0;
-        usart_buffs[i].send_bgn = 0;
-        usart_buffs[i].send_len = 0;
-    }
-
+    device_used = 0;
+    device_work = 0;
     return 0;
 }
 
@@ -192,193 +402,40 @@ void hw_usart_poll(void)
 {
     int i;
 
-    for (i = 0; i < USART_INSTANCE_MAX; i++) {
-        if (!hw_usart_is_enable(i)) {
-            continue;
-        }
-
-        hw_usart_check_recv(i);
-        hw_usart_check_send(i);
-    }
-}
-
-int hw_usart_alloc(void)
-{
-    int i;
-
-    for (i = 0; i < USART_INSTANCE_MAX; i++) {
-        if (!(usart_flags[i] & USART_INUSED)) {
-            usart_flags[i] = USART_INUSED;
-            usart_buffs[i].recv_bgn = 0;
-            usart_buffs[i].recv_len = 0;
-            usart_buffs[i].send_bgn = 0;
-            usart_buffs[i].send_len = 0;
-
-            return i;
+    for (i = 0; i < USART_INSTANCE_NUM; i++) {
+        if (device_is_work(i)) {
+            device_check_recv(i);
+            device_check_send(i);
         }
     }
-
-    return -1;
 }
 
-int hw_usart_release(int instance)
-{
-    if (hw_usart_verify(instance)) {
-        /* instance release code here */
-        /* ...                      */
-
-        usart_flags[instance] = 0;
-        return 0;
+const hw_driver_t hw_driver_usart = {
+    .request = device_request,
+    .release = device_release,
+    .get_err = device_get_error,
+    .enable  = device_enable,
+    .disable = device_disable,
+    .config_set = device_config_set,
+    .config_get = device_config_get,
+    .listen = device_listen,
+    .ignore = device_ignore,
+    .io.stream = {
+        .send = device_send,
+        .recv = device_recv,
+        .received = device_received,
     }
-    return -1;
-}
+};
 
-void hw_usart_conf_reset(hw_usart_conf_t *conf)
-{
-    conf->baudrate = 9600;
-    conf->databits = 8;
-    conf->stopbits = 1;
-    conf->parity   = OPT_USART_PARITY_NONE;
-}
-
-int hw_usart_enable(int instance, hw_usart_conf_t *cfg)
-{
-    if (!hw_usart_verify(instance)) {
-        return -1;
-    }
-
-    if (!(usart_flags[instance] & USART_ENABLE)) {
-        if (0 == hw_usart_config_set(instance, cfg)) {
-            usart_flags[instance] |= USART_ENABLE;
-            return 0;
-        }
-    }
-
-    return -1;
-}
-
-int hw_usart_disable(int instance)
-{
-    if (!hw_usart_verify(instance)) {
-        return -1;
-    }
-
-    if (usart_flags[instance] & USART_ENABLE) {
-        if (0 == hw_usart_config_clr(instance)) {
-            usart_flags[instance] &= ~USART_ENABLE;
-            return 0;
-        }
-    }
-    return -1;
-}
-
-void hw_usart_recv_load(int instance, int size, uint8_t *buf)
-{
-    hw_usart_t *buff;
-    int tail;
-
-    if (!hw_usart_verify(instance)) {
-        return;
-    }
-    buff = &usart_buffs[instance];
-
-    if (size <= 0) {
-        return;
-    } else
-    if (size > buff->recv_len) {
-        buff->recv_len = 0;
-        return;
-    }
-
-    buff->recv_len -= size;
-    tail = buff->recv_bgn + size;
-
-    if (tail < USART_BUF_SIZE) {
-        if (buf) {
-            _TRACE("copy from %d: %d\n", buff->recv_bgn, size);
-            memcpy(buf, buff->recv_buf + buff->recv_bgn, size);
-        }
-        buff->recv_bgn = tail;
-    } else {
-        int wrap = tail - USART_BUF_SIZE;
-        if (buf) {
-            if (wrap) {
-                size -= wrap;
-                memcpy(buf + size, buff->recv_buf, wrap);
-            }
-            memcpy(buf, buff->recv_buf + buff->recv_bgn, size);
-        }
-        buff->recv_bgn = wrap;
-    }
-
-    return;
-}
-
-int hw_usart_recv_len(int instance)
-{
-    hw_usart_t *buff;
-
-    if (!hw_usart_verify(instance)) {
-        return -1;
-    }
-    buff = &usart_buffs[instance];
-
-    return buff->recv_len;
-}
-
-int hw_usart_send(int instance, int size, uint8_t *data)
-{
-    hw_usart_t *buff;
-    int space, tail, wrap = 0;
-
-    if (!hw_usart_verify(instance)) {
-        return -1;
-    }
-    buff = &usart_buffs[instance];
-
-    space = USART_BUF_SIZE - buff->send_len;
-    if (size > space) {
-        size = space;
-    }
-
-    if (size == 0) {
-        return 0;
-    }
-
-    tail = buff->send_bgn + buff->send_len;
-    buff->send_len += size;
-
-    if (tail < USART_BUF_SIZE && tail + size > USART_BUF_SIZE) {
-        wrap = tail + size - USART_BUF_SIZE;
-        size -= wrap;
-
-        memcpy(usart_buffs[instance].send_buf, data + size, wrap);
-    }
-    memcpy(usart_buffs[instance].send_buf + tail, data, size);
-
-    return size + wrap;
-}
-
-int hw_usart_event_enable(int instance, int event)
-{
-    if (!hw_usart_verify(instance) || event >= USART_EVENT_MAX) {
-        return -1;
-    }
-
-    usart_flags[instance] |= (1 << event);
-
-
-    return 0;
-}
-
-int hw_usart_event_disable(int instance, int event)
-{
-    if (!hw_usart_verify(instance) || event >= USART_EVENT_MAX) {
-        return -1;
-    }
-
-    usart_flags[instance] &= ~(1 << event);
-
-    return 0;
-}
+const hw_device_t hw_device_usart= {
+    .name = USART_DEVICE_NAME,
+    .id   = USART_DEVICE_ID,
+    .type = HW_DEVICE_STREAM,
+    .inst_num   = USART_INSTANCE_NUM,
+    .conf_num   = USART_CONFIG_NUM,
+    .event_num  = USART_EVENT_NUM,
+    .conf_names = device_config_names,
+    .conf_descs = device_config_descs,
+    .opt_names  = device_opt_names,
+};
 

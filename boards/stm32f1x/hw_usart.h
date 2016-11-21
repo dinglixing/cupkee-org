@@ -30,5 +30,8 @@ SOFTWARE.
 int  hw_usart_setup(void);
 void hw_usart_poll(void);
 
+extern const hw_device_t hw_device_usart;
+extern const hw_driver_t hw_driver_usart;
+
 #endif /* __HW_USART_INC__ */
 

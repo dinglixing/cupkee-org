@@ -154,3 +154,15 @@ int hw_scripts_save(const char *s)
     return storage_write(s, len);
 }
 
+void hw_led_set(void)
+{
+}
+
+void hw_led_clear(void)
+{
+}
+
+void hw_led_toggle(void)
+{
+}
+

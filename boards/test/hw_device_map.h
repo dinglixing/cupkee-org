@@ -30,7 +30,7 @@ SOFTWARE.
 void hw_device_map_setup(void);
 void hw_device_map_poll(void);
 
-extern const hw_driver_t      hw_device_map_driver;
-extern const hw_device_desc_t hw_device_map_desc;
+extern const hw_driver_t hw_driver_map;
+extern const hw_device_t hw_device_map;
 
 #endif /* __HW_DEVICE_MAP_INC__ */
