@@ -94,7 +94,6 @@ void hw_setup(void)
     hw_gpio_setup();
     hw_adc_setup();
     hw_usart_setup();
-
     hw_usb_setup();         // usb used as console
     hw_systick_setup();
     hw_storage_setup();

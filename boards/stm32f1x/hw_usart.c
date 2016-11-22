@@ -66,6 +66,7 @@ static const hw_config_desc_t device_config_descs[] = {
 static uint8_t device_used = 0;
 static uint8_t device_work = 0;
 static int device_error[USART_INSTANCE_NUM];
+static uint32_t device_check_times[USART_INSTANCE_NUM];
 static int device_config_settings[USART_INSTANCE_NUM][USART_CONFIG_NUM];
 static int device_event_settings[USART_INSTANCE_NUM];
 static hw_buf_t device_buf[USART_INSTANCE_NUM][2];
@@ -164,55 +165,57 @@ static inline int device_is_work(int inst) {
 
 static inline int device_has_data(int inst) {
     (void) inst;
-    return 0;
+    return USART_SR(USART1) & USART_SR_RXNE;
 }
 
 static inline int device_not_busy(int inst) {
     (void) inst;
-    return 0;
+    return USART_SR(USART1) & USART_SR_TXE;
 }
 
 static inline uint8_t device_in(int inst) {
     (void) inst;
-    return 0;
+    return USART_DR(USART1);
 }
 
 static inline void device_out(int inst, uint8_t d)
 {
     (void) inst;
-    (void) d;
+    USART_DR(USART1) = d;
 }
 
 static void device_check_recv(int i)
 {
     hw_buf_t *b = &device_buf[i][BUF_RECV];
-    int recv = 0;
 
-    while(device_has_data(i)) {
+    if (device_has_data(i)) {
         buf_push(b, device_in(i));
-        recv++;
-    }
-
-    if (recv && (device_event_settings[i] & (1 << DEVICE_EVENT_DATA))) {
-        devices_event_post(USART_DEVICE_ID, i, DEVICE_EVENT_DATA);
+        if (b->len > (BUF_SIZE * 2 / 3)) {
+            devices_event_post(USART_DEVICE_ID, i, DEVICE_EVENT_DATA);
+        }
+        device_check_times[i] = 0;
+    } else {
+        if (b->len) {
+            uint32_t times = device_check_times[i]++;
+            if (times > 500){
+                devices_event_post(USART_DEVICE_ID, i, DEVICE_EVENT_DATA);
+                device_check_times[i] = 0;
+            }
+        }
     }
 }
 
 static void device_check_send(int i)
 {
     hw_buf_t *b = &device_buf[i][BUF_SEND];
-    int send = 0;
 
-    while (device_not_busy(i)) {
-        if (b->len <= 0) {
-            if (send && (device_event_settings[i] & (1 << DEVICE_EVENT_DRAIN))) {
+    if (b->len > 0) {
+        if (device_not_busy(i)) {
+            device_out(i, buf_shift(b));
+            if (b->len == 0 && (device_event_settings[i] & (1 << DEVICE_EVENT_DRAIN))) {
                 devices_event_post(USART_DEVICE_ID, i, DEVICE_EVENT_DRAIN);
             }
-            return;
         }
-
-        device_out(i, buf_shift(b));
-        send++;
     }
 }
 
@@ -237,31 +240,74 @@ static int device_get_error(int id, int inst)
 
 static int device_setup(int inst)
 {
-    (void) inst;
-    if (0) {
-        device_set_error(inst, 1);
+    uint32_t stopbits, parity;
+
+    switch(device_config_settings[inst][CONF_STOPBITS]) {
+    case 0: stopbits = USART_STOPBITS_1; break;
+    case 1: stopbits = USART_STOPBITS_2; break;
+    case 2: stopbits = USART_STOPBITS_0_5; break;
+    case 3: stopbits = USART_STOPBITS_1_5; break;
+    default: stopbits = USART_STOPBITS_1; break;
     }
+
+    switch(device_config_settings[inst][CONF_PARITY]) {
+    case 0: parity = USART_PARITY_NONE; break;
+    case 1: parity = USART_PARITY_ODD; break;
+    case 2: parity = USART_PARITY_EVEN; break;
+    default: parity = USART_PARITY_NONE; break;
+    }
+
+    if (!hw_gpio_use(0, GPIO_USART1_TX | GPIO_USART1_RX)) {
+        device_set_error(inst, 777);
+        return 0;
+    }
+    rcc_periph_clock_enable(RCC_USART1);
+
+	usart_set_baudrate(USART1, device_config_settings[inst][CONF_BAUDRATE]);
+	usart_set_databits(USART1, 8);
+	usart_set_stopbits(USART1, stopbits);
+	usart_set_parity  (USART1, parity);
+	usart_set_mode    (USART1, USART_MODE_TX_RX);
+	usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+
+    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+            GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART1_TX);
+    gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO_USART1_RX);
+
+    usart_enable(USART1);
+
     return 1;
 }
 
 static int device_reset(int inst)
 {
     (void) inst;
+
+    hw_gpio_release(0, GPIO_USART1_TX | GPIO_USART1_RX);
+    usart_disable(USART1);
+    rcc_periph_clock_disable(RCC_USART1);
+
     return 1;
 }
 
 static int device_enable(int id, int inst)
 {
     (void) id;
+
     if (device_is_inused(inst)) {
         uint8_t b = 1 << inst;
 
         if (!(device_work & b)) {
             buf_init(&device_buf[inst][BUF_RECV]);
             buf_init(&device_buf[inst][BUF_SEND]);
+            device_check_times[inst] = 0;
 
-            device_work |= b;
-            return device_setup(inst);
+            if (device_setup(inst)) {
+                device_work |= b;
+                return 1;
+            } else {
+                return 0;
+            }
         }
         return 1;
     }
