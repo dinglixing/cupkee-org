@@ -27,8 +27,8 @@ SOFTWARE.
 #ifndef __HW_USART_INC__
 #define __HW_USART_INC__
 
-int  hw_usart_setup(void);
-void hw_usart_poll(void);
+int  hw_setup_usart(void);
+void hw_poll_usart(void);
 
 extern const hw_device_t hw_device_usart;
 extern const hw_driver_t hw_driver_usart;

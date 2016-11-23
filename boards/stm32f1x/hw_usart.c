@@ -437,14 +437,14 @@ static int device_received(int id, int inst)
     return 0;
 }
 
-int hw_usart_setup(void)
+int hw_setup_usart(void)
 {
     device_used = 0;
     device_work = 0;
     return 0;
 }
 
-void hw_usart_poll(void)
+void hw_poll_usart(void)
 {
     int i;
 

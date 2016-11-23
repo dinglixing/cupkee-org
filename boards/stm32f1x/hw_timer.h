@@ -24,9 +24,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __NOSYS_KEY_INC__
-#define __NOSYS_KEY_INC__
+#ifndef __HW_TIMER_INC__
+#define __HW_TIMER_INC__
 
-int key_enable(void);
+void hw_setup_timer(void);
+void hw_poll_timer(void);
 
-#endif /* __NOSYS_KEY_INC__ */
+extern const hw_driver_t hw_driver_pulse;
+extern const hw_device_t hw_device_pulse;
+
+extern const hw_driver_t hw_driver_pwm;
+extern const hw_device_t hw_device_pwm;
+
+#endif /* __HW_TIMER_INC__ */

@@ -27,8 +27,8 @@ SOFTWARE.
 #ifndef __HW_ADC_INC__
 #define __HW_ADC_INC__
 
-int  hw_adc_setup(void);
-void hw_adc_poll(void);
+int  hw_setup_adc(void);
+void hw_poll_adc(void);
 
 extern const hw_device_t hw_device_adc;
 extern const hw_driver_t hw_driver_adc;

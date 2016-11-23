@@ -29,6 +29,7 @@ SOFTWARE.
 
 #include <bsp.h>
 #include "key.h"
+#include "timer.h"
 
 void systick_event_post(void);
 void devices_event_post(int dev, int which, int event);
@@ -127,20 +128,55 @@ static void command_proc(void)
     } else
     if (!strcmp("led\r", command_buf)) {
         hw_led_toggle();
-        hw_console_sync_puts("led toggle\r\n");
     } else
-    if (!strcmp("key_enable\r", command_buf)) {
-        if (key_enable()) {
+    if (!strcmp("pulse\r", command_buf)) {
+        if (pulse_enable()) {
             hw_console_sync_puts("ok\r\n");
         } else {
             hw_console_sync_puts("fail\r\n");
         }
     } else
-    if (!strcmp("adc_enable\r", command_buf)) {
+    if (!strcmp("trigger\r", command_buf)) {
+        if (pulse_trigger()) {
+            hw_console_sync_puts("ok\r\n");
+        } else {
+            hw_console_sync_puts("fail\r\n");
+        }
     } else
-    if (!strcmp("adc_show\r", command_buf)) {
+    if (!strcmp("pwm\r", command_buf)) {
+        if (pwm_enable()) {
+            hw_console_sync_puts("ok\r\n");
+        } else {
+            hw_console_sync_puts("fail\r\n");
+        }
     } else
-    if (!strcmp("usart_enable\r", command_buf)) {
+    if (!strcmp("pwm10\r", command_buf)) {
+        if (pwm_set(10)) {
+            hw_console_sync_puts("ok\r\n");
+        } else {
+            hw_console_sync_puts("fail\r\n");
+        }
+    } else
+    if (!strcmp("pwm50\r", command_buf)) {
+        if (pwm_set(50)) {
+            hw_console_sync_puts("ok\r\n");
+        } else {
+            hw_console_sync_puts("fail\r\n");
+        }
+    } else
+    if (!strcmp("pwm80\r", command_buf)) {
+        if (pwm_set(80)) {
+            hw_console_sync_puts("ok\r\n");
+        } else {
+            hw_console_sync_puts("fail\r\n");
+        }
+    } else
+    if (!strcmp("pwm100\r", command_buf)) {
+        if (pwm_set(100)) {
+            hw_console_sync_puts("ok\r\n");
+        } else {
+            hw_console_sync_puts("fail\r\n");
+        }
     } else
     if (!strcmp("usart_send\r", command_buf)) {
     }
@@ -161,8 +197,9 @@ int main(void)
             }
         }
 
-        command_proc();
         event_proc();
+
+        command_proc();
 
         hw_poll();
     }

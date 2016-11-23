@@ -100,7 +100,7 @@ static const char *hw_scripts_get(int id)
     return s;
 }
 
-void hw_storage_setup(void)
+void hw_setup_storage(void)
 {
     int rom = desig_get_flash_size();
 

@@ -638,7 +638,7 @@ const hw_device_t hw_device_key = {
     .opt_names  = NULL,
 };
 
-int hw_gpio_setup(void)
+int hw_setup_gpio(void)
 {
     int i;
     for (i = 0; i < 7; i++) {
@@ -654,7 +654,7 @@ int hw_gpio_setup(void)
     return 0;
 }
 
-void hw_gpio_poll(void)
+void hw_poll_gpio(void)
 {
     pin_device_monitor();
     key_device_monitor();

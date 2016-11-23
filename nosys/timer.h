@@ -24,9 +24,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __NOSYS_KEY_INC__
-#define __NOSYS_KEY_INC__
+#ifndef __NOSYS_TIMER_INC__
+#define __NOSYS_TIMER_INC__
 
-int key_enable(void);
+int pulse_enable(void);
+int pulse_trigger(void);
+int pwm_enable(void);
+int pwm_set(int v);
 
-#endif /* __NOSYS_KEY_INC__ */
+#endif /* __NOSYS_TIMER_INC__ */

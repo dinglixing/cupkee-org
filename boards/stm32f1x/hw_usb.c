@@ -205,7 +205,7 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 
 static usbd_device *usbd_dev;
 
-void hw_usb_setup(void)
+void hw_setup_usb(void)
 {
 	usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
@@ -250,7 +250,7 @@ int hw_console_set_callback(void (*input)(void *, int), void (*drain)(void))
     return 0;
 }
 
-void hw_usb_poll(void)
+void hw_poll_usb(void)
 {
     usbd_poll(usbd_dev);
 

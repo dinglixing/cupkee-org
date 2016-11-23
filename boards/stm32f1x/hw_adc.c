@@ -417,14 +417,14 @@ const hw_device_t hw_device_adc = {
     .opt_names  = device_opt_names,
 };
 
-int hw_adc_setup(void)
+int hw_setup_adc(void)
 {
     device_used = 0;
     device_work = 0;
     return 0;
 }
 
-void hw_adc_poll(void)
+void hw_poll_adc(void)
 {
     int i;
 

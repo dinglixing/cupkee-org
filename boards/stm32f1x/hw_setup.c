@@ -8,17 +8,22 @@ extern vector_table_t vector_table;
 extern char end;
 static int memory_alloced = 0;
 static int memory_size = 0;
+
 static const hw_device_t *hw_devices[] = {
     &hw_device_pin,
     &hw_device_key,
     &hw_device_adc,
     &hw_device_usart,
+    &hw_device_pulse,
+    &hw_device_pwm,
 };
 static const hw_driver_t *hw_drivers[] = {
     &hw_driver_pin,
     &hw_driver_key,
     &hw_driver_adc,
     &hw_driver_usart,
+    &hw_driver_pulse,
+    &hw_driver_pwm,
 };
 
 static void hw_memory_init(void)
@@ -27,7 +32,7 @@ static void hw_memory_init(void)
     memory_size = (char *)(vector_table.initial_sp_value) - (&end) - MAIN_STACK_SIZE;
 }
 
-static void hw_systick_setup(void)
+static void hw_setup_systick(void)
 {
     systick_set_frequency(SYSTEM_TICKS_PRE_SEC, 72000000);
 
@@ -89,30 +94,33 @@ void hw_setup(void)
 {
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
-    hw_memory_init();
+    hw_setup_systick();
 
-    hw_gpio_setup();
-    hw_adc_setup();
-    hw_usart_setup();
-    hw_usb_setup();         // usb used as console
-    hw_systick_setup();
-    hw_storage_setup();
+    hw_setup_usb();         // usb used as console
+    hw_setup_gpio();
+    hw_setup_adc();
+    hw_setup_usart();
+    hw_setup_timer();
+    hw_setup_storage();
+
+    hw_memory_init();
 }
 
 void hw_poll(void)
 {
     static uint32_t system_ticks_count_pre = 0;
 
-    hw_usb_poll();
-    hw_usart_poll();
+    hw_poll_usb();
+    hw_poll_usart();
+    hw_poll_timer();
 
     if (system_ticks_count_pre != system_ticks_count) {
         system_ticks_count_pre = system_ticks_count;
 
         systick_event_post();
 
-        hw_gpio_poll();
-        hw_adc_poll();
+        hw_poll_gpio();
+        hw_poll_adc();
     }
 }
 

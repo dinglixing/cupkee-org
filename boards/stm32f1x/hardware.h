@@ -39,8 +39,8 @@ SOFTWARE.
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/flash.h>
-#include <libopencm3/stm32/desig.h>
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
@@ -72,11 +72,24 @@ SOFTWARE.
 #define USART_CONFIG_NUM        3
 #define USART_INSTANCE_NUM      1
 
+#define PULSE_DEVICE_NAME       "pulse"
+#define PULSE_DEVICE_ID         4
+#define PULSE_EVENT_NUM         3
+#define PULSE_CONFIG_NUM        2
+#define PULSE_INSTANCE_NUM      4
+
+#define PWM_DEVICE_NAME         "pwm"
+#define PWM_DEVICE_ID           5
+#define PWM_EVENT_NUM           1
+#define PWM_CONFIG_NUM          3
+#define PWM_INSTANCE_NUM        4
+
 #include "hw_usb.h"
 #include "hw_misc.h"
 #include "hw_gpio.h"
 #include "hw_adc.h"
 #include "hw_usart.h"
+#include "hw_timer.h"
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
