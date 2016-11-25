@@ -427,20 +427,11 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
 
     setting = ac > 0 ? av : NULL;
 
-    if (setting) {
-        if (val_is_true(setting)) {
-            if (val_is_object(setting)) {
-                if (VAL_TRUE == device_config_set_all(device, setting)) {
-                    device_enable(device);
-                }
-            } else {
-                device_enable(device);
-            }
-        } else {
-            device_disable(device);
-        }
+    if (setting && val_is_object(setting)) {
+        device_config_set_all(device, setting);
         ac--; av++;
     }
+    device_enable(device);
 
     if (ac && val_is_function(av)) {
         val_t args[2];
@@ -452,6 +443,33 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
     }
 
     return (device->flags & DEVICE_ENABLE) ? VAL_TRUE : VAL_FALSE;
+}
+
+static val_t device_native_disable(env_t *env, int ac, val_t *av)
+{
+    cupkee_device_t *device;
+
+    (void) env;
+
+    if (ac == 0 || (device = device_val_control(av)) == NULL) {
+        return VAL_UNDEFINED;
+    } else {
+        device_disable(device);
+        return (device->flags & DEVICE_ENABLE) ? VAL_FALSE : VAL_TRUE;
+    }
+}
+
+static val_t device_native_is_enable(env_t *env, int ac, val_t *av)
+{
+    cupkee_device_t *device;
+
+    (void) env;
+
+    if (ac == 0 || (device = device_val_control(av)) == NULL) {
+        return VAL_UNDEFINED;
+    } else {
+        return (device->flags & DEVICE_ENABLE) ? VAL_TRUE : VAL_FALSE;
+    }
 }
 
 static val_t device_native_listen(env_t *env, int ac, val_t *av)
@@ -777,6 +795,14 @@ static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop)
         } else
         if (!strcmp(prop_name, "enable")) {
             val_set_native(prop, (intptr_t)device_native_enable);
+            return;
+        } else
+        if (!strcmp(prop_name, "disable")) {
+            val_set_native(prop, (intptr_t)device_native_disable);
+            return;
+        } else
+        if (!strcmp(prop_name, "isEnable")) {
+            val_set_native(prop, (intptr_t)device_native_is_enable);
             return;
         } else
         if (!strcmp(prop_name, "listen")) {

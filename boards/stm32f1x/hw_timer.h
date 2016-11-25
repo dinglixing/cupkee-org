@@ -36,4 +36,10 @@ extern const hw_device_t hw_device_pulse;
 extern const hw_driver_t hw_driver_pwm;
 extern const hw_device_t hw_device_pwm;
 
+extern const hw_driver_t hw_driver_count;
+extern const hw_device_t hw_device_count;
+
+extern const hw_driver_t hw_driver_timer;
+extern const hw_device_t hw_device_timer;
+
 #endif /* __HW_TIMER_INC__ */

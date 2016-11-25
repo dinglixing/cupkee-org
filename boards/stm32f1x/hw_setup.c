@@ -16,7 +16,10 @@ static const hw_device_t *hw_devices[] = {
     &hw_device_usart,
     &hw_device_pulse,
     &hw_device_pwm,
+    &hw_device_count,
+    &hw_device_timer,
 };
+
 static const hw_driver_t *hw_drivers[] = {
     &hw_driver_pin,
     &hw_driver_key,
@@ -24,6 +27,8 @@ static const hw_driver_t *hw_drivers[] = {
     &hw_driver_usart,
     &hw_driver_pulse,
     &hw_driver_pwm,
+    &hw_driver_count,
+    &hw_driver_timer,
 };
 
 static void hw_memory_init(void)
