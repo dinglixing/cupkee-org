@@ -426,7 +426,6 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
     }
 
     setting = ac > 0 ? av : NULL;
-
     if (setting && val_is_object(setting)) {
         device_config_set_all(device, setting);
         ac--; av++;
@@ -469,6 +468,20 @@ static val_t device_native_is_enable(env_t *env, int ac, val_t *av)
         return VAL_UNDEFINED;
     } else {
         return (device->flags & DEVICE_ENABLE) ? VAL_TRUE : VAL_FALSE;
+    }
+}
+
+static val_t device_native_get_error(env_t *env, int ac, val_t *av)
+{
+    cupkee_device_t *device;
+
+    (void) env;
+
+    if (ac == 0 || (device = device_val_control(av)) == NULL) {
+        return VAL_UNDEFINED;
+    } else {
+        int err = device->driver->get_err(device->desc->id, device->inst);
+        return val_mk_number(err);
     }
 }
 
@@ -801,12 +814,16 @@ static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop)
             val_set_native(prop, (intptr_t)device_native_disable);
             return;
         } else
+        if (!strcmp(prop_name, "listen")) {
+            val_set_native(prop, (intptr_t)device_native_listen);
+            return;
+        } else
         if (!strcmp(prop_name, "isEnable")) {
             val_set_native(prop, (intptr_t)device_native_is_enable);
             return;
         } else
-        if (!strcmp(prop_name, "listen")) {
-            val_set_native(prop, (intptr_t)device_native_listen);
+        if (!strcmp(prop_name, "getError")) {
+            val_set_native(prop, (intptr_t)device_native_get_error);
             return;
         } else
         if (!strcmp(prop_name, "destroy")) {
@@ -883,14 +900,13 @@ void device_event_proc(env_t *env, int event)
     uint8_t id, inst, e;
 
     e = event & 0xff;
-
     if (e >= DEVICE_EVENT_MAX) {
         return;
     }
+
     id   = (event >> 16) & 0xff;
     inst = (event >> 8) & 0xff;
     device = device_work;
-
     while (device) {
         if (device->inst == inst && device->desc->id == id) {
             break;
