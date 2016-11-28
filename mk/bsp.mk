@@ -29,7 +29,7 @@ lib_NAMES = bsp
 bsp_SRCS = ${notdir ${wildcard ${BSP_DIR}/${BOARD_SRC_DIR}/*.c}}
 $(info ${bsp_SRCS})
 
-bsp_CPPFLAGS = -I${BSP_DIR}/include
+bsp_CPPFLAGS = -I${BSP_DIR}/include -I${SYS_DIR}/include
 bsp_CFLAGS   =
 bsp_LDFLAGS  =
 

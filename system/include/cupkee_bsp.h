@@ -24,8 +24,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __BSP_INC__
-#define __BSP_INC__
+#ifndef __CUPKEE_BSP_INC__
+#define __CUPKEE_BSP_INC__
 
 #include <stdint.h>
 
@@ -131,10 +131,6 @@ void hw_info_get(hw_info_t *);
 
 int hw_memory_alloc(void **p, int size, int align);
 
-/* device */
-const hw_device_t *hw_device_take(const char *name, int inst, const hw_driver_t **driver);
-const hw_device_t *hw_device_descript(int i);
-
 /* console */
 int hw_console_set_callback(void (*input)(void *, int), void (*drain)(void));
 int hw_console_putc(int ch);
@@ -148,9 +144,15 @@ int hw_scripts_remove(int id);
 int hw_scripts_save(const char *s);
 const char *hw_scripts_load(const char *prev);
 
+int hw_pin_map(int id, int port, int pin);
+
 void hw_led_set(void);
 void hw_led_clear(void);
 void hw_led_toggle(void);
 
-#endif /* __BSP_INC__ */
+/* device */
+const hw_device_t *hw_device_take(const char *name, int inst, const hw_driver_t **driver);
+const hw_device_t *hw_device_descript(int i);
+
+#endif /* __CUPKEE_BSP_INC__ */
 

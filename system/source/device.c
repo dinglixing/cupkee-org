@@ -975,6 +975,26 @@ val_t device_native_create(env_t *env, int ac, val_t *av)
     }
 }
 
+val_t device_native_pin_map(env_t *env, int ac, val_t *av)
+{
+    int id, port, pin;
+    (void) env;
+
+    if (ac < 3 || !val_is_number(av) || !val_is_number(av + 1) || !val_is_number(av + 2)) {
+        return VAL_FALSE;
+    }
+
+    id   = val_2_integer(av);
+    port = val_2_integer(av + 1);
+    pin  = val_2_integer(av + 2);
+
+    if (CUPKEE_OK == hw_pin_map(id, port, pin)) {
+        return VAL_TRUE;
+    } else {
+        return VAL_FALSE;
+    }
+}
+
 val_t device_native_led(env_t *env, int ac, val_t *av)
 {
     (void) env;

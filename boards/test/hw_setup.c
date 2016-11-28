@@ -24,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <bsp.h>
 #include "hardware.h"
 
 /*******************************************************************************
@@ -133,6 +132,15 @@ void hw_info_get(hw_info_t * info)
     (void) info;
 
     return;
+}
+
+int hw_pin_map(int id, int port, int pin)
+{
+    (void) id;
+    (void) port;
+    (void) pin;
+
+    return 0;
 }
 
 int hw_memory_alloc(void **p, int size, int align)

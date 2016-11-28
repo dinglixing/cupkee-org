@@ -31,22 +31,23 @@ SOFTWARE.
 #include <stdint.h>
 #include <string.h>
 
-#include <bsp.h>
+/************************************************************************
+ * Shell lang
+ ***********************************************************************/
 #include <panda.h>
 
 /************************************************************************
  * Cupkee error code
  ***********************************************************************/
-#define CUPKEE_OK               0       // not implement
-#define CUPKEE_ERROR            10000   // error not in list:
-#define CUPKEE_EIMPLEMENT       20000   // not implement
-#define CUPKEE_ENAME            20001   // invalid device name
-#define CUPKEE_EINVAL           20002   // invalid argument
-#define CUPKEE_ERESOURCE        20003   // not enought resource
-#define CUPKEE_EHARDWARE        20004   // hardware error
+#include "cupkee_errno.h"
 
 /************************************************************************
- * Cupkee API
+ * Cupkee native functions
+ ***********************************************************************/
+#include "cupkee_native.h"
+
+/************************************************************************
+ * Cupkee basic API
  ***********************************************************************/
 int cupkee_init(void);
 int cupkee_start(const char *scripts);
@@ -54,26 +55,9 @@ int cupkee_poll(void);
 int cupkee_set_native(const native_t *, int n);
 
 /************************************************************************
- * Cupkee native functions
+ * Cupkee hardware interface
  ***********************************************************************/
-val_t native_sysinfos(env_t *env, int ac, val_t *av);
-val_t native_systicks(env_t *env, int ac, val_t *av);
-val_t native_print(env_t *env, int ac, val_t *av);
-val_t native_scripts(env_t *env, int ac, val_t *av);
-
-// Timer
-val_t native_set_timeout(env_t *env, int ac, val_t *av);
-val_t native_set_interval(env_t *env, int ac, val_t *av);
-val_t native_clear_timeout(env_t *env, int ac, val_t *av);
-val_t native_clear_interval(env_t *env, int ac, val_t *av);
-
-/*
- * Device api
- */
-val_t device_native_create(env_t *env, int ac, val_t *av);
-val_t device_native_led(env_t *env, int ac, val_t *av);
-
-// Device special api
+#include "cupkee_bsp.h"
 
 
 #endif /* __CUPKEE_INC__ */

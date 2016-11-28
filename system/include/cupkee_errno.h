@@ -24,48 +24,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <cupkee.h>
+#ifndef __CUPKEE_ERRNO_INC__
+#define __CUPKEE_ERRNO_INC__
 
-static const native_t native_entry[] = {
-    /* panda natives */
-    {"Buffer",          buffer_native_create},
+/************************************************************************
+ * Cupkee error code
+ ***********************************************************************/
+#define CUPKEE_OK               0       // not implement
+#define CUPKEE_ERROR            10000   // error not in list:
+#define CUPKEE_EIMPLEMENT       20000   // not implement
+#define CUPKEE_ENAME            20001   // invalid device name
+#define CUPKEE_EINVAL           20002   // invalid argument
+#define CUPKEE_ERESOURCE        20003   // not enought resource
+#define CUPKEE_EHARDWARE        21000   // hardware error
 
-    /* cupkee natives */
-    {"sysinfos",        native_sysinfos},
-    {"systicks",        native_systicks},
-    {"scripts",         native_scripts},
-    {"print",           native_print},
-
-    {"setTimeout",      native_set_timeout},
-    {"setInterval",     native_set_interval},
-    {"clearTimeout",    native_clear_timeout},
-    {"clearInterval",   native_clear_interval},
-
-    {"device",          device_native_create},
-    {"pinMap",          device_native_pin_map},
-    {"led",             device_native_led},
-
-    /* user native */
-
-};
-
-// system initial scripts
-//static char *initial = "setInterval(led, 1000);";
-static char *initial = NULL;
-
-int main(void)
-{
-    cupkee_init();
-
-    /* user code here */
-
-    cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
-    cupkee_start(initial);
-
-    while (1)
-        cupkee_poll();
-
-    // Should not go here
-    return 0;
-}
+#endif /* __CUPKEE_ERRNO_INC__ */
 

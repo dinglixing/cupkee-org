@@ -144,20 +144,20 @@ static void test_enable(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('option')\r",                         "\"x\"\r\n", 1));
 
     // return is enable, without argument
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnable()\r",                               "false\r\n", 1));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable(1)\r",                                "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnable()\r",                               "true\r\n", 1));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable(0)\r",                                "false\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.disable()\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnable()\r",                               "false\r\n", 1));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable({\
   bool: true,\
   number: 10,\
   option: 'yy'\
 })\r",                                                                                        "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnable()\r",                               "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('bool')\r",                           "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('number')\r",                         "10\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('option')\r",                         "\"yy\"\r\n", 1));

@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "hardware.h"
+
 #define DEVICE_NAME          "stream"
 #define DEVICE_ID            1
 #define EVENT_NUM            3

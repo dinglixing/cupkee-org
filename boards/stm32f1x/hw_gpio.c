@@ -24,31 +24,62 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <bsp.h>
 #include "hardware.h"
+
+#define PORT_MAX                7
+#define PIN_MAX                 16
+#define PIN_MAP_MAX             16
 
 #define PIN_DEVICE_MOD          0
 #define PIN_DEVICE_MOD_OUT      0
 #define PIN_DEVICE_MOD_IN       1
 #define PIN_DEVICE_MOD_DUAL     2
 
-static const uint32_t hw_gpio_port_rcc[7] = {
+static const uint32_t hw_gpio_port_rcc[PORT_MAX] = {
     RCC_GPIOA, RCC_GPIOB, RCC_GPIOC, RCC_GPIOD, RCC_GPIOE, RCC_GPIOF, RCC_GPIOF
 };
-/*
-static const uint32_t hw_gpio_port_base[7] = {
-    GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF, GPIOF
+static const uint32_t hw_gpio_port_base[PORT_MAX] = {
+    GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF, GPIOG
 };
-*/
+static uint16_t hw_gpio_pin_use[PORT_MAX];
+static uint8_t  hw_gpio_pin_map[PIN_MAP_MAX];
 
 
-static uint16_t hw_gpio_pin_state[7];
+static inline uint8_t hw_gpio_map_id(int port, int pin)
+{
+    return (port << 4) | (pin & 15);
+}
+
+static inline uint8_t hw_gpio_map_port(uint8_t map)
+{
+    return (map >> 4) & PORT_MAX;
+}
+
+static inline uint8_t hw_gpio_map_pin(uint8_t map)
+{
+    return map & PIN_MAX;
+}
 
 static void hw_led_setup(void)
 {
-    hw_gpio_use(0, 8);
+    int port = hw_gpio_map_port(hw_gpio_pin_map[0]);
+    int pin  = hw_gpio_map_pin(hw_gpio_pin_map[0]);
 
-    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
+    hw_gpio_use(port, 1 << pin);
+
+    gpio_set_mode(hw_gpio_port_base[port], GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, 1 << pin);
+}
+
+static void hw_led_reset(int port, int pin)
+{
+    hw_gpio_use(port, 1 << pin);
+
+    gpio_set_mode(hw_gpio_port_base[port], GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, 1 << pin);
+
+    // release origin pin
+    port = hw_gpio_map_port(hw_gpio_pin_map[0]);
+    pin  = hw_gpio_map_pin(hw_gpio_pin_map[0]);
+    hw_gpio_release(port, 1 << pin);
 }
 
 void hw_led_set(void)
@@ -641,8 +672,8 @@ const hw_device_t hw_device_key = {
 int hw_setup_gpio(void)
 {
     int i;
-    for (i = 0; i < 7; i++) {
-        hw_gpio_pin_state[i] = 0;
+    for (i = 0; i < PORT_MAX; i++) {
+        hw_gpio_pin_use[i] = 0;
     }
 
     hw_led_setup();
@@ -660,26 +691,40 @@ void hw_poll_gpio(void)
     key_device_monitor();
 }
 
+int hw_pin_map(int id, int port, int pin)
+{
+    if (id >= PIN_MAP_MAX || port >= PORT_MAX || pin >= PIN_MAP_MAX) {
+        return CUPKEE_ERROR;
+    }
+
+    if (id == 0) {
+        hw_led_reset(port, pin);
+    }
+    hw_gpio_pin_map[id] = hw_gpio_map_id(port, pin);
+
+    return CUPKEE_OK;
+}
+
 int hw_gpio_use(int port, uint16_t pins)
 {
-    if (port >= 7 || (hw_gpio_pin_state[port] & pins)) {
+    if (port >= PORT_MAX || (hw_gpio_pin_use[port] & pins)) {
         return 0;
     }
-    if (!hw_gpio_pin_state[port]) {
+    if (!hw_gpio_pin_use[port]) {
         rcc_periph_clock_enable(hw_gpio_port_rcc[port]);
     }
-    hw_gpio_pin_state[port] |= pins;
+    hw_gpio_pin_use[port] |= pins;
     return 1;
 }
 
 int hw_gpio_release(int port, uint16_t pins)
 {
-    if (port >= 7) {
+    if (port >= PORT_MAX) {
         return 0;
     }
 
-    hw_gpio_pin_state[port] &= ~pins;
-    if (!hw_gpio_pin_state[port]) {
+    hw_gpio_pin_use[port] &= ~pins;
+    if (!hw_gpio_pin_use[port]) {
         rcc_periph_clock_disable(hw_gpio_port_rcc[port]);
     }
     return 1;

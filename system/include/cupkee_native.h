@@ -24,48 +24,33 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <cupkee.h>
+#ifndef __CUPKEE_NATIVE_INC__
+#define __CUPKEE_NATIVE_INC__
 
-static const native_t native_entry[] = {
-    /* panda natives */
-    {"Buffer",          buffer_native_create},
+// System
+val_t native_sysinfos(env_t *env, int ac, val_t *av);
+val_t native_systicks(env_t *env, int ac, val_t *av);
+val_t native_print(env_t *env, int ac, val_t *av);
 
-    /* cupkee natives */
-    {"sysinfos",        native_sysinfos},
-    {"systicks",        native_systicks},
-    {"scripts",         native_scripts},
-    {"print",           native_print},
+// User scripts
+val_t native_scripts(env_t *env, int ac, val_t *av);
 
-    {"setTimeout",      native_set_timeout},
-    {"setInterval",     native_set_interval},
-    {"clearTimeout",    native_clear_timeout},
-    {"clearInterval",   native_clear_interval},
+// Timer
+val_t native_set_timeout(env_t *env, int ac, val_t *av);
+val_t native_set_interval(env_t *env, int ac, val_t *av);
+val_t native_clear_timeout(env_t *env, int ac, val_t *av);
+val_t native_clear_interval(env_t *env, int ac, val_t *av);
 
-    {"device",          device_native_create},
-    {"pinMap",          device_native_pin_map},
-    {"led",             device_native_led},
+/*
+ * Device api
+ */
+val_t device_native_create(env_t *env, int ac, val_t *av);
+val_t device_native_pin_map(env_t *env, int ac, val_t *av);
+val_t device_native_led(env_t *env, int ac, val_t *av);
 
-    /* user native */
+// Filter api
+val_t filter_native_crate(env_t env, int ac, val_t *av);
 
-};
 
-// system initial scripts
-//static char *initial = "setInterval(led, 1000);";
-static char *initial = NULL;
-
-int main(void)
-{
-    cupkee_init();
-
-    /* user code here */
-
-    cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
-    cupkee_start(initial);
-
-    while (1)
-        cupkee_poll();
-
-    // Should not go here
-    return 0;
-}
+#endif /* __CUPKEE_NATIVE_INC__ */
 

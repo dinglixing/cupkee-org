@@ -45,8 +45,9 @@ SOFTWARE.
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
-#include <bsp.h>
-#include "system.h"
+#include <cupkee_errno.h>
+#include <cupkee_event.h>
+#include <cupkee_bsp.h>
 
 #define PIN_DEVICE_NAME         "pin"
 #define PIN_DEVICE_ID           0

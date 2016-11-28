@@ -66,8 +66,9 @@ void hw_dbg_stream_set_send(int n);
 /* Debug api end
 ******************************************************************************/
 
-#include <bsp.h>
-#include "system.h"
+#include <cupkee_errno.h>
+#include <cupkee_event.h>
+#include <cupkee_bsp.h>
 
 /******************************************************************************
  * Hardware interface not in bsp.h
