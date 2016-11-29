@@ -242,6 +242,16 @@ static char *more_handle(void)
     return NULL;
 }
 
+// Uncatched error
+static void shell_error_proc(env_t *env, int err)
+{
+    print_error(err);
+
+    // Todo: stack dump
+
+    env_set_error(env, 0);
+}
+
 static void shell_execute_line(env_t *env)
 {
     val_t *res;
@@ -253,7 +263,7 @@ static void shell_execute_line(env_t *env)
     if (err < 0) {
         if (shell_mode == 0 || err != -ERR_InvalidToken) {
             shell_mode = 0;
-            print_error(-err);
+            shell_error_proc(env, -err);
         }
     } else
     if (err > 0) {
@@ -291,7 +301,7 @@ static void shell_execute_multi(env_t *env)
 
     err = interp_execute_string(env, input_buf, &res);
     if (err < 0) {
-        print_error(-err);
+        shell_error_proc(env, -err);
     } else
     if (err > 0) {
         print_value(res);
