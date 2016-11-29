@@ -33,9 +33,6 @@ void hw_poll_gpio(void);
 int hw_gpio_use(int port, uint16_t pins);
 int hw_gpio_release(int port, uint16_t pins);
 
-extern const hw_device_t hw_device_key;
-extern const hw_driver_t hw_driver_key;
-
 extern const hw_device_t hw_device_pin;
 extern const hw_driver_t hw_driver_pin;
 

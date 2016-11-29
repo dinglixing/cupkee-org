@@ -37,6 +37,7 @@ SOFTWARE.
 #define CUPKEE_EINVAL           20002   // invalid argument
 #define CUPKEE_ERESOURCE        20003   // not enought resource
 #define CUPKEE_EHARDWARE        21000   // hardware error
+#define CUPKEE_ESETTINGS        21001   // invalid settings
 
 #endif /* __CUPKEE_ERRNO_INC__ */
 

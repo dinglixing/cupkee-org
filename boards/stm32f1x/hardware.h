@@ -52,14 +52,8 @@ SOFTWARE.
 #define PIN_DEVICE_NAME         "pin"
 #define PIN_DEVICE_ID           0
 #define PIN_EVENT_NUM           2
-#define PIN_CONFIG_NUM          1
-#define PIN_INSTANCE_NUM        1
-
-#define KEY_DEVICE_NAME         "key"
-#define KEY_DEVICE_ID           1
-#define KEY_EVENT_NUM           2
-#define KEY_CONFIG_NUM          0
-#define KEY_INSTANCE_NUM        1
+#define PIN_CONFIG_NUM          3
+#define PIN_INSTANCE_NUM        2
 
 #define ADC_DEVICE_NAME         "adc"
 #define ADC_DEVICE_ID           2
@@ -102,6 +96,12 @@ SOFTWARE.
 #define USART_EVENT_NUM         3
 #define USART_CONFIG_NUM        3
 #define USART_INSTANCE_NUM      1
+
+#define SPI_DEVICE_NAME         "spi"
+#define SPI_DEVICE_ID           9
+#define SPI_EVENT_NUM           3
+#define SPI_CONFIG_NUM          3
+#define SPI_INSTANCE_NUM        1
 
 #include "hw_usb.h"
 #include "hw_misc.h"
