@@ -268,7 +268,7 @@ static void shell_execute_line(env_t *env)
     } else
     if (err > 0) {
         shell_mode = 0;
-        print_value(res);
+        print_simple_value(res);
         history_append(input_buf);
     }
 
@@ -294,8 +294,14 @@ static void shell_execute_multi(env_t *env)
         input_cached = 0;
         shell_mode = 0;
     } else {
-        console_puts(". ");
         input_cached += len;
+
+        if (input_cached >= input_buf_size) {
+            console_puts("Warning! input over flow... \r\n");
+            shell_mode = 0;
+        } else {
+            console_puts(". ");
+        }
         return;
     }
 
@@ -304,7 +310,7 @@ static void shell_execute_multi(env_t *env)
         shell_error_proc(env, -err);
     } else
     if (err > 0) {
-        print_value(res);
+        print_simple_value(res);
         //history_append(input_buf);
     }
     console_puts("> ");

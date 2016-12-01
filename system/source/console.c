@@ -272,7 +272,7 @@ static void console_input_char(char c)
 
 static void console_input_enter(void)
 {
-    console_puts(CRLF);
+    hw_console_sync_puts(CRLF);
     console_buf_write_byte(CON_IN, '\r');
     console_buf_write_byte(CON_IN, '\n');
     console_in_pos = 0;

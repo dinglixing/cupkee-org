@@ -46,64 +46,157 @@ void reference_release(val_t *ref)
 void print_error(int error)
 {
     switch (error) {
-    case ERR_SysError:          console_puts("Error: System error\r\n"); break;
+    case ERR_NotEnoughMemory:   console_puts("Error: Not enought memory\r\n");      break;
+    case ERR_NotImplemented:    console_puts("Error: Not implemented\r\n");         break;
+    case ERR_StackOverflow:     console_puts("Error: Stack overflow\r\n");          break;
+    case ERR_ResourceOutLimit:  console_puts("Error: Resource out of limit\r\n");   break;
 
-    case ERR_NotEnoughMemory:   console_puts("Error: Not enought memory\r\n"); break;
-    case ERR_NotImplemented:    console_puts("Error: Not implemented\r\n"); break;
-    case ERR_StackOverflow:     console_puts("Error: Stack overflow\r\n"); break;
-    case ERR_ResourceOutLimit:  console_puts("Error: Resource out of limit\r\n"); break;
+    case ERR_InvalidToken:      console_puts("Error: Invalid Token\r\n");           break;
+    case ERR_InvalidSyntax:     console_puts("Error: Invalid syntax\r\n");          break;
+    case ERR_InvalidLeftValue:  console_puts("Error: Invalid left value\r\n");      break;
+    case ERR_InvalidSementic:   console_puts("Error: Invalid Sementic\r\n");        break;
 
-    case ERR_InvalidToken:      console_puts("Error: Invalid Token\r\n"); break;
-    case ERR_InvalidSyntax:     console_puts("Error: Invalid syntax\r\n"); break;
-    case ERR_InvalidLeftValue:  console_puts("Error: Invalid left value\r\n"); break;
-    case ERR_InvalidSementic:   console_puts("Error: Invalid Sementic\r\n"); break;
+    case ERR_InvalidByteCode:   console_puts("Error: Invalid Byte code\r\n");       break;
+    case ERR_InvalidInput:      console_puts("Error: Invalid input\r\n");           break;
+    case ERR_InvalidCallor:     console_puts("Error: Invalid callor\r\n");          break;
 
-    case ERR_InvalidByteCode:   console_puts("Error: Invalid Byte code\r\n"); break;
-    case ERR_InvalidInput:      console_puts("Error: Invalid input\r\n"); break;
-    case ERR_InvalidCallor:     console_puts("Error: Invalid callor\r\n"); break;
+    case ERR_SysError:          console_puts("Error: System error\r\n");            break;
+
     default: console_puts("Error: unknown error\r\n");
+    }
+}
+
+
+static inline void print_number(val_t *v) {
+    char buf[32];
+
+    if (*v & 0xffff) {
+        snprintf(buf, 32, "%f\r\n", val_2_double(v));
+    } else {
+        snprintf(buf, 32, "%lld\r\n", (int64_t)val_2_double(v));
+    }
+    hw_console_sync_puts(buf);
+}
+
+static inline void print_boolean(val_t *v) {
+    hw_console_sync_puts(val_2_intptr(v) ? "true\r\n" : "false\r\n");
+}
+
+static inline void print_string(val_t *v) {
+    hw_console_sync_puts("\"");
+    hw_console_sync_puts(val_2_cstring(v));
+    hw_console_sync_puts("\"\r\n");
+}
+
+void print_simple_value(val_t *v)
+{
+    if (val_is_number(v)) {
+        print_number(v);
+    } else
+    if (val_is_boolean(v)) {
+        print_boolean(v);
+    } else
+    if (val_is_string(v)) {
+        print_string(v);
+    } else
+    if (val_is_undefined(v)) {
+        hw_console_sync_puts("undefined\r\n");
+    } else
+    if (val_is_nan(v)) {
+        hw_console_sync_puts("NaN\r\n");
+    } else
+    if (val_is_function(v)) {
+        hw_console_sync_puts("<function>\r\n");
+    } else
+    if (val_is_object(v)) {
+        hw_console_sync_puts("<object>\r\n");
+    } else
+    if (val_is_buffer(v)) {
+        hw_console_sync_puts("<buffer>\r\n");
+    } else
+    if (val_is_array(v)) {
+        hw_console_sync_puts("<array>\r\n");
+    } else {
+        hw_console_sync_puts("<object>\r\n");
+    }
+}
+
+static void print_object_value(val_t *o)
+{
+    object_t *obj = (object_t *) val_2_intptr(o);
+    object_iter_t it;
+    const char *k;
+    val_t *v;
+
+    hw_console_sync_puts("{");
+
+    _object_iter_init(&it, obj);
+    if (_object_iter_next(&it, &k, &v)) {
+        hw_console_sync_puts("\r\n");
+        do {
+            hw_console_sync_puts("  ");
+            hw_console_sync_puts(k);
+            hw_console_sync_puts(": ");
+            print_simple_value(v);
+        }while(_object_iter_next(&it, &k, &v));
+    }
+    hw_console_sync_puts("}\r\n");
+}
+
+static void print_array_value(val_t *v)
+{
+    array_t *array = (array_t *) val_2_intptr(v);
+    int i, max;
+
+    max = array_len(array);
+
+    if (max == 0) {
+        hw_console_sync_puts("[]\r\n");
+        return;
+    }
+    hw_console_sync_puts("[\r\n");
+    for (i = 0; i < max; i++) {
+        char buf[16];
+        snprintf(buf, 16, "  [%2d]:", i);
+        hw_console_sync_puts(buf);
+
+        print_simple_value(_array_elem(array, i));
+    }
+    hw_console_sync_puts("]\r\n");
+}
+
+static void print_buffer_value(val_t *v)
+{
+    int i, len = buffer_size(v);
+    uint8_t *ptr = buffer_addr(v);
+    char buf[16];
+
+    snprintf(buf, 16, "<Buffer[%d]:", len);
+    hw_console_sync_puts(buf);
+    for (i = 0; i < len && i < 8; i++) {
+        snprintf(buf, 16, " %.2x", ptr[i]);
+        hw_console_sync_puts(buf);
+    }
+
+    if (i < len) {
+        hw_console_sync_puts(" ...>\r\n");
+    } else {
+        hw_console_sync_puts(">\r\n");
     }
 }
 
 void print_value(val_t *v)
 {
-    char buf[32];
-
-    if (val_is_number(v)) {
-        if (*v & 0xffff) {
-            snprintf(buf, 32, "%f\r\n", val_2_double(v));
-        } else {
-            snprintf(buf, 32, "%lld\r\n", (int64_t)val_2_double(v));
-        }
-        console_puts(buf);
-    } else
-    if (val_is_boolean(v)) {
-        console_puts(val_2_intptr(v) ? "true\r\n" : "false\r\n");
-    } else
-    if (val_is_string(v)) {
-        console_puts("\"");
-        console_puts(val_2_cstring(v));
-        console_puts("\"\r\n");
-    } else
-    if (val_is_undefined(v)) {
-        console_puts("undefined\r\n");
-    } else
-    if (val_is_nan(v)) {
-        console_puts("NaN\r\n");
-    } else
-    if (val_is_function(v)) {
-        console_puts("<function>\r\n");
+    if (val_is_array(v)) {
+        print_array_value(v);
     } else
     if (val_is_object(v)) {
-        console_puts("<object>\r\n");
+        print_object_value(v);
     } else
     if (val_is_buffer(v)) {
-        console_puts("<buffer>\r\n");
-    } else
-    if (val_is_array(v)) {
-        console_puts("<array>\r\n");
+        print_buffer_value(v);
     } else {
-        console_puts("<object>\r\n");
+        print_simple_value(v);
     }
 }
 
@@ -152,12 +245,8 @@ val_t native_print(env_t *env, int ac, val_t *av)
     (void) env;
 
     for (i = 0; i < ac; i++) {
-        if (i > 0) {
-            console_puts(" ");
-        }
         print_value(av+i);
     }
-    console_puts("\n");
 
     return val_mk_undefined();
 }
