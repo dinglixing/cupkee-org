@@ -169,6 +169,83 @@ static cupkee_device_t *device_create(const char *name, int instance)
     return device;
 }
 
+static void device_show(void)
+{
+    int i = 0;
+    const hw_device_t *desc;
+
+    hw_console_sync_puts("DEVICE    ID TYPE CONF INST\r\n");
+    while (NULL != (desc = hw_device_descript(i++))) {
+        int n;
+        char buf[16];
+
+        // name
+        n = strlen(desc->name);
+        hw_console_sync_puts(desc->name);
+        while(n++ < 10) {
+            hw_console_sync_putc(' ');
+        }
+
+        // type
+        snprintf(buf, 16, "%2d ", desc->id);
+        hw_console_sync_puts(buf);
+
+        if (desc->type == HW_DEVICE_MAP) {
+            hw_console_sync_puts("  M  ");
+        } else
+        if (desc->type == HW_DEVICE_STREAM) {
+            hw_console_sync_puts("  S  ");
+        } else
+        if (desc->type == HW_DEVICE_BLOCK) {
+            hw_console_sync_puts("  B  ");
+        } else {
+            hw_console_sync_puts("  ?  ");
+        }
+
+        // conf
+        snprintf(buf, 16, " %2d  ", desc->conf_num);
+        hw_console_sync_puts(buf);
+
+        // inst
+        snprintf(buf, 16, " %2d\r\n", desc->inst_num);
+        hw_console_sync_puts(buf);
+    }
+}
+
+static void device_config_show(const hw_device_t *desc)
+{
+    int i;
+
+    hw_console_sync_puts("ID NAME:TYPE\r\n");
+    for (i = 0; i < desc->conf_num; i++) {
+        const hw_config_desc_t *conf = &desc->conf_descs[i];
+        char buf[16];
+        snprintf(buf, 16, "%2d ", i);
+
+        hw_console_sync_puts(buf);
+        hw_console_sync_puts(desc->conf_names[i]);
+        if (conf->type == HW_CONFIG_BOOL) {
+            hw_console_sync_puts(":Bool\r\n");
+        } else
+        if (conf->type == HW_CONFIG_NUM) {
+            hw_console_sync_puts(":Number\r\n");
+        } else
+        if (conf->type == HW_CONFIG_OPT) {
+            int o;
+            hw_console_sync_puts(":[");
+            for (o = 0; o < conf->opt_num; o++) {
+                if (o > 0) {
+                    hw_console_sync_puts(", ");
+                }
+                hw_console_sync_puts(desc->opt_names[conf->opt_start + o]);
+            }
+            hw_console_sync_puts("]\r\n");
+        } else {
+            hw_console_sync_puts(":?\r\n");
+        }
+    }
+}
+
 static void device_work_list_join(cupkee_device_t *device)
 {
     device->next = device_work;
@@ -397,10 +474,14 @@ static val_t device_native_config(env_t *env, int ac, val_t *av)
         return VAL_UNDEFINED;
     }
 
-    if (ac && (val_is_number(av) || val_is_string(av))) {
-        name = av++; ac--;
+    if (ac == 0) {
+        device_config_show(device->desc);
+        return VAL_UNDEFINED;
     }
 
+    if (val_is_number(av) || val_is_string(av)) {
+        name = av++; ac--;
+    }
     setting = ac > 0 ? av : NULL;
 
     if (setting) {
@@ -953,6 +1034,7 @@ val_t device_native_create(env_t *env, int ac, val_t *av)
     int instance;
 
     if (ac == 0) {
+        device_show();
         return VAL_UNDEFINED;
     }
 

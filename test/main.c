@@ -33,7 +33,7 @@ static const native_t native_entry[] = {
     {"sysinfos",        native_sysinfos},
     {"systicks",        native_systicks},
 
-    {"print",           native_print},
+    {"show",            native_show},
 
     {"setTimeout",      native_set_timeout},
     {"setInterval",     native_set_interval},

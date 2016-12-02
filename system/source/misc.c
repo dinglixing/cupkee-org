@@ -239,16 +239,23 @@ val_t native_systicks(env_t *env, int ac, val_t *av)
     return val_mk_number(system_ticks_count);
 }
 
-val_t native_print(env_t *env, int ac, val_t *av)
+val_t native_show(env_t *env, int ac, val_t *av)
 {
     int i;
-    (void) env;
 
-    for (i = 0; i < ac; i++) {
-        print_value(av+i);
+    if (ac) {
+        for (i = 0; i < ac; i++) {
+            print_value(av+i);
+        }
+    } else {
+        for (i = 0; i < env->native_num; i++) {
+            hw_console_sync_puts(" * ");
+            hw_console_sync_puts(env->native_ent[i].name);
+            hw_console_sync_puts("\r\n");
+        }
     }
 
-    return val_mk_undefined();
+    return VAL_UNDEFINED;
 }
 
 val_t native_scripts(env_t *env, int ac, val_t *av)
