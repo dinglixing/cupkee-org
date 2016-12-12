@@ -138,8 +138,8 @@ void hw_poll(void)
     static uint32_t system_ticks_count_pre = 0;
 
     hw_poll_usb();
-    hw_poll_usart();
     hw_poll_timer();
+    hw_poll_usart();
 
     if (system_ticks_count_pre != system_ticks_count) {
         system_ticks_count_pre = system_ticks_count;

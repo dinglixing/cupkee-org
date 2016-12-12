@@ -160,7 +160,9 @@ static inline int device_is_inused(int inst) {
 
 static inline int device_is_work(int inst) {
     if (inst < HW_UART_INSTANCE_NUM) {
-        return (device_used & device_work) & (1 << inst);
+        uint8_t device_bit = 1 << inst;
+
+        return (device_used & device_bit) && (device_work & device_bit);
     } else {
         return 0;
     }
@@ -494,20 +496,24 @@ static int device_recv(int id, int inst, int n, void *buf)
 static int device_send(int id, int inst, int n, void *data)
 {
     (void) id;
+
     if (device_is_work(inst)) {
         hw_buf_t *b = &device_buf[inst][BUF_SEND];
         return buf_puts(b, n, data);
     }
+
     return 0;
 }
 
 static int device_received(int id, int inst)
 {
     (void) id;
+
     if (device_is_work(inst)) {
         hw_buf_t *b = &device_buf[inst][BUF_RECV];
         return b->len;
     }
+
     return 0;
 }
 
@@ -515,6 +521,7 @@ int hw_setup_usart(void)
 {
     device_used = 0;
     device_work = 0;
+
     return 0;
 }
 

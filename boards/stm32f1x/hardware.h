@@ -91,11 +91,11 @@ SOFTWARE.
 #define TIMER_CONFIG_NUM        2
 #define TIMER_INSTANCE_NUM      4
 
-#define HW_UART_DEVICE_NAME        "uart"
-#define HW_UART_DEVICE_ID          8
-#define HW_UART_EVENT_NUM          3
-#define HW_UART_CONFIG_NUM         3
-#define HW_UART_INSTANCE_NUM       5
+#define HW_UART_DEVICE_NAME     "uart"
+#define HW_UART_DEVICE_ID       8
+#define HW_UART_EVENT_NUM       3
+#define HW_UART_CONFIG_NUM      3
+#define HW_UART_INSTANCE_NUM    5
 
 #define SPI_DEVICE_NAME         "spi"
 #define SPI_DEVICE_ID           10
