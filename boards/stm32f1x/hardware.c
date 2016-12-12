@@ -36,7 +36,7 @@ static int memory_size = 0;
 static const hw_device_t *hw_devices[] = {
     &hw_device_pin,
     &hw_device_adc,
-    &hw_device_usart,
+    &hw_device_uart,
     &hw_device_pulse,
     &hw_device_pwm,
     &hw_device_count,
@@ -46,7 +46,7 @@ static const hw_device_t *hw_devices[] = {
 static const hw_driver_t *hw_drivers[] = {
     &hw_driver_pin,
     &hw_driver_adc,
-    &hw_driver_usart,
+    &hw_driver_uart,
     &hw_driver_pulse,
     &hw_driver_pwm,
     &hw_driver_count,

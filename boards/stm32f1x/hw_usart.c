@@ -40,6 +40,9 @@ typedef struct hw_buf_t{
     uint8_t buf[BUF_SIZE];
 } hw_buf_t;
 
+static const uint32_t device_base[] = {USART1, USART2, USART3, UART4, UART5};
+static const uint32_t device_rcc[] = {RCC_USART1, RCC_USART2, RCC_USART3, RCC_UART4, RCC_UART5};
+
 static const char *device_config_names[] = {
     "baudrate", "stopbits", "parity"
 };
@@ -65,11 +68,11 @@ static const hw_config_desc_t device_config_descs[] = {
 
 static uint8_t device_used = 0;
 static uint8_t device_work = 0;
-static int device_error[USART_INSTANCE_NUM];
-static uint32_t device_check_times[USART_INSTANCE_NUM];
-static int device_config_settings[USART_INSTANCE_NUM][USART_CONFIG_NUM];
-static int device_event_settings[USART_INSTANCE_NUM];
-static hw_buf_t device_buf[USART_INSTANCE_NUM][2];
+static int device_error[HW_UART_INSTANCE_NUM];
+static uint32_t device_check_times[HW_UART_INSTANCE_NUM];
+static int device_config_settings[HW_UART_INSTANCE_NUM][HW_UART_CONFIG_NUM];
+static int device_event_settings[HW_UART_INSTANCE_NUM];
+static hw_buf_t device_buf[HW_UART_INSTANCE_NUM][2];
 
 static inline void buf_init(hw_buf_t *b) {
     b->len = 0;
@@ -148,7 +151,7 @@ static inline int buf_puts(hw_buf_t *b, int n, void *buf) {
 }
 
 static inline int device_is_inused(int inst) {
-    if (inst < USART_INSTANCE_NUM) {
+    if (inst < HW_UART_INSTANCE_NUM) {
         return device_used & (1 << inst);
     } else {
         return 0;
@@ -156,7 +159,7 @@ static inline int device_is_inused(int inst) {
 }
 
 static inline int device_is_work(int inst) {
-    if (inst < USART_INSTANCE_NUM) {
+    if (inst < HW_UART_INSTANCE_NUM) {
         return (device_used & device_work) & (1 << inst);
     } else {
         return 0;
@@ -164,24 +167,20 @@ static inline int device_is_work(int inst) {
 }
 
 static inline int device_has_data(int inst) {
-    (void) inst;
-    return USART_SR(USART1) & USART_SR_RXNE;
+    return USART_SR(device_base[inst]) & USART_SR_RXNE;
 }
 
 static inline int device_not_busy(int inst) {
-    (void) inst;
-    return USART_SR(USART1) & USART_SR_TXE;
+    return USART_SR(device_base[inst]) & USART_SR_TXE;
 }
 
 static inline uint8_t device_in(int inst) {
-    (void) inst;
-    return USART_DR(USART1);
+    return USART_DR(device_base[inst]);
 }
 
 static inline void device_out(int inst, uint8_t d)
 {
-    (void) inst;
-    USART_DR(USART1) = d;
+    USART_DR(device_base[inst]) = d;
 }
 
 static void device_check_recv(int i)
@@ -191,14 +190,14 @@ static void device_check_recv(int i)
     if (device_has_data(i)) {
         buf_push(b, device_in(i));
         if (b->len > (BUF_SIZE * 2 / 3)) {
-            devices_event_post(USART_DEVICE_ID, i, DEVICE_EVENT_DATA);
+            devices_event_post(HW_UART_DEVICE_ID, i, DEVICE_EVENT_DATA);
         }
         device_check_times[i] = 0;
     } else {
         if (b->len) {
             uint32_t times = device_check_times[i]++;
             if (times > 500){
-                devices_event_post(USART_DEVICE_ID, i, DEVICE_EVENT_DATA);
+                devices_event_post(HW_UART_DEVICE_ID, i, DEVICE_EVENT_DATA);
                 device_check_times[i] = 0;
             }
         }
@@ -213,7 +212,7 @@ static void device_check_send(int i)
         if (device_not_busy(i)) {
             device_out(i, buf_shift(b));
             if (b->len == 0 && (device_event_settings[i] & (1 << DEVICE_EVENT_DRAIN))) {
-                devices_event_post(USART_DEVICE_ID, i, DEVICE_EVENT_DRAIN);
+                devices_event_post(HW_UART_DEVICE_ID, i, DEVICE_EVENT_DRAIN);
             }
         }
     }
@@ -224,18 +223,97 @@ static void device_set_error(int inst, int error)
     device_error[inst] = error;
 
     if (device_event_settings[inst] & 1) {
-        devices_event_post(USART_DEVICE_ID, inst, 0);
+        devices_event_post(HW_UART_DEVICE_ID, inst, 0);
     }
 }
 
 static int device_get_error(int id, int inst)
 {
     (void) id;
-    if (inst >= USART_INSTANCE_NUM) {
+    if (inst >= HW_UART_INSTANCE_NUM) {
         return 0;
     }
 
     return device_error[inst];
+}
+
+static int device_setup_uart_gpio(int inst)
+{
+    uint32_t bank_rx, bank_tx;
+    uint16_t gpio_rx, gpio_tx;
+    int port_rx, port_tx;
+
+    switch(inst) {
+    case 0:
+        gpio_rx = GPIO_USART1_RX; gpio_tx = GPIO_USART1_TX;
+        bank_rx = bank_tx = GPIOA;
+        port_rx = port_tx = 0;
+        break;
+    case 1:
+        gpio_rx = GPIO_USART2_RX; gpio_tx = GPIO_USART2_TX;
+        bank_rx = bank_tx = GPIOA;
+        port_rx = port_tx = 0;
+        break;
+    case 2:
+        gpio_rx = GPIO_USART3_RX; gpio_tx = GPIO_USART3_TX;
+        bank_rx = bank_tx = GPIOB;
+        port_rx = port_tx = 1;
+        break;
+    case 3:
+        gpio_rx = GPIO_UART4_RX; gpio_tx = GPIO_UART4_TX;
+        bank_rx = bank_tx = GPIOC;
+        port_rx = port_tx = 2;
+        break;
+    case 4:
+        gpio_rx = GPIO_UART5_RX; gpio_tx = GPIO_UART5_TX;
+        bank_rx = GPIO_BANK_UART5_RX; bank_tx = GPIO_BANK_UART5_TX;
+        port_rx = 3; port_tx = 2;
+        break;
+    default: return -1;
+    }
+
+    if (port_rx == port_tx) {
+        if (!hw_gpio_use(port_rx, gpio_rx | gpio_tx)) {
+            return -1;
+        }
+    } else {
+        if (!hw_gpio_use(port_rx, gpio_rx)) {
+            return -1;
+        }
+        if (!hw_gpio_use(port_tx, gpio_tx)) {
+            hw_gpio_release(port_rx, gpio_rx);
+            return -1;
+        }
+    }
+
+    gpio_set_mode(bank_tx, GPIO_MODE_OUTPUT_50_MHZ,
+            GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, gpio_tx);
+    gpio_set_mode(bank_rx, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, gpio_rx);
+
+    return 0;
+}
+
+static void device_reset_uart_gpio(int inst)
+{
+    switch(inst) {
+    case 0:
+        hw_gpio_release(0, GPIO_USART1_TX | GPIO_USART1_RX);
+        break;
+    case 1:
+        hw_gpio_release(0, GPIO_USART2_TX | GPIO_USART2_RX);
+        break;
+    case 2:
+        hw_gpio_release(1, GPIO_USART3_TX | GPIO_USART3_RX);
+        break;
+    case 3:
+        hw_gpio_release(2, GPIO_UART4_TX | GPIO_UART4_RX);
+        break;
+    case 4:
+        hw_gpio_release(2, GPIO_UART5_TX);
+        hw_gpio_release(3, GPIO_UART5_RX);
+        break;
+    default: break;
+    }
 }
 
 static int device_setup(int inst)
@@ -257,35 +335,31 @@ static int device_setup(int inst)
     default: parity = USART_PARITY_NONE; break;
     }
 
-    if (!hw_gpio_use(0, GPIO_USART1_TX | GPIO_USART1_RX)) {
+    if (device_setup_uart_gpio(inst)) {
         device_set_error(inst, 777);
         return 0;
     }
-    rcc_periph_clock_enable(RCC_USART1);
+    rcc_periph_clock_enable(device_rcc[inst]);
 
-	usart_set_baudrate(USART1, device_config_settings[inst][CONF_BAUDRATE]);
-	usart_set_databits(USART1, 8);
-	usart_set_stopbits(USART1, stopbits);
-	usart_set_parity  (USART1, parity);
-	usart_set_mode    (USART1, USART_MODE_TX_RX);
-	usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+	usart_set_baudrate(device_base[inst], device_config_settings[inst][CONF_BAUDRATE]);
+	usart_set_databits(device_base[inst], 8);
+	usart_set_stopbits(device_base[inst], stopbits);
+	usart_set_parity  (device_base[inst], parity);
+	usart_set_mode    (device_base[inst], USART_MODE_TX_RX);
+	usart_set_flow_control(device_base[inst], USART_FLOWCONTROL_NONE);
 
-    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-            GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_USART1_TX);
-    gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO_USART1_RX);
-
-    usart_enable(USART1);
+    usart_enable(device_base[inst]);
 
     return 1;
 }
 
 static int device_reset(int inst)
 {
-    (void) inst;
+    device_reset_uart_gpio(inst);
 
-    hw_gpio_release(0, GPIO_USART1_TX | GPIO_USART1_RX);
-    usart_disable(USART1);
-    rcc_periph_clock_disable(RCC_USART1);
+    usart_disable(device_base[inst]);
+
+    rcc_periph_clock_disable(device_rcc[inst]);
 
     return 1;
 }
@@ -335,7 +409,7 @@ static int device_disable(int id, int inst)
 static int device_request(int id, int inst)
 {
     (void) id;
-    if (inst < USART_INSTANCE_NUM) {
+    if (inst < HW_UART_INSTANCE_NUM) {
         int used = device_used & (1 << inst);
 
         if (!used) {
@@ -345,7 +419,7 @@ static int device_request(int id, int inst)
             device_event_settings[inst] = 0;
             device_used |= 1 << inst;
             device_work &= ~(1 << inst);
-            for (c = 0; c < USART_CONFIG_NUM; c++) {
+            for (c = 0; c < HW_UART_CONFIG_NUM; c++) {
                 device_config_settings[inst][c] = 0;
             }
 
@@ -373,7 +447,7 @@ static int device_release(int id, int inst)
 static int device_config_set(int id, int inst, int which, int setting)
 {
     (void) id;
-    if (device_is_inused(inst) && which < USART_CONFIG_NUM) {
+    if (device_is_inused(inst) && which < HW_UART_CONFIG_NUM) {
         device_config_settings[inst][which] = setting;
         return 1;
     }
@@ -383,7 +457,7 @@ static int device_config_set(int id, int inst, int which, int setting)
 static int device_config_get(int id, int inst, int which, int *setting)
 {
     (void) id;
-    if (device_is_inused(inst) && which < USART_CONFIG_NUM && setting) {
+    if (device_is_inused(inst) && which < HW_UART_CONFIG_NUM && setting) {
         *setting = device_config_settings[inst][which];
         return 1;
     }
@@ -393,7 +467,7 @@ static int device_config_get(int id, int inst, int which, int *setting)
 static void device_listen(int id, int inst, int event)
 {
     (void) id;
-    if (device_is_inused(inst) && event < USART_EVENT_NUM) {
+    if (device_is_inused(inst) && event < HW_UART_EVENT_NUM) {
         device_event_settings[inst] |= 1 << event;
     }
 }
@@ -401,7 +475,7 @@ static void device_listen(int id, int inst, int event)
 static void device_ignore(int id, int inst, int event)
 {
     (void) id;
-    if (device_is_inused(inst) && event < USART_EVENT_NUM) {
+    if (device_is_inused(inst) && event < HW_UART_EVENT_NUM) {
         device_event_settings[inst] &= ~(1 << event);
     }
 }
@@ -448,7 +522,7 @@ void hw_poll_usart(void)
 {
     int i;
 
-    for (i = 0; i < USART_INSTANCE_NUM; i++) {
+    for (i = 0; i < HW_UART_INSTANCE_NUM; i++) {
         if (device_is_work(i)) {
             device_check_recv(i);
             device_check_send(i);
@@ -456,7 +530,7 @@ void hw_poll_usart(void)
     }
 }
 
-const hw_driver_t hw_driver_usart = {
+const hw_driver_t hw_driver_uart = {
     .request = device_request,
     .release = device_release,
     .get_err = device_get_error,
@@ -473,13 +547,13 @@ const hw_driver_t hw_driver_usart = {
     }
 };
 
-const hw_device_t hw_device_usart= {
-    .name = USART_DEVICE_NAME,
-    .id   = USART_DEVICE_ID,
+const hw_device_t hw_device_uart= {
+    .name = HW_UART_DEVICE_NAME,
+    .id   = HW_UART_DEVICE_ID,
     .type = HW_DEVICE_STREAM,
-    .inst_num   = USART_INSTANCE_NUM,
-    .conf_num   = USART_CONFIG_NUM,
-    .event_num  = USART_EVENT_NUM,
+    .inst_num   = HW_UART_INSTANCE_NUM,
+    .conf_num   = HW_UART_CONFIG_NUM,
+    .event_num  = HW_UART_EVENT_NUM,
     .conf_names = device_config_names,
     .conf_descs = device_config_descs,
     .opt_names  = device_opt_names,
