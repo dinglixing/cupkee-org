@@ -12,7 +12,6 @@
 
 static env_t core_env;
 
-
 #define MEM_BLOCK_SIZE  256
 static void memory_distribution(
         void **core_mem_ptr,
@@ -40,7 +39,6 @@ static void memory_distribution(
 
     *core_mem_ptr  = memory;
     *shell_mem_ptr = memory + *core_mem_size;
-
 }
 
 static void core_init(void *memory, int size, int stack_mem_size, int heap_mem_size)
@@ -54,8 +52,7 @@ static void core_init(void *memory, int size, int stack_mem_size, int heap_mem_s
     event_init();
 }
 
-//static uint32_t system_ticks_count_pre = 0;
-static void system_poll(void)
+static void event_process(void)
 {
     int e;
 
@@ -82,14 +79,12 @@ int cupkee_init(void)
             &core_mem, &core_mem_sz,
             &heap_mem_sz, &stack_mem_sz,
             &shell_mem, &shell_mem_sz);
-    //printf("core: %d, heap: %d, stack: %d, shell: %d\n",
-    //       core_mem_sz, heap_mem_sz, stack_mem_sz, shell_mem_sz);
-
-    /* Initial memory evn, etc. */
-    core_init(core_mem, core_mem_sz, stack_mem_sz, heap_mem_sz);
 
     /* Initial console reources */
     console_init();
+
+    /* Initial memory env, etc. */
+    core_init(core_mem, core_mem_sz, stack_mem_sz, heap_mem_sz);
 
     /* Initial reference */
     reference_init(&core_env);
@@ -98,7 +93,7 @@ int cupkee_init(void)
     timeout_init();
 
     /* Initial devices resource */
-    device_setup();
+    device_init();
 
     /* Initial shell resource */
     shell_init(&core_env, shell_mem, shell_mem_sz);
@@ -114,6 +109,7 @@ int cupkee_set_native(const native_t *entry, int n)
 
 int cupkee_start(const char *scripts)
 {
+    // Start shell & execute initial scripts
     return shell_start(scripts);
 }
 
@@ -121,7 +117,9 @@ int cupkee_poll(void)
 {
     hw_poll();
 
-    system_poll();
+    device_poll();
+
+    event_process();
 
     return 0;
 }

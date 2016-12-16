@@ -42,10 +42,6 @@ int  test_cupkee_run_without_reply(const char *input, int try_max);
 
 CU_pSuite test_hello(void);
 CU_pSuite test_misc(void);
-CU_pSuite test_devices(void);
-
-CU_pSuite test_device_gpio(void);
-CU_pSuite test_device_adc(void);
-CU_pSuite test_device_usart(void);
+CU_pSuite test_device_pin(void);
 
 #endif /* __TEST_INC__ */

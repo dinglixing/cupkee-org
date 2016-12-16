@@ -59,52 +59,11 @@ void hw_dbg_reset(void)
 /*******************************************************************************
  * dbg field end
 *******************************************************************************/
-
-static const hw_device_t *hw_devices[] = {
-    &hw_device_map,
-    &hw_device_stream,
-};
-static const hw_driver_t *hw_drivers [] = {
-    &hw_driver_map,
-    &hw_driver_stream,
-};
-
 uint32_t system_ticks_count = 0;
-
-const hw_device_t *hw_device_descript(int i)
-{
-    int max = sizeof(hw_devices) / sizeof(hw_device_t *);
-
-    if (i < 0 || i >= max) {
-        return NULL;
-    }
-    return hw_devices[i];
-}
-
-const hw_device_t *hw_device_take(const char *name, int inst, const hw_driver_t **driver)
-{
-    int i, max = sizeof(hw_devices) / sizeof(hw_device_t *);
-
-    _TRACE("request %s[%d]\n", name, inst);
-    for (i = 0; i < max; i++) {
-        const hw_device_t *desc = hw_devices[i];
-        if (!strcmp(name, desc->name)) {
-            if (hw_drivers[i]->request(desc->id, inst)) {
-                if (driver) {
-                    *driver = hw_drivers[i];
-                }
-                return desc;
-            }
-            break;
-        }
-    }
-    return NULL;
-}
 
 void hw_setup(void)
 {
-    hw_device_map_setup();
-    hw_device_stream_setup();
+    hw_setup_gpio();
 }
 
 void hw_poll(void)
@@ -115,9 +74,6 @@ void hw_poll(void)
         system_ticks_count_pre = system_ticks_count;
         systick_event_post();
     }
-
-    hw_device_map_poll();
-    hw_device_stream_poll();
 }
 
 void hw_halt(void)
@@ -132,15 +88,6 @@ void hw_info_get(hw_info_t * info)
     (void) info;
 
     return;
-}
-
-int hw_pin_map(int id, int port, int pin)
-{
-    (void) id;
-    (void) port;
-    (void) pin;
-
-    return 0;
 }
 
 int hw_memory_alloc(void **p, int size, int align)
@@ -173,5 +120,48 @@ int hw_memory_alloc(void **p, int size, int align)
     }
 
     return size;
+}
+
+int hw_pin_map(int id, int port, int pin)
+{
+    (void) id;
+    (void) port;
+    (void) pin;
+
+    return 0;
+}
+
+const hw_driver_t *hw_device_request(int type, int instance)
+{
+    switch (type) {
+    case DEVICE_TYPE_PIN:       return hw_request_pin(instance);
+    case DEVICE_TYPE_ADC:
+    case DEVICE_TYPE_DAC:
+    case DEVICE_TYPE_PWM:
+    case DEVICE_TYPE_PULSE:
+    case DEVICE_TYPE_TIMER:
+    case DEVICE_TYPE_COUNTER:
+    case DEVICE_TYPE_UART:
+    case DEVICE_TYPE_USART:
+    case DEVICE_TYPE_SPI:
+    default:                    return NULL;
+    }
+}
+
+int hw_device_instances(int type)
+{
+    switch (type) {
+    case DEVICE_TYPE_PIN:       return HW_INSTANCES_PIN;
+    case DEVICE_TYPE_ADC:
+    case DEVICE_TYPE_DAC:
+    case DEVICE_TYPE_PWM:
+    case DEVICE_TYPE_PULSE:
+    case DEVICE_TYPE_TIMER:
+    case DEVICE_TYPE_COUNTER:
+    case DEVICE_TYPE_UART:
+    case DEVICE_TYPE_USART:
+    case DEVICE_TYPE_SPI:
+    default:                    return 0;
+    }
 }
 

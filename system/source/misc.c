@@ -131,14 +131,14 @@ static void print_object_value(val_t *o)
     hw_console_sync_puts("{");
 
     _object_iter_init(&it, obj);
-    if (_object_iter_next(&it, &k, &v)) {
+    if (object_iter_next(&it, &k, &v)) {
         hw_console_sync_puts("\r\n");
         do {
             hw_console_sync_puts("  ");
             hw_console_sync_puts(k);
             hw_console_sync_puts(": ");
             print_simple_value(v);
-        }while(_object_iter_next(&it, &k, &v));
+        }while(object_iter_next(&it, &k, &v));
     }
     hw_console_sync_puts("}\r\n");
 }

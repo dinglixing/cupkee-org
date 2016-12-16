@@ -42,7 +42,7 @@ static const native_t native_entry[] = {
 
     {"scripts",         native_scripts},
 
-    {"xxx",             device_native_create},
+    {"Device",          device_native_create},
     /* user native */
 };
 
@@ -75,7 +75,8 @@ int main(int argc, const char *argv[])
     // add test suite here:
     test_hello();
     test_misc();
-    test_devices();
+    test_device_pin();
+    // add test suite
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();

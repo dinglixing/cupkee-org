@@ -24,13 +24,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __HW_DEVICE_MAP_INC__
-#define __HW_DEVICE_MAP_INC__
+#ifndef __DEVICE_TIMER_INC__
+#define __DEVICE_TIMER_INC__
 
-void hw_device_map_setup(void);
-void hw_device_map_poll(void);
+int device_timer_set(hw_config_t *conf, int which, val_t *val);
+int device_timer_get(hw_config_t *conf, int which, val_t *val);
 
-extern const hw_driver_t hw_driver_map;
-extern const hw_device_t hw_device_map;
+#endif /* __DEVICE_TIMER_INC__ */
 
-#endif /* __HW_DEVICE_MAP_INC__ */

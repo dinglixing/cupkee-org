@@ -24,11 +24,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <cupkee.h>
-
+#include "device.h"
 #include "util.h"
 #include "misc.h"
-#include "device.h"
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
@@ -37,27 +35,144 @@ SOFTWARE.
 #endif
 
 #define DEVICE_MAX          (16)
-#define DEVICE_ENABLE       0x80
-#define DEVICE_EVNET_MASK   0x0f
 
-typedef struct cupkee_device_t {
-    uint16_t magic;
-    uint8_t  flags;
-    uint8_t  inst;
-    const hw_device_t *desc;
-    const hw_driver_t *driver;
-    val_t    *event_handle[DEVICE_EVENT_MAX];
-    struct cupkee_device_t *next;
-} cupkee_device_t;
+static int device_is_true(intptr_t id);
+
+static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop);
+static void device_op_elem(void *env, intptr_t devid, val_t *name, val_t *prop);
+
+const char *device_categorys[] = {
+    "map", "stream", "block"
+};
+
+const char *device_opt_dir[] = {
+    "in", "out", "dual"
+};
+
+const char *device_opt_polarity[] = {
+    "positive", "negative", "edge"
+};
+
+const char *device_opt_parity[] = {
+    "none", "odd", "even",
+};
+
+const char *device_opt_stopbits[] = {
+    "1bit", "2bit", "0.5bit", "1.5bit"
+};
+
+const char *device_pin_conf_names[] = {
+    "pinNum", "pinStart", "dir"
+};
+
+const char *device_adc_conf_names[] = {
+    "channel", "interval"
+};
+
+const char *device_dac_conf_names[] = {
+    "channel", "interval"
+};
+
+const char *device_pwm_pulse_timer_counter_conf_names[] = {
+    "channel", "polarity", "period"
+};
+
+const char *device_uart_conf_names[] = {
+    "baudrate", "dataBits", "stopBits", "parity"
+};
 
 static const char *device_event_names[] = {
     "error", "data", "drain", "ready"
 };
 
-static int device_is_true(intptr_t id);
-static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop);
-static void device_op_elem(void *env, intptr_t devid, val_t *name, val_t *prop);
-static cupkee_device_t device_queue[DEVICE_MAX];
+static const cupkee_device_desc_t device_pin = {
+    .name = "pin",
+    .type = DEVICE_TYPE_PIN,
+    .category = DEVICE_CATEGORY_MAP,
+    .conf_num = 3,
+    .event_mask = 0x3,
+    .conf_names = device_pin_conf_names,
+    .set = device_pin_set,
+    .get = device_pin_get,
+};
+
+static const cupkee_device_desc_t device_adc = {
+    .name = "adc",
+    .type = DEVICE_TYPE_ADC,
+    .category = DEVICE_CATEGORY_MAP,
+    .conf_num = 2,
+    .event_mask = 0x3,
+    .conf_names = device_adc_conf_names,
+    .set = device_adc_set,
+    .get = device_adc_get
+};
+
+static const cupkee_device_desc_t device_pwm = {
+    .name = "pwm",
+    .type = DEVICE_TYPE_PWM,
+    .category = DEVICE_CATEGORY_MAP,
+    .conf_num = 3,
+    .event_mask = 0x3,
+    .conf_names = device_pwm_pulse_timer_counter_conf_names,
+    .set = device_pwm_set,
+    .get = device_pwm_get
+};
+
+static const cupkee_device_desc_t device_pulse = {
+    .name = "pulse",
+    .type = DEVICE_TYPE_PULSE,
+    .category = DEVICE_CATEGORY_MAP,
+    .conf_num = 2,
+    .event_mask = 0x1,
+    .conf_names = device_pwm_pulse_timer_counter_conf_names,
+    .set = device_pulse_set,
+    .get = device_pulse_get
+};
+
+static const cupkee_device_desc_t device_timer = {
+    .name = "timer",
+    .type = DEVICE_TYPE_TIMER,
+    .category = DEVICE_CATEGORY_MAP,
+    .conf_num = 2,
+    .event_mask = 0x3,
+    .conf_names = device_pwm_pulse_timer_counter_conf_names,
+    .set = device_timer_set,
+    .get = device_timer_get
+};
+
+static const cupkee_device_desc_t device_counter = {
+    .name = "counter",
+    .type = DEVICE_TYPE_COUNTER,
+    .category = DEVICE_CATEGORY_MAP,
+    .conf_num = 2,
+    .event_mask = 0x3,
+    .conf_names = device_pwm_pulse_timer_counter_conf_names,
+    .set = device_counter_set,
+    .get = device_counter_get
+};
+
+static const cupkee_device_desc_t device_uart = {
+    .name = "uart",
+    .type = DEVICE_TYPE_UART,
+    .category = DEVICE_CATEGORY_STREAM,
+    .conf_num = 4,
+    .event_mask = 0x7,
+    .conf_names = device_uart_conf_names,
+    .set = device_uart_set,
+    .get = device_uart_get,
+};
+
+static const cupkee_device_desc_t *device_entrys[] = {
+    &device_pin,
+    &device_adc,
+    &device_pwm,
+    &device_pulse,
+    &device_timer,
+    &device_counter,
+    &device_uart,
+};
+
+static cupkee_device_t device_heap[DEVICE_MAX];
 static cupkee_device_t *device_free = NULL;
 static cupkee_device_t *device_work = NULL;
 static uint16_t device_magic_factor = 1;
@@ -67,6 +182,10 @@ static const val_foreign_op_t device_op = {
     .elem = device_op_elem,
 };
 
+static inline int device_is_enabled(cupkee_device_t *device)
+{
+    return device->flags & DEVICE_FL_ENABLE;
+}
 
 static int device_is_true(intptr_t devid)
 {
@@ -75,7 +194,7 @@ static int device_is_true(intptr_t devid)
     magic = devid & 0xffff;
     devid >>= 16 & 0xff;
 
-    if (devid >= DEVICE_MAX || device_queue[devid].magic != magic) {
+    if (devid >= DEVICE_MAX || device_heap[devid].magic != magic) {
         return 0;
     } else {
         return 1;
@@ -83,7 +202,7 @@ static int device_is_true(intptr_t devid)
 }
 
 static inline intptr_t device_id_gen(cupkee_device_t *device) {
-    return ((device - device_queue) << 16) | device->magic;
+    return ((device - device_heap) << 16) | device->magic;
 }
 
 static inline cupkee_device_t *device_id_control(intptr_t devid)
@@ -93,10 +212,10 @@ static inline cupkee_device_t *device_id_control(intptr_t devid)
     magic = devid & 0xffff;
     devid >>= 16 & 0xff;
 
-    if (devid >= DEVICE_MAX || device_queue[devid].magic != magic) {
+    if (devid >= DEVICE_MAX || device_heap[devid].magic != magic) {
         return NULL;
     } else {
-        return device_queue + devid;
+        return &device_heap[devid];
     }
 }
 
@@ -113,7 +232,7 @@ static cupkee_device_t *device_val_control(val_t *d)
     return NULL;
 }
 
-static cupkee_device_t *device_alloc(void)
+static cupkee_device_t *device_block_alloc(void)
 {
     cupkee_device_t *device = device_free;
 
@@ -126,17 +245,17 @@ static cupkee_device_t *device_alloc(void)
         }
 
         device->flags = 0;
+        device->event = 0;
+
         device->magic = (device_magic_factor + 1) ^ (device_magic_factor << 8);
         device_magic_factor++;
     }
     return device;
 }
 
-static int device_release(cupkee_device_t *device)
+static int device_block_release(cupkee_device_t *device)
 {
     if (device) {
-        device->driver->release(device->desc->id, device->inst);
-
         memset(device, 0, sizeof(cupkee_device_t));
         device->next = device_free;
         device_free = device;
@@ -146,103 +265,56 @@ static int device_release(cupkee_device_t *device)
     return -1;
 }
 
-static cupkee_device_t *device_create(const char *name, int instance)
+static const cupkee_device_desc_t *device_desc_get_by_name(const char *name)
 {
-    cupkee_device_t  *device;
-    const hw_device_t *desc;
-    const hw_driver_t *driver;
+    int i, max = sizeof(device_entrys) / sizeof(cupkee_device_desc_t *);
 
-    desc = hw_device_take(name, instance, &driver);
-    if (!desc) {
-        return NULL;
+    for (i = 0; i < max; i++) {
+        if (!strcmp(device_entrys[i]->name, name)) {
+            return device_entrys[i];
+        }
     }
 
-    device = device_alloc();
-    if (device) {
-        device->inst = instance;
-        device->desc = desc;
-        device->driver = driver;
-    } else {
-        driver->release(desc->id, instance);
-    }
-
-    return device;
+    return NULL;
 }
 
 static void device_show(void)
 {
-    int i = 0;
-    const hw_device_t *desc;
+    int i, max = sizeof(device_entrys) / sizeof(cupkee_device_desc_t *);
 
-    hw_console_sync_puts("DEVICE    ID TYPE CONF INST\r\n");
-    while (NULL != (desc = hw_device_descript(i++))) {
+    hw_console_sync_puts("DEVICE TYPE:CATEGORY CONF INST\r\n");
+    for (i = 0; i < max; i++) {
+        const cupkee_device_desc_t *desc = device_entrys[i];
+        char buf[32];
         int n;
-        char buf[16];
 
         // name
         n = strlen(desc->name);
         hw_console_sync_puts(desc->name);
-        while(n++ < 10) {
+        while(n++ < 8) {
             hw_console_sync_putc(' ');
         }
 
-        // type
-        snprintf(buf, 16, "%2d ", desc->id);
+        // id
+        snprintf(buf, 16, "%2d ", desc->type);
         hw_console_sync_puts(buf);
 
-        if (desc->type == HW_DEVICE_MAP) {
+        // type
+        if (desc->category == DEVICE_CATEGORY_MAP) {
             hw_console_sync_puts("  M  ");
         } else
-        if (desc->type == HW_DEVICE_STREAM) {
+        if (desc->category == DEVICE_CATEGORY_STREAM) {
             hw_console_sync_puts("  S  ");
         } else
-        if (desc->type == HW_DEVICE_BLOCK) {
+        if (desc->category == DEVICE_CATEGORY_BLOCK) {
             hw_console_sync_puts("  B  ");
         } else {
             hw_console_sync_puts("  ?  ");
         }
 
         // conf
-        snprintf(buf, 16, " %2d  ", desc->conf_num);
+        snprintf(buf, 32, " %2d\t%2d\r\n", desc->conf_num, hw_device_instances(desc->type));
         hw_console_sync_puts(buf);
-
-        // inst
-        snprintf(buf, 16, " %2d\r\n", desc->inst_num);
-        hw_console_sync_puts(buf);
-    }
-}
-
-static void device_config_show(const hw_device_t *desc)
-{
-    int i;
-
-    hw_console_sync_puts("ID NAME:TYPE\r\n");
-    for (i = 0; i < desc->conf_num; i++) {
-        const hw_config_desc_t *conf = &desc->conf_descs[i];
-        char buf[16];
-        snprintf(buf, 16, "%2d ", i);
-
-        hw_console_sync_puts(buf);
-        hw_console_sync_puts(desc->conf_names[i]);
-        if (conf->type == HW_CONFIG_BOOL) {
-            hw_console_sync_puts(":Bool\r\n");
-        } else
-        if (conf->type == HW_CONFIG_NUM) {
-            hw_console_sync_puts(":Number\r\n");
-        } else
-        if (conf->type == HW_CONFIG_OPT) {
-            int o;
-            hw_console_sync_puts(":[");
-            for (o = 0; o < conf->opt_num; o++) {
-                if (o > 0) {
-                    hw_console_sync_puts(", ");
-                }
-                hw_console_sync_puts(desc->opt_names[conf->opt_start + o]);
-            }
-            hw_console_sync_puts("]\r\n");
-        } else {
-            hw_console_sync_puts(":?\r\n");
-        }
     }
 }
 
@@ -275,9 +347,13 @@ static void device_work_list_drop(cupkee_device_t *device)
 
 static void device_enable(cupkee_device_t *device)
 {
-    if (!(device->flags & DEVICE_ENABLE)) {
-        if (device->driver->enable(device->desc->id, device->inst)) {
-            device->flags |= DEVICE_ENABLE;
+    if (!device_is_enabled(device)) {
+        int devid = device - device_heap;
+        int err;
+
+        err = device->driver->setup(device->inst, devid, &device->conf);
+        if (!err) {
+            device->flags |= DEVICE_FL_ENABLE;
             device_work_list_join(device);
         } else {
             //Todo: set error
@@ -287,152 +363,111 @@ static void device_enable(cupkee_device_t *device)
 
 static void device_disable(cupkee_device_t *device)
 {
-    if (device->flags & DEVICE_ENABLE) {
-        if (device->driver->disable(device->desc->id, device->inst)) {
-            device->flags &= ~DEVICE_ENABLE;
-            device_work_list_drop(device);
+    if (device->flags & DEVICE_FL_ENABLE) {
+        device->driver->reset(device->inst);
+        device->flags &= ~DEVICE_FL_ENABLE;
+        device->error = 0; // clean error
+
+        device_work_list_drop(device);
+    }
+}
+
+static cupkee_device_t *device_create(const char *name, int instance)
+{
+    cupkee_device_t  *device;
+    const cupkee_device_desc_t *desc;
+    const hw_driver_t *driver;
+
+    if (!name || instance < 0) {
+        return NULL;
+    }
+
+    desc = device_desc_get_by_name(name);
+    if (!desc) {
+        return NULL;
+    }
+
+    driver = hw_device_request(desc->type, instance);
+    if (!driver) {
+        return NULL;
+    }
+
+    device = device_block_alloc();
+    if (device) {
+        device->inst = instance;
+        device->desc = desc;
+        device->driver = driver;
+        memset(&device->conf, 0, sizeof(hw_config_t));
+    } else {
+        driver->release(instance);
+    }
+
+    return device;
+}
+
+static int device_destroy(cupkee_device_t *device)
+{
+    device_disable(device);
+    device->driver->release(device->inst);
+    return device_block_release(device);
+}
+
+static val_t device_config_set(cupkee_device_t *device, val_t *name, val_t *val)
+{
+    int which = device_string_map_var(name, device->desc->conf_num,
+                                            device->desc->conf_names);
+
+    if (which >= 0 && which < device->desc->conf_num) {
+        if (CUPKEE_OK == device->desc->set(&device->conf, which, val)) {
+            return VAL_TRUE;
         } else {
-            //Todo: set error
+            return VAL_FALSE;
         }
     }
-}
 
-static int device_str_map(const char *name, int max, const char **names)
-{
-    int id;
-
-    if (!name)
-        return max;
-
-    for (id = 0; id < max && names[id]; id++) {
-        if (!strcmp(name, names[id])) {
-            return id;
-        }
-    }
-    return id;
-}
-
-static inline int device_val_map(val_t *in, int max, const char **names)
-{
-    if (val_is_number(in)) {
-        return val_2_integer(in);
-    } else {
-        return device_str_map(val_2_cstring(in), max, names);
-    }
-}
-
-/* return:
- *  0: ok
- * -1: invalid value
- */
-static int device_setting_convert(const cupkee_device_t *device, const hw_config_desc_t *desc, val_t *value, int *setting)
-{
-    switch(desc->type) {
-    case HW_CONFIG_BOOL:
-        *setting = val_is_true(value);
-        break;
-    case HW_CONFIG_NUM:
-        if (!val_is_number(value)) {
-            return -1;
-        }
-        *setting = val_2_integer(value);
-        break;
-    case HW_CONFIG_OPT:
-        *setting = cupkee_id(value, desc->opt_num, device->desc->opt_names + desc->opt_start);
-        if (*setting >= desc->opt_num) {
-            return -1;
-        }
-        break;
-    default:
-        return -1;
-    }
-
-    return 0;
-}
-
-// return:
-//   0: ok
-//   -1: hw false
-//   -2: invalid item
-//   -3: invalid value
-static int device_config_set(cupkee_device_t *device, int which, val_t *value)
-{
-    const hw_config_desc_t *conf;
-    int setting;
-
-    if (which < 0 || which >= device->desc->conf_num) {
-        return -3;
-    }
-
-    conf = &device->desc->conf_descs[which];
-    if (device_setting_convert(device, conf, value, &setting)) {
-        return -2;
-    }
-
-    if (device->driver->config_set(device->desc->id, device->inst, which, setting)) {
-        return 0;
-    } else {
-        return -1;
-    }
-}
-
-static inline val_t device_config_set_one(cupkee_device_t *device, val_t *name, val_t *value)
-{
-    int err = device_config_set(device, device_val_map(name, device->desc->conf_num, device->desc->conf_names), value);
-
-    if (!err) {
-        return VAL_TRUE;
-    }
-    if (err == -3) {
-        return VAL_UNDEFINED;
-    }
     return VAL_FALSE;
 }
 
-static val_t device_config_set_all(cupkee_device_t *device, val_t *value)
+static int device_config_set_all(cupkee_device_t *device, val_t *settings)
 {
-    if (val_is_object(value)) {
-        object_iter_t it;
-        const char *k;
-        val_t *v;
+    object_iter_t it;
+    const char *key;
+    val_t *val;
 
-        _object_iter_init(&it, (object_t *)val_2_intptr(value));
-        while (_object_iter_next(&it, &k, &v)) {
-            int which = device_str_map(k, device->desc->conf_num, device->desc->conf_names);
-            if (device_config_set(device, which, v)) {
-                return VAL_FALSE;
-            }
-        }
-        return VAL_TRUE;
+    if (object_iter_init(&it, settings)) {
+        return -CUPKEE_EINVAL;
     }
-    return VAL_FALSE;
+
+    while (object_iter_next(&it, &key, &val)) {
+        int which = device_string_map(key, device->desc->conf_num,
+                                           device->desc->conf_names);
+
+        if (which < 0) {
+            // skip unknowned config items
+            continue;
+        }
+
+        if (device->desc->set(&device->conf, which, val)) {
+            return CUPKEE_EINVAL;
+        }
+    }
+
+    return CUPKEE_OK;
 }
 
 static val_t device_config_get(cupkee_device_t *device, val_t *name)
 {
-    int which = cupkee_id(name, device->desc->conf_num, device->desc->conf_names);
-    const hw_config_desc_t *conf;
-    int setting;
+    int which = device_string_map_var(name, device->desc->conf_num,
+                                            device->desc->conf_names);
 
-    if (which >= device->desc->conf_num) {
-        return VAL_UNDEFINED;
+    if (which >= 0 && which < device->desc->conf_num) {
+        val_t setting;
+        if (CUPKEE_OK == device->desc->get(&device->conf, which, &setting)) {
+            return setting;
+        }
     }
 
-    if (!device->driver->config_get(device->desc->id, device->inst, which, &setting)) {
-        return VAL_UNDEFINED;
-    }
-
-    conf = &device->desc->conf_descs[which];
-    switch(conf->type) {
-    case HW_CONFIG_BOOL:
-        return setting ? VAL_TRUE : VAL_FALSE;
-    case HW_CONFIG_NUM:
-        return val_mk_number(setting);
-    case HW_CONFIG_OPT:
-        return val_mk_foreign_string((intptr_t)device->desc->opt_names[conf->opt_start + setting]);
-    default:
-        return VAL_UNDEFINED;
-    }
+    return VAL_UNDEFINED;
 }
 
 static val_t device_config_get_all(cupkee_device_t *device)
@@ -453,7 +488,7 @@ static val_t device_native_destroy(env_t *env, int ac, val_t *av)
         return VAL_FALSE;
     }
 
-    if (0 != device_release(device)) {
+    if (0 != device_destroy(device)) {
         return VAL_FALSE;
     } else {
         return VAL_TRUE;
@@ -474,19 +509,14 @@ static val_t device_native_config(env_t *env, int ac, val_t *av)
         return VAL_UNDEFINED;
     }
 
-    if (ac == 0) {
-        device_config_show(device->desc);
-        return VAL_UNDEFINED;
-    }
-
     if (val_is_number(av) || val_is_string(av)) {
         name = av++; ac--;
     }
     setting = ac > 0 ? av : NULL;
 
     if (setting) {
-        return name ? device_config_set_one(device, name, setting) :
-                      device_config_set_all(device, setting);
+        return name ? device_config_set(device, name, setting) :
+                      device_config_set_all(device, setting) ? VAL_FALSE : VAL_TRUE;
     } else {
         return name ? device_config_get(device, name) :
                       device_config_get_all(device);
@@ -497,6 +527,7 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
 {
     cupkee_device_t *device;
     val_t *setting, *hnd;
+    int err = 0;
 
     (void) env;
 
@@ -508,21 +539,21 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
 
     setting = ac > 0 ? av : NULL;
     if (setting && val_is_object(setting)) {
-        device_config_set_all(device, setting);
+        err = device_config_set_all(device, setting);
         ac--; av++;
     }
     device_enable(device);
 
     if (ac && val_is_function(av)) {
         val_t args[2];
-        int err = device->driver->get_err(device->desc->id, device->inst);
-        args[0] = err ? val_mk_number(err) : VAL_UNDEFINED;
+
+        args[0] = err ? val_mk_number(-err) : VAL_UNDEFINED;
         args[1] = *hnd;
 
         cupkee_do_callback(env, av, 2, args);
     }
 
-    return (device->flags & DEVICE_ENABLE) ? VAL_TRUE : VAL_FALSE;
+    return (device->flags & DEVICE_FL_ENABLE) ? VAL_TRUE : VAL_FALSE;
 }
 
 static val_t device_native_disable(env_t *env, int ac, val_t *av)
@@ -533,13 +564,13 @@ static val_t device_native_disable(env_t *env, int ac, val_t *av)
 
     if (ac == 0 || (device = device_val_control(av)) == NULL) {
         return VAL_UNDEFINED;
-    } else {
-        device_disable(device);
-        return (device->flags & DEVICE_ENABLE) ? VAL_FALSE : VAL_TRUE;
     }
+
+    device_disable(device);
+    return  device_is_enabled(device) ? VAL_FALSE : VAL_TRUE;
 }
 
-static val_t device_native_is_enable(env_t *env, int ac, val_t *av)
+static val_t device_native_is_enabled(env_t *env, int ac, val_t *av)
 {
     cupkee_device_t *device;
 
@@ -548,7 +579,7 @@ static val_t device_native_is_enable(env_t *env, int ac, val_t *av)
     if (ac == 0 || (device = device_val_control(av)) == NULL) {
         return VAL_UNDEFINED;
     } else {
-        return (device->flags & DEVICE_ENABLE) ? VAL_TRUE : VAL_FALSE;
+        return device_is_enabled(device) ? VAL_TRUE : VAL_FALSE;
     }
 }
 
@@ -561,8 +592,7 @@ static val_t device_native_get_error(env_t *env, int ac, val_t *av)
     if (ac == 0 || (device = device_val_control(av)) == NULL) {
         return VAL_UNDEFINED;
     } else {
-        int err = device->driver->get_err(device->desc->id, device->inst);
-        return val_mk_number(err);
+        return val_mk_number(device->error);
     }
 }
 
@@ -571,6 +601,7 @@ static val_t device_native_listen(env_t *env, int ac, val_t *av)
     cupkee_device_t *device;
     val_t *callback;
     int event_id;
+    uint8_t event_bit;
 
     (void) env;
 
@@ -581,8 +612,13 @@ static val_t device_native_listen(env_t *env, int ac, val_t *av)
     }
 
     callback = av + 1;
-    event_id = device_val_map(av, DEVICE_EVENT_MAX, device_event_names);
-    if (event_id >= device->desc->event_num || !val_is_function(callback)) {
+    event_id = device_string_map_var(av, DEVICE_EVENT_MAX, device_event_names);
+    if ( event_id < 0 || !val_is_function(callback)) {
+        return VAL_FALSE;
+    }
+    event_bit = 1 << event_id;
+
+    if (!(event_bit & device->desc->event_mask)) {
         return VAL_FALSE;
     }
 
@@ -597,11 +633,42 @@ static val_t device_native_listen(env_t *env, int ac, val_t *av)
         // origion ref released, automic
         *device->event_handle[event_id] = *callback;
     }
+    device->event |= event_bit;
 
-    device->driver->listen(device->desc->id, device->inst, event_id);
     return VAL_TRUE;
 }
 
+static val_t device_native_ignore(env_t *env, int ac, val_t *av)
+{
+    cupkee_device_t *device;
+    int event_id;
+    uint8_t event_bit;
+
+    (void) env;
+
+    if (ac >= 2 && (device = device_val_control(av)) != NULL) {
+        av++; ac--;
+    } else {
+        return VAL_UNDEFINED;
+    }
+
+    event_id = device_string_map_var(av, DEVICE_EVENT_MAX, device_event_names);
+    if (0 > event_id) {
+        return VAL_FALSE;
+    }
+    event_bit = 1 << event_id;
+
+    if (event_bit & device->event) {
+        reference_release(device->event_handle[event_id]);
+        device->event_handle[event_id] = NULL;
+
+        device->event &= ~event_bit;
+    }
+
+    return VAL_TRUE;
+}
+
+#if 0
 static int device_map_read_all(cupkee_device_t *device, env_t *env, val_t *data)
 {
     uint32_t v;
@@ -623,7 +690,7 @@ static int device_map_read_all(cupkee_device_t *device, env_t *env, val_t *data)
 
         for (i = 0; i < size; i++) {
             if (device->driver->io.map.get(device->desc->id, device->inst, i, &v)) {
-               val_set_number(_array_elem(a, i), v);
+                val_set_number(_array_elem(a, i), v);
             } else {
                 val_set_undefined(_array_elem(a, i));
             }
@@ -633,6 +700,7 @@ static int device_map_read_all(cupkee_device_t *device, env_t *env, val_t *data)
 
     return 0;
 }
+*/
 
 static val_t device_native_read_map(env_t *env, int ac, val_t *av)
 {
@@ -648,7 +716,7 @@ static val_t device_native_read_map(env_t *env, int ac, val_t *av)
         return VAL_UNDEFINED;
     }
 
-    if (!(device->flags & DEVICE_ENABLE)) {
+    if (!(device->flags & DEVICE_FL_ENABLE)) {
         return VAL_UNDEFINED;
     }
 
@@ -695,7 +763,7 @@ static val_t device_native_read_stream(env_t *env, int ac, val_t *av)
         return VAL_UNDEFINED;
     }
 
-    if (!(device->flags & DEVICE_ENABLE)) {
+    if (!(device->flags & DEVICE_FL_ENABLE)) {
         return VAL_FALSE;
     }
 
@@ -761,7 +829,7 @@ static val_t device_native_write_map(env_t *env, int ac, val_t *av)
         return VAL_UNDEFINED;
     }
 
-    if (!(device->flags & DEVICE_ENABLE)) {
+    if (!(device->flags & DEVICE_FL_ENABLE)) {
         return VAL_UNDEFINED;
     }
 
@@ -850,13 +918,32 @@ static inline void device_get_map_elem(cupkee_device_t *device, env_t *env, int 
 
     (void) env;
 
-    if (device->desc->type == HW_DEVICE_MAP
-        && (device->flags & DEVICE_ENABLE)
+    if (device->desc->category == HW_DEVICE_MAP
+        && device_is_enabled(device)
         && device->driver->io.map.get(device->desc->id, device->inst, off, &v)) {
         val_set_number(elem, v);
     } else {
         val_set_undefined(elem);
     }
+}
+#endif
+
+static val_t device_native_read(env_t *env, int ac, val_t *av)
+{
+    (void) env;
+    (void) ac;
+    (void) av;
+
+    return VAL_UNDEFINED;
+}
+
+static val_t device_native_write(env_t *env, int ac, val_t *av)
+{
+    (void) env;
+    (void) ac;
+    (void) av;
+
+    return VAL_UNDEFINED;
 }
 
 static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop)
@@ -868,20 +955,12 @@ static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop)
 
     if (device && prop_name) {
         if (!strcmp(prop_name, "read")) {
-            switch (device->desc->type) {
-            case HW_DEVICE_MAP:    val_set_native(prop, (intptr_t)device_native_read_map);    return;
-            case HW_DEVICE_STREAM: val_set_native(prop, (intptr_t)device_native_read_stream); return;
-            case HW_DEVICE_BLOCK:  val_set_native(prop, (intptr_t)device_native_read_block);  return;
-            default: val_set_undefined(prop); return;
-            }
+            val_set_native(prop, (intptr_t)device_native_read);
+            return;
         } else
         if (!strcmp(prop_name, "write")) {
-            switch (device->desc->type) {
-            case HW_DEVICE_MAP:    val_set_native(prop, (intptr_t)device_native_write_map);    return;
-            case HW_DEVICE_STREAM: val_set_native(prop, (intptr_t)device_native_write_stream); return;
-            case HW_DEVICE_BLOCK:  val_set_native(prop, (intptr_t)device_native_write_block);  return;
-            default: val_set_undefined(prop); return;
-            }
+            val_set_native(prop, (intptr_t)device_native_write);
+            return;
         } else
         if (!strcmp(prop_name, "config")) {
             val_set_native(prop, (intptr_t)device_native_config);
@@ -899,12 +978,28 @@ static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop)
             val_set_native(prop, (intptr_t)device_native_listen);
             return;
         } else
-        if (!strcmp(prop_name, "isEnable")) {
-            val_set_native(prop, (intptr_t)device_native_is_enable);
+        if (!strcmp(prop_name, "ignore")) {
+            val_set_native(prop, (intptr_t)device_native_ignore);
+            return;
+        } else
+        if (!strcmp(prop_name, "isEnabled")) {
+            val_set_native(prop, (intptr_t)device_native_is_enabled);
             return;
         } else
         if (!strcmp(prop_name, "getError")) {
             val_set_native(prop, (intptr_t)device_native_get_error);
+            return;
+        } else
+        if (!strcmp(prop_name, "instance")) {
+            val_set_number(prop, device->inst);
+            return;
+        } else
+        if (!strcmp(prop_name, "type")) {
+            val_set_foreign_string(prop, (intptr_t) device->desc->name);
+            return;
+        } else
+        if (!strcmp(prop_name, "category")) {
+            val_set_foreign_string(prop, (intptr_t) device_categorys[device->desc->category]);
             return;
         } else
         if (!strcmp(prop_name, "destroy")) {
@@ -916,32 +1011,31 @@ static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop)
     val_set_undefined(prop);
 }
 
+static void device_element(cupkee_device_t *device, env_t *env, int index, val_t *elem)
+{
+    (void) device;
+    (void) env;
+    (void) index;
+
+    val_set_undefined(elem);
+}
+
 static void device_op_elem(void *env, intptr_t devid, val_t *idx, val_t *elem)
 {
     if (val_is_number(idx)) {
         cupkee_device_t *device = device_id_control(devid);
 
-        device_get_map_elem (device, env, val_2_integer(idx), elem);
+        device_element(device, env, val_2_integer(idx), elem);
     } else {
         device_op_prop(env, devid, idx, elem);
-
     }
 }
 
-static void device_error_proc(cupkee_device_t *device, env_t *env)
-{
-
-    int err = device->driver->get_err(device->desc->id, device->inst);
-
-    cupkee_do_callback_error(env, device->event_handle[0], err);
-}
-
-static void device_map_data_proc(cupkee_device_t *device, env_t *env)
+static void device_data_proc_map(cupkee_device_t *device, env_t *env)
 {
     val_t data;
-    int err;
+    int err = CUPKEE_EINVAL;
 
-    err = device_map_read_all(device, env, &data);
     if (err) {
         cupkee_do_callback_error(env, device->event_handle[DEVICE_EVENT_ERR], err);
         return;
@@ -949,14 +1043,14 @@ static void device_map_data_proc(cupkee_device_t *device, env_t *env)
     cupkee_do_callback(env, device->event_handle[DEVICE_EVENT_DATA], 1, &data);
 }
 
-static void device_stream_data_proc(cupkee_device_t *device, env_t *env)
+static void device_data_proc_stream(cupkee_device_t *device, env_t *env)
 {
     val_t data;
     int err, n;
 
-    n = device->driver->io.stream.received(device->desc->id, device->inst);
+    n = device->driver->io.stream.received(device->inst);
     if (n > 0) {
-        err = device_stream_recv_data(device, env, n, &data);
+        err = CUPKEE_ERESOURCE; //device_stream_recv_data(device, env, n, &data);
         if (err < 0) {
             cupkee_do_callback_error(env, device->event_handle[DEVICE_EVENT_ERR], err);
         } else {
@@ -965,60 +1059,93 @@ static void device_stream_data_proc(cupkee_device_t *device, env_t *env)
     }
 }
 
-static void device_data_proc(cupkee_device_t *device, env_t *env)
+static void device_data_proc_block(cupkee_device_t *device, env_t *env)
 {
-    switch(device->desc->type) {
-    case HW_DEVICE_MAP:     device_map_data_proc(device, env);    break;
-    case HW_DEVICE_STREAM:  device_stream_data_proc(device, env); break;
-    case HW_DEVICE_BLOCK:
+    (void) device;
+    (void) env;
+}
+
+static inline void device_do_error(cupkee_device_t *device, env_t *env)
+{
+    if (device->error) {
+        cupkee_do_callback_error(env, device->event_handle[DEVICE_EVENT_ERR], device->error);
+    }
+}
+
+static inline void device_do_data(cupkee_device_t *device, env_t *env)
+{
+    switch(device->desc->category) {
+    case DEVICE_CATEGORY_MAP:     device_data_proc_map   (device, env); break;
+    case DEVICE_CATEGORY_STREAM:  device_data_proc_stream(device, env); break;
+    case DEVICE_CATEGORY_BLOCK:   device_data_proc_block (device, env); break;
     default:                break;
     }
 }
 
-void device_event_proc(env_t *env, int event)
+static inline void device_do_drain(cupkee_device_t *device, env_t *env)
 {
-    cupkee_device_t *device;
-    uint8_t id, inst, e;
+    cupkee_do_callback(env, device->event_handle[DEVICE_EVENT_DRAIN], 0, NULL);
+}
 
-    e = event & 0xff;
-    if (e >= DEVICE_EVENT_MAX) {
-        return;
-    }
+static inline void device_do_ready(cupkee_device_t *device, env_t *env)
+{
+    (void) device;
+    (void) env;
+}
 
-    id   = (event >> 16) & 0xff;
-    inst = (event >> 8) & 0xff;
-    device = device_work;
+void device_poll(void)
+{
+    cupkee_device_t *device = device_work;
+
     while (device) {
-        if (device->inst == inst && device->desc->id == id) {
-            break;
-        }
+        device->driver->poll(device->inst);
+
         device = device->next;
-    }
-
-    if (!device || !device->event_handle[e]) {
-        return;
-    }
-
-    switch(e) {
-    case DEVICE_EVENT_ERR:   device_error_proc(device, env); break;
-    case DEVICE_EVENT_DATA:  device_data_proc(device, env);  break;
-    case DEVICE_EVENT_DRAIN: cupkee_do_callback(env, device->event_handle[e], 0, NULL); break;
-    case DEVICE_EVENT_READY: break;
-    default: break; // what happen ?
     }
 }
 
-void device_setup(void)
+typedef void (*device_event_handle_t)(cupkee_device_t *, env_t *);
+static const device_event_handle_t device_event_handles[] = {
+    device_do_error,
+    device_do_data,
+    device_do_drain,
+    device_do_ready
+};
+
+void device_event_proc(env_t *env, int event)
+{
+    cupkee_device_t *device;
+    uint8_t devid, inst;
+
+    devid = (event >> 16) & 0xff;
+    inst  = (event >>  8) & 0xff;
+    event = event & 0xff;
+
+    if (event >= DEVICE_EVENT_MAX || devid >= DEVICE_MAX) {
+        return;
+    }
+
+    device = &device_heap[devid];
+    if (!device_is_enabled(device) || device->inst != inst) {
+        return;
+    }
+
+    device_event_handles[event](device, env);
+}
+
+void device_init(void)
 {
     int i;
 
     device_free = NULL;
     device_work = NULL;
+
     for (i = 0; i < DEVICE_MAX; i++) {
-        cupkee_device_t *device = device_queue + i;
+        cupkee_device_t *device = &device_heap[i];
 
         device->magic = 0;
         device->flags = 0;
+        device->event = 0;
         device->next = device_free;
 
         device_free = device;

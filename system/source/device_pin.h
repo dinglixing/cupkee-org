@@ -24,14 +24,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __HW_DEVICE_STREAM_INC__
-#define __HW_DEVICE_STREAM_INC__
+#ifndef __DEVICE_PIN_INC__
+#define __DEVICE_PIN_INC__
 
-void hw_device_stream_setup(void);
-void hw_device_stream_poll(void);
+int device_pin_set(hw_config_t *conf, int which, val_t *val);
+int device_pin_get(hw_config_t *conf, int which, val_t *val);
 
-extern const hw_driver_t hw_driver_stream;
-extern const hw_device_t hw_device_stream;
-
-#endif /* __HW_DEVICE_STREAM_INC__ */
+#endif /* __DEVICE_PIN_INC__ */
 

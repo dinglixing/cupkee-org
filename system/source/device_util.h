@@ -24,48 +24,41 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <cupkee.h>
+#ifndef __DEVICE_UTIL_INC__
+#define __DEVICE_UTIL_INC__
 
-static const native_t native_entry[] = {
-    /* panda natives */
-    {"Buffer",          buffer_native_create},
+int device_string_map(const char *name, int max, const char **str_list);
+int device_string_map_var(val_t *in, int max, const char **str_list);
 
-    /* cupkee natives */
-    {"sysinfos",        native_sysinfos},
-    {"systicks",        native_systicks},
-    {"scripts",         native_scripts},
-    {"show",            native_show},
+int device_set_uint8(val_t *val, uint8_t *conf);
+int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list);
 
-    {"setTimeout",      native_set_timeout},
-    {"setInterval",     native_set_interval},
-    {"clearTimeout",    native_clear_timeout},
-    {"clearInterval",   native_clear_interval},
+void device_get_option(val_t *opt, int i, int max, const char **opt_list);
 
-    {"Device",          device_native_create},
-    {"pinMap",          device_native_pin_map},
-    {"led",             device_native_led},
-
-    /* user native */
-
-};
-
-// system initial scripts
-//static char *initial = "setInterval(led, 1000);";
-static char *initial = NULL;
-
-int main(void)
-{
-    cupkee_init();
-
-    /* user code here */
-
-    cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
-    cupkee_start(initial);
-
-    while (1)
-        cupkee_poll();
-
-    // Should not go here
+static inline int device_param_stream(int ac, val_t *av, void **addr, int *size) {
+    if (ac) {
+        if (val_is_buffer(av)) {
+            *addr = buffer_addr(av);
+            *size = buffer_size(av);
+        } else
+        if ((*size = string_len(av)) < 0) {
+            return 0;
+        } else {
+            *addr = (void *) val_2_cstring(av);
+        }
+        return 1;
+    }
     return 0;
 }
+
+static inline int device_param_int(int ac, val_t *av, int *n) {
+    if (ac > 0 && val_is_number(av)) {
+        *n = val_2_integer(av);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+#endif /* __DEVICE_UTIL_INC__ */
 

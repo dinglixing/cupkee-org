@@ -45,17 +45,9 @@ void hw_dbg_console_set_input(const char *data);
 int  hw_dbg_console_get_reply(char **ptr);
 void hw_dbg_console_clr_buf(void);
 
-// Map device
-void hw_dbg_map_set(int inst, int off, uint32_t v);
-int  hw_dbg_map_off_get(int inst);
-uint32_t hw_dbg_map_val_get(int inst);
-void hw_dbg_map_set_size(int inst, int size);
-void hw_dbg_map_event_triger(int inst, int event);
+// pin device
 
 // Stream device
-void hw_dbg_stream_set_error(int inst, int err);
-void hw_dbg_stream_set_input(const char *data);
-void hw_dbg_stream_set_send(int n);
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
@@ -75,7 +67,7 @@ void hw_dbg_stream_set_send(int n);
 ******************************************************************************/
 #include "hw_console.h"
 
-#include "hw_device_map.h"
-#include "hw_device_stream.h"
+#include "hw_gpio.h"
 
 #endif /* __HW_MOCK_INC__ */
+

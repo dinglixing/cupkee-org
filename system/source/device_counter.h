@@ -24,48 +24,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <cupkee.h>
+#ifndef __DEVICE_COUNTER_INC__
+#define __DEVICE_COUNTER_INC__
 
-static const native_t native_entry[] = {
-    /* panda natives */
-    {"Buffer",          buffer_native_create},
+int device_counter_set(hw_config_t *conf, int which, val_t *val);
+int device_counter_get(hw_config_t *conf, int which, val_t *val);
 
-    /* cupkee natives */
-    {"sysinfos",        native_sysinfos},
-    {"systicks",        native_systicks},
-    {"scripts",         native_scripts},
-    {"show",            native_show},
-
-    {"setTimeout",      native_set_timeout},
-    {"setInterval",     native_set_interval},
-    {"clearTimeout",    native_clear_timeout},
-    {"clearInterval",   native_clear_interval},
-
-    {"Device",          device_native_create},
-    {"pinMap",          device_native_pin_map},
-    {"led",             device_native_led},
-
-    /* user native */
-
-};
-
-// system initial scripts
-//static char *initial = "setInterval(led, 1000);";
-static char *initial = NULL;
-
-int main(void)
-{
-    cupkee_init();
-
-    /* user code here */
-
-    cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
-    cupkee_start(initial);
-
-    while (1)
-        cupkee_poll();
-
-    // Should not go here
-    return 0;
-}
+#endif /* __DEVICE_COUNTER_INC__ */
 
