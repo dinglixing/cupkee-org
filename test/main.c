@@ -72,10 +72,13 @@ int main(int argc, const char *argv[])
         return CU_get_error();
     }
 
-    // add test suite here:
+    /***********************************************
+     * Test suites here:
+     ***********************************************/
     test_hello();
     test_misc();
     test_device_pin();
+    test_device_uart();
     // add test suite
 
     CU_basic_set_mode(CU_BRM_VERBOSE);

@@ -51,7 +51,7 @@ static void test_create(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("b = Device('pin', 1)\r",                        "<object>\r\n", 1));
 
     // return undefined, if instance out of range
-    CU_ASSERT(0 == test_cupkee_run_with_reply("Device('pin', 2)\r",                            "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("Device('pin', 999)\r",                          "undefined\r\n", 1));
 
     // return undefined, if instance already existed
     CU_ASSERT(0 == test_cupkee_run_with_reply("Device('pin')\r",                               "undefined\r\n", 1));

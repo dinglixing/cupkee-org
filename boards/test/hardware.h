@@ -73,6 +73,7 @@ void hw_dbg_pin_trigger_data(int instance, uint32_t data);
 #include "hw_console.h"
 
 #include "hw_gpio.h"
+#include "hw_uart.h"
 
 #endif /* __HW_MOCK_INC__ */
 

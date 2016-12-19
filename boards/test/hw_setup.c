@@ -64,6 +64,7 @@ uint32_t system_ticks_count = 0;
 void hw_setup(void)
 {
     hw_setup_gpio();
+    hw_setup_uart();
 }
 
 void hw_poll(void)
@@ -140,8 +141,8 @@ const hw_driver_t *hw_device_request(int type, int instance)
     case DEVICE_TYPE_PWM:
     case DEVICE_TYPE_PULSE:
     case DEVICE_TYPE_TIMER:
-    case DEVICE_TYPE_COUNTER:
-    case DEVICE_TYPE_UART:
+    case DEVICE_TYPE_COUNTER:   return NULL;
+    case DEVICE_TYPE_UART:      return hw_request_uart(instance);
     case DEVICE_TYPE_USART:
     case DEVICE_TYPE_SPI:
     default:                    return NULL;
@@ -157,8 +158,8 @@ int hw_device_instances(int type)
     case DEVICE_TYPE_PWM:
     case DEVICE_TYPE_PULSE:
     case DEVICE_TYPE_TIMER:
-    case DEVICE_TYPE_COUNTER:
-    case DEVICE_TYPE_UART:
+    case DEVICE_TYPE_COUNTER:   return 0;
+    case DEVICE_TYPE_UART:      return HW_INSTANCES_UART;
     case DEVICE_TYPE_USART:
     case DEVICE_TYPE_SPI:
     default:                    return 0;

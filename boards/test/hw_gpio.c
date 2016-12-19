@@ -35,7 +35,8 @@ typedef struct hw_pin_t {
 
 static hw_pin_t pin_controls[HW_INSTANCES_PIN];
 
-/* debug start */
+/****************************************************************************
+ * Debug start                                                             */
 static int dbg_setup_status[HW_INSTANCES_PIN];
 static int dbg_update[HW_INSTANCES_PIN];
 static uint32_t dbg_data[HW_INSTANCES_PIN];
@@ -82,7 +83,8 @@ void hw_dbg_pin_trigger_data(int instance, uint32_t data)
     dbg_data[instance] = data;
 }
 
-/* debug end */
+/* debug end                                                               *
+ ***************************************************************************/
 
 static void pin_release(int instance)
 {
@@ -113,7 +115,7 @@ static int pin_setup(int instance, uint8_t dev_id, const hw_config_t *config)
     return dbg_setup_status[instance];
 }
 
-static int pin_poll(int instance)
+static void pin_poll(int instance)
 {
     hw_pin_t *control = &pin_controls[instance];
 
@@ -122,7 +124,6 @@ static int pin_poll(int instance)
         control->data = dbg_data[instance];
         device_data_post(control->dev_id);
     }
-    return -CUPKEE_EIMPLEMENT;
 }
 
 static int pin_get(int instance, int off, uint32_t *data)
