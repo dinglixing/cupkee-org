@@ -66,7 +66,7 @@ typedef struct cupkee_device_desc_t {
 
 typedef struct cupkee_device_t {
     uint16_t magic;
-    uint16_t error;
+    int16_t  error;
     uint8_t  inst;
     uint8_t  flags;
     uint8_t  event;

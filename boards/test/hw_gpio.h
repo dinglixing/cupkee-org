@@ -29,6 +29,7 @@ SOFTWARE.
 
 #define HW_INSTANCES_PIN         2
 
+void  hw_setup_gpio(void);
 const hw_driver_t *hw_request_pin(int instance);
 
 #endif /* __HW_GPIO_INC__ */

@@ -345,7 +345,7 @@ static void device_work_list_drop(cupkee_device_t *device)
     }
 }
 
-static void device_enable(cupkee_device_t *device)
+static int device_enable(cupkee_device_t *device)
 {
     if (!device_is_enabled(device)) {
         int devid = device - device_heap;
@@ -355,10 +355,11 @@ static void device_enable(cupkee_device_t *device)
         if (!err) {
             device->flags |= DEVICE_FL_ENABLE;
             device_work_list_join(device);
-        } else {
-            //Todo: set error
         }
+        return err;
     }
+
+    return 0;
 }
 
 static void device_disable(cupkee_device_t *device)
@@ -515,6 +516,11 @@ static val_t device_native_config(env_t *env, int ac, val_t *av)
     setting = ac > 0 ? av : NULL;
 
     if (setting) {
+        // config set is forbidden, if device is enabled
+        if (device_is_enabled(device)) {
+            return VAL_FALSE;
+        }
+
         return name ? device_config_set(device, name, setting) :
                       device_config_set_all(device, setting) ? VAL_FALSE : VAL_TRUE;
     } else {
@@ -539,10 +545,17 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
 
     setting = ac > 0 ? av : NULL;
     if (setting && val_is_object(setting)) {
-        err = device_config_set_all(device, setting);
+        if (device_is_enabled(device)) {
+            err = CUPKEE_EENABLED;
+        } else {
+            err = device_config_set_all(device, setting);
+        }
         ac--; av++;
     }
-    device_enable(device);
+
+    if (!err) {
+        err = device_enable(device);
+    }
 
     if (ac && val_is_function(av)) {
         val_t args[2];
@@ -553,7 +566,7 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
         cupkee_do_callback(env, av, 2, args);
     }
 
-    return (device->flags & DEVICE_FL_ENABLE) ? VAL_TRUE : VAL_FALSE;
+    return (err == 0) ? VAL_TRUE : VAL_FALSE;
 }
 
 static val_t device_native_disable(env_t *env, int ac, val_t *av)
@@ -580,19 +593,6 @@ static val_t device_native_is_enabled(env_t *env, int ac, val_t *av)
         return VAL_UNDEFINED;
     } else {
         return device_is_enabled(device) ? VAL_TRUE : VAL_FALSE;
-    }
-}
-
-static val_t device_native_get_error(env_t *env, int ac, val_t *av)
-{
-    cupkee_device_t *device;
-
-    (void) env;
-
-    if (ac == 0 || (device = device_val_control(av)) == NULL) {
-        return VAL_UNDEFINED;
-    } else {
-        return val_mk_number(device->error);
     }
 }
 
@@ -928,22 +928,153 @@ static inline void device_get_map_elem(cupkee_device_t *device, env_t *env, int 
 }
 #endif
 
-static val_t device_native_read(env_t *env, int ac, val_t *av)
+static void device_read_map_all(cupkee_device_t *device, env_t *env, val_t *result)
 {
+    uint32_t data;
+
+    if (device->driver->io.map.get(device->inst, -1, &data) > 0) {
+        // support combine read
+        val_set_number(result, data);
+    } else {
+        int i, size;
+        array_t *a;
+
+        size = device->driver->io.map.size(device->inst);
+        a = _array_create(env, size);
+        if (!a) {
+            env_set_error(env, -CUPKEE_ERESOURCE);
+            return;
+        }
+
+        for (i = 0; i < size; i++) {
+            if (device->driver->io.map.get(device->inst, i, &data) > 0) {
+                val_set_number(_array_elem(a, i), data);
+            } else {
+                val_set_undefined(_array_elem(a, i));
+            }
+        }
+
+        val_set_array(result, (intptr_t) a);
+    }
+}
+
+static val_t device_read_map(cupkee_device_t *device, env_t *env, int offset)
+{
+    uint32_t data;
+    val_t result;
+
+    if (offset >= 0) {
+        if (device->driver->io.map.get(device->inst, offset, &data) > 0) {
+            val_set_number(&result, data);
+        } else {
+            result = VAL_UNDEFINED;
+        }
+    } else {
+        device_read_map_all(device, env, &result);
+    }
+
+    return result;
+}
+
+static val_t device_read_stream(cupkee_device_t *device, env_t *env, int ac, val_t *av)
+{
+    (void) device;
     (void) env;
     (void) ac;
     (void) av;
-
     return VAL_UNDEFINED;
+}
+
+static val_t device_read_block(cupkee_device_t *device, env_t *env, int ac, val_t *av)
+{
+    (void) device;
+    (void) env;
+    (void) ac;
+    (void) av;
+    return VAL_UNDEFINED;
+}
+
+static val_t device_write_map(cupkee_device_t *device, env_t *env, int ac, val_t *av)
+{
+    (void) device;
+    (void) env;
+    (void) ac;
+    (void) av;
+    return VAL_UNDEFINED;
+}
+
+static val_t device_write_stream(cupkee_device_t *device, env_t *env, int ac, val_t *av)
+{
+    (void) device;
+    (void) env;
+    (void) ac;
+    (void) av;
+    return VAL_UNDEFINED;
+}
+
+static val_t device_write_block(cupkee_device_t *device, env_t *env, int ac, val_t *av)
+{
+    (void) device;
+    (void) env;
+    (void) ac;
+    (void) av;
+    return VAL_UNDEFINED;
+}
+
+static val_t device_native_read(env_t *env, int ac, val_t *av)
+{
+    cupkee_device_t *device;
+
+    if (ac && (device = device_val_control(av)) != NULL && device_is_enabled(device)) {
+        av++; ac--;
+    } else {
+        return VAL_UNDEFINED;
+    }
+
+    switch (device->desc->category) {
+    case DEVICE_CATEGORY_MAP:    {
+        int offset;
+
+        if (ac && val_is_number(av)) {
+            offset = val_2_integer(av);
+        } else {
+            offset = -1;
+        }
+        return device_read_map(device, env, offset);
+    }
+    case DEVICE_CATEGORY_STREAM: return device_read_stream(device, env, ac, av);
+    case DEVICE_CATEGORY_BLOCK:  return device_read_block(device, env, ac, av);
+    default: return VAL_UNDEFINED;
+    }
 }
 
 static val_t device_native_write(env_t *env, int ac, val_t *av)
 {
-    (void) env;
-    (void) ac;
-    (void) av;
+    cupkee_device_t *device;
 
-    return VAL_UNDEFINED;
+    if (ac && (device = device_val_control(av)) != NULL && device_is_enabled(device)) {
+        av++; ac--;
+    } else {
+        return VAL_FALSE;
+    }
+
+    (void) env;
+
+    switch (device->desc->category) {
+    case DEVICE_CATEGORY_MAP:    return device_write_map(device, env, ac, av);
+    case DEVICE_CATEGORY_STREAM: return device_write_stream(device, env, ac, av);
+    case DEVICE_CATEGORY_BLOCK:  return device_write_block(device, env, ac, av);
+    default: return VAL_UNDEFINED;
+    }
+}
+
+static void device_element(cupkee_device_t *device, env_t *env, int index, val_t *elem)
+{
+    if (device->desc->category == DEVICE_CATEGORY_MAP) {
+        *elem = device_read_map(device, env, index);
+    } else {
+        val_set_undefined(elem);
+    }
 }
 
 static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop)
@@ -986,8 +1117,8 @@ static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop)
             val_set_native(prop, (intptr_t)device_native_is_enabled);
             return;
         } else
-        if (!strcmp(prop_name, "getError")) {
-            val_set_native(prop, (intptr_t)device_native_get_error);
+        if (!strcmp(prop_name, "error")) {
+            val_set_number(prop, device->error);
             return;
         } else
         if (!strcmp(prop_name, "instance")) {
@@ -1011,35 +1142,23 @@ static void device_op_prop(void *env, intptr_t devid, val_t *name, val_t *prop)
     val_set_undefined(prop);
 }
 
-static void device_element(cupkee_device_t *device, env_t *env, int index, val_t *elem)
+static void device_op_elem(void *env, intptr_t devid, val_t *which, val_t *elem)
 {
-    (void) device;
-    (void) env;
-    (void) index;
-
-    val_set_undefined(elem);
-}
-
-static void device_op_elem(void *env, intptr_t devid, val_t *idx, val_t *elem)
-{
-    if (val_is_number(idx)) {
+    if (val_is_number(which)) {
         cupkee_device_t *device = device_id_control(devid);
 
-        device_element(device, env, val_2_integer(idx), elem);
+        device_element(device, env, val_2_integer(which), elem);
     } else {
-        device_op_prop(env, devid, idx, elem);
+        device_op_prop(env, devid, which, elem);
     }
 }
 
 static void device_data_proc_map(cupkee_device_t *device, env_t *env)
 {
     val_t data;
-    int err = CUPKEE_EINVAL;
 
-    if (err) {
-        cupkee_do_callback_error(env, device->event_handle[DEVICE_EVENT_ERR], err);
-        return;
-    }
+    device_read_map_all(device, env, &data);
+
     cupkee_do_callback(env, device->event_handle[DEVICE_EVENT_DATA], 1, &data);
 }
 
@@ -1093,6 +1212,62 @@ static inline void device_do_ready(cupkee_device_t *device, env_t *env)
     (void) env;
 }
 
+void device_error_post(uint8_t dev_id, int16_t code)
+{
+    cupkee_device_t *device;
+
+    if (dev_id >= DEVICE_MAX) {
+        return;
+    }
+
+    device = &device_heap[dev_id];
+    if (!device_is_enabled(device)) {
+        return;
+    }
+
+    device->error = -code;
+
+    if (device->event & (1 << DEVICE_EVENT_ERR)) {
+        devices_event_post(dev_id, DEVICE_EVENT_ERR);
+    }
+}
+
+void device_data_post(uint8_t dev_id)
+{
+    cupkee_device_t *device;
+
+    if (dev_id >= DEVICE_MAX) {
+        return;
+    }
+
+    device = &device_heap[dev_id];
+    if (!device_is_enabled(device)) {
+        return;
+    }
+
+    if (device->event & (1 << DEVICE_EVENT_DATA)) {
+        devices_event_post(dev_id, DEVICE_EVENT_DATA);
+    }
+}
+
+void device_drain_post(uint8_t dev_id)
+{
+    cupkee_device_t *device;
+
+    if (dev_id >= DEVICE_MAX) {
+        return;
+    }
+
+    device = &device_heap[dev_id];
+    if (!device_is_enabled(device)) {
+        return;
+    }
+
+    if (device->event & (1 << DEVICE_EVENT_DRAIN)) {
+        devices_event_post(dev_id, DEVICE_EVENT_DRAIN);
+    }
+}
+
 void device_poll(void)
 {
     cupkee_device_t *device = device_work;
@@ -1115,18 +1290,17 @@ static const device_event_handle_t device_event_handles[] = {
 void device_event_proc(env_t *env, int event)
 {
     cupkee_device_t *device;
-    uint8_t devid, inst;
+    uint8_t devid;
 
-    devid = (event >> 16) & 0xff;
-    inst  = (event >>  8) & 0xff;
-    event = event & 0xff;
+    devid = EVENT_PARAM1(event);
+    event = EVENT_PARAM2(event);
 
     if (event >= DEVICE_EVENT_MAX || devid >= DEVICE_MAX) {
         return;
     }
 
     device = &device_heap[devid];
-    if (!device_is_enabled(device) || device->inst != inst) {
+    if (!device_is_enabled(device)) {
         return;
     }
 

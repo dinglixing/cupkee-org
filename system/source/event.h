@@ -15,7 +15,6 @@ typedef enum event_type_t{
 #define EVENT_MAKE(t)                       ((t) << 24)
 #define EVENT_MAKE_PARAM(t, v)              (((t) << 24) + (v))
 #define EVENT_MAKE_PARAM2(t, v1, v2)        (((t) << 24) + ((v1) << 16) + (v2))
-#define EVENT_MAKE_PARAM3(t, v1, v2, v3)    (((t) << 24) + ((v1) << 16) + ((v2) << 8) + (v3))
 
 #define EVENT_TYPE(e)                       (((e) >> 24) & EVENT_MASK)
 #define EVENT_PARAM(e)                      ((e) & 0xffffff)
@@ -27,8 +26,7 @@ int event_put(int e);
 int event_get(void);
 
 void shell_event_post(int type);
-void systick_event_post(void);
-void devices_event_post(int id, int which, int type);
+void devices_event_post(uint8_t id, uint8_t type);
 
 #endif /* __EVENT_INC__ */
 

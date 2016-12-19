@@ -59,6 +59,7 @@ void print_error(int error)
     case ERR_InvalidByteCode:   console_puts("Error: Invalid Byte code\r\n");       break;
     case ERR_InvalidInput:      console_puts("Error: Invalid input\r\n");           break;
     case ERR_InvalidCallor:     console_puts("Error: Invalid callor\r\n");          break;
+    case ERR_NotDefinedId:      console_puts("Error: Not defined ID\r\n");          break;
 
     case ERR_SysError:          console_puts("Error: System error\r\n");            break;
 

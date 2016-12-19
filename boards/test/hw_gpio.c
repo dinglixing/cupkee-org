@@ -29,10 +29,60 @@ SOFTWARE.
 typedef struct hw_pin_t {
     uint8_t inused;
     uint8_t dev_id;
-    hw_config_pin_t *config;
+    uint16_t  data;
+    const hw_config_pin_t *config;
 } hw_pin_t;
 
 static hw_pin_t pin_controls[HW_INSTANCES_PIN];
+
+/* debug start */
+static int dbg_setup_status[HW_INSTANCES_PIN];
+static int dbg_update[HW_INSTANCES_PIN];
+static uint32_t dbg_data[HW_INSTANCES_PIN];
+
+void hw_dbg_pin_setup_status_set(int instance, int status)
+{
+    dbg_setup_status[instance] = status;
+}
+
+void hw_dbg_pin_data_set(int instance, int offset, uint32_t value)
+{
+    if (offset < 0) {
+        pin_controls[instance].data = value;
+    } else
+    if (offset < 32) {
+        if (value) {
+            pin_controls[instance].data |= (1 << offset);
+        } else {
+            pin_controls[instance].data &= ~(1 << offset);
+        }
+    }
+}
+
+uint32_t hw_dbg_pin_data_get(int instance, int offset)
+{
+    if (offset < 0) {
+        return pin_controls[instance].data;
+    } else
+    if (offset < 32) {
+        return (pin_controls[instance].data & (1 << offset)) ? 1 : 0;
+    } else {
+        return 0;
+    }
+}
+
+void hw_dbg_pin_trigger_error(int instance, int code)
+{
+    device_error_post(pin_controls[instance].dev_id, code);
+}
+
+void hw_dbg_pin_trigger_data(int instance, uint32_t data)
+{
+    dbg_update[instance] = 1;
+    dbg_data[instance] = data;
+}
+
+/* debug end */
 
 static void pin_release(int instance)
 {
@@ -49,29 +99,72 @@ static void pin_reset(int instance)
     pin_controls[instance].config = NULL;
 }
 
-static int pin_setup(int instance, uint8_t dev_id, hw_config_t *conf)
+static int pin_setup(int instance, uint8_t dev_id, const hw_config_t *config)
 {
-    return -CUPKEE_EIMPLEMENT;
+    hw_pin_t *control = &pin_controls[instance];
+
+    // hardware setup here
+    //
+    // return status;
+    control->dev_id = dev_id;
+    control->config = (const hw_config_pin_t *)config;
+
+    // debug code
+    return dbg_setup_status[instance];
 }
 
 static int pin_poll(int instance)
 {
+    hw_pin_t *control = &pin_controls[instance];
+
+    if (dbg_update[instance]) {
+        dbg_update[instance] = 0;
+        control->data = dbg_data[instance];
+        device_data_post(control->dev_id);
+    }
     return -CUPKEE_EIMPLEMENT;
 }
 
 static int pin_get(int instance, int off, uint32_t *data)
 {
-    return -CUPKEE_EIMPLEMENT;
+    hw_pin_t *control = &pin_controls[instance];
+
+    if (off < 0) {
+        *data = control->data;
+        return 1;
+    } else
+    if (off < control->config->num) {
+        *data = (control->data & (1 << off)) ? 1 : 0;
+        return 1;
+    }
+
+    return 0;
 }
 
 static int pin_set(int instance, int off, uint32_t data)
 {
-    return -CUPKEE_EIMPLEMENT;
+    hw_pin_t *control = &pin_controls[instance];
+
+    if (off < 0) {
+        control->data = data;
+        return 1;
+    } else
+    if (off < control->config->num) {
+        if (data) {
+            control->data |= 1 << off;
+        } else {
+            control->data &= ~(1 << off);
+        }
+        return 1;
+    }
+    return 0;
 }
 
 static int pin_size(int instance)
 {
-    return -CUPKEE_EIMPLEMENT;
+    (void) instance;
+
+    return 2;
 }
 
 static const hw_driver_t pin_driver = {
@@ -105,6 +198,9 @@ void hw_setup_gpio(void)
 
     for (i = 0; i < HW_INSTANCES_PIN; i++) {
         pin_controls[i].inused = 0;
+
+        // for debug
+        dbg_setup_status[i] = 0;
     }
 }
 

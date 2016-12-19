@@ -46,6 +46,11 @@ int  hw_dbg_console_get_reply(char **ptr);
 void hw_dbg_console_clr_buf(void);
 
 // pin device
+void hw_dbg_pin_setup_status_set(int instance, int status);
+void hw_dbg_pin_data_set(int instance, int offset, uint32_t value);
+uint32_t hw_dbg_pin_data_get(int instance, int offset);
+void hw_dbg_pin_trigger_error(int instance, int code);
+void hw_dbg_pin_trigger_data(int instance, uint32_t data);
 
 // Stream device
 
