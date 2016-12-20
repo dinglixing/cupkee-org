@@ -39,15 +39,6 @@ static int test_clean()
     return 0;
 }
 
-static void test_initial(void)
-{
-    test_cupkee_reset();
-
-    CU_ASSERT(0 == test_cupkee_start("var a = 0"));
-
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "0\r\n", 1));
-}
-
 static void test_enter(void)
 {
     test_cupkee_reset();
@@ -57,6 +48,18 @@ static void test_enter(void)
     // empty input should feedback new prompt
     CU_ASSERT(0 == test_cupkee_run_with_reply("\r", NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("   \t\r", NULL, 1));
+}
+
+static void test_eval(void)
+{
+    test_cupkee_reset();
+
+    CU_ASSERT(0 == test_cupkee_start("var a = 0"));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",            "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a = 2\r",        "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a * 2\r",        "4\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a / 2\r",        "1\r\n", 1));
 }
 
 static void test_systicks(void)
@@ -84,26 +87,26 @@ static void test_scripts(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
     // variable a should defined
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                        "0\r\n", 1));
 
     // scripts should be delete
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts('delete')\r", "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts()\r", "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts('delete')\r",        "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts()\r",                "0\r\n", 1));
 
     hw_scripts_save("a\r\n");
     hw_scripts_save("b\r\n");
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(0)\r", "[0000] a\r\n2\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(1)\r", "[0001] b\r\n2\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts()\r", "[0000] a\r\n[0001] b\r\n2\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(1, 'delete')\r", "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(1)\r", "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(0)\r",               "[0000] a\r\n2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(1)\r",               "[0001] b\r\n2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts()\r",                "[0000] a\r\n[0001] b\r\n2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(1, 'delete')\r",     "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(1)\r",               "1\r\n", 1));
 
     hw_scripts_save("c\r\n");
     hw_scripts_save("d\r\n");
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts()\r", "[0000] a\r\n[0001] c\r\n[0002] d\r\n3\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts()\r",                "[0000] a\r\n[0001] c\r\n[0002] d\r\n3\r\n", 1));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(0, 'delete')\r", "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts()\r", "[0000] c\r\n[0001] d\r\n2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts(0, 'delete')\r",     "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("scripts()\r",                "[0000] c\r\n[0001] d\r\n2\r\n", 1));
 }
 
 static void test_timeout(void)
@@ -113,65 +116,69 @@ static void test_timeout(void)
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
     //test_reply_show(1);
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var a = 0\r", "undefined\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("def f() return a++;\r", NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("f();\r", "0\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var a = 0\r",                    "undefined\r\n", 1));
+    test_reply_show(1);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("def f() return a++;\r",          "<function>\r\n", 1));
+    test_reply_show(0);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("f();\r",                         "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "1\r\n", 1));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var t = setTimeout(f, 10)\r", "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var t = setTimeout(f, 10)\r",    "undefined\r\n", 1));
     hw_dbg_set_systicks(9);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 10));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "1\r\n", 1));
 
     // trigger timeout
     hw_dbg_set_systicks(10);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "2\r\n", 1));
 
     // clear timeout
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var t = setTimeout(f, 10)\r", "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var t = setTimeout(f, 10)\r",    "undefined\r\n", 1));
     hw_dbg_set_systicks(19);
-    CU_ASSERT(0 == test_cupkee_run_with_reply("clearTimeout(t)\r", "1\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("clearTimeout(t)\r", "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("clearTimeout(t)\r",              "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("clearTimeout(t)\r",              "0\r\n", 1));
     hw_dbg_set_systicks(20);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "2\r\n", 1));
 
     // register self
-    CU_ASSERT(0 == test_cupkee_run_with_reply("def fn() if (a < 5) { a++, setTimeout(fn, 10)};\r", NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("fn()\r", "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("def fn() if (a++ < 5) {"
+                                                "setTimeout(fn, 10)"
+                                              "};\r",                           NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("fn()\r",                         "undefined\r\n", 1));
     hw_dbg_set_systicks(29);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 10));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "3\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "3\r\n", 1));
     hw_dbg_set_systicks(30);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "4\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "4\r\n", 1));
     hw_dbg_set_systicks(40);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "5\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "5\r\n", 1));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("clearTimeout()\r", "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("clearTimeout()\r",               "1\r\n", 1));
 
     // interval
-    CU_ASSERT(0 == test_cupkee_run_with_reply("t = setInterval(f, 10)\r", NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "5\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("t = setInterval(f, 10)\r",       NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "5\r\n", 1));
     // trigger interval event
     hw_dbg_set_systicks(50);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "6\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "6\r\n", 1));
     hw_dbg_set_systicks(60);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "7\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "7\r\n", 1));
     hw_dbg_set_systicks(70);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "8\r\n", 1));
 
     // clear interval
-    CU_ASSERT(0 == test_cupkee_run_with_reply("clearInterval(t)\r", "1\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("clearInterval(t)\r", "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("clearInterval(t)\r",             "1\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("clearInterval(t)\r",             "0\r\n", 1));
     hw_dbg_set_systicks(80);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r", "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "8\r\n", 1));
 }
 
 CU_pSuite test_misc()
@@ -179,11 +186,11 @@ CU_pSuite test_misc()
     CU_pSuite suite = CU_add_suite("misc", test_setup, test_clean);
 
     if (suite) {
-        CU_add_test(suite, "initial",   test_initial);
-        CU_add_test(suite, "empty",     test_enter);
+        CU_add_test(suite, "empty   ",  test_enter);
+        CU_add_test(suite, "eval    ",  test_eval);
         CU_add_test(suite, "systicks",  test_systicks);
-        CU_add_test(suite, "scripts",   test_scripts);
-        CU_add_test(suite, "timeout",   test_timeout);
+        CU_add_test(suite, "scripts ",  test_scripts);
+        CU_add_test(suite, "timeout ",  test_timeout);
         if (0) {
         }
     }

@@ -24,12 +24,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __DEVICE_UART_INC__
-#define __DEVICE_UART_INC__
+#ifndef __CUPKEE_UTILS_INC__
+#define __CUPKEE_UTILS_INC__
 
-void device_uart_def(hw_config_t *conf);
-int device_uart_set(hw_config_t *conf, int which, val_t *val);
-int device_uart_get(hw_config_t *conf, int which, val_t *val);
+void *cupkee_buf_alloc(void);
+void  cupkee_buf_release(void *b);
+void  cupkee_buf_reset(void *b);
+int cupkee_buf_is_empty(void *b);
+int cupkee_buf_is_full(void *b);
+int cupkee_buf_push(void *b, uint8_t d);
+int cupkee_buf_shift(void *b, uint8_t *d);
+int cupkee_buf_gets(void *b, int n, void *buf);
+int cupkee_buf_puts(void *b, int n, void *buf);
 
-#endif /* __DEVICE_UART_INC__ */
+#endif /* __CUPKEE_UTILS_INC__ */
 

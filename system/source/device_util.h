@@ -31,6 +31,8 @@ int device_string_map(const char *name, int max, const char **str_list);
 int device_string_map_var(val_t *in, int max, const char **str_list);
 
 int device_set_uint8(val_t *val, uint8_t *conf);
+int device_set_uint16(val_t *val, uint16_t *conf);
+int device_set_uint32(val_t *val, uint32_t *conf);
 int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list);
 
 void device_get_option(val_t *opt, int i, int max, const char **opt_list);
@@ -38,8 +40,8 @@ void device_get_option(val_t *opt, int i, int max, const char **opt_list);
 static inline int device_param_stream(int ac, val_t *av, void **addr, int *size) {
     if (ac) {
         if (val_is_buffer(av)) {
-            *addr = buffer_addr(av);
             *size = buffer_size(av);
+            *addr = buffer_addr(av);
         } else
         if ((*size = string_len(av)) < 0) {
             return 0;

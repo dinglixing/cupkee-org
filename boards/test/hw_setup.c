@@ -63,6 +63,7 @@ uint32_t system_ticks_count = 0;
 
 void hw_setup(void)
 {
+    /* device resouce setup */
     hw_setup_gpio();
     hw_setup_uart();
 }

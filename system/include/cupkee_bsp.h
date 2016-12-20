@@ -29,6 +29,9 @@ SOFTWARE.
 
 #include <stdint.h>
 
+/****************************************************************/
+/* hardware defines                                             */
+/****************************************************************/
 #define SYSTEM_TICKS_PRE_SEC                1000
 #define SYSTEM_STACK_SIZE                   (8 * 1024)
 
@@ -39,7 +42,11 @@ SOFTWARE.
 #define HW_CHN_MAX_TIMER                    1
 #define HW_CHN_MAX_COUNTER                  4
 
-/* device defintions */
+#define HW_BUF_SIZE                         32
+
+/****************************************************************/
+/* system define                                                */
+/****************************************************************/
 #define DEVICE_ID_INVALID                   0xff
 
 #define DEVICE_EVENT_ERR                    0
@@ -77,10 +84,6 @@ SOFTWARE.
 #define DEVICE_OPT_PARITY_ODD               1
 #define DEVICE_OPT_PARITY_EVEN              2
 #define DEVICE_OPT_PARITY_MAX               3
-
-#define DEVICE_OPT_DATABITS_8               0   // default
-#define DEVICE_OPT_DATABITS_9               0
-#define DEVICE_OPT_DATABITS_MAX             2
 
 #define DEVICE_OPT_STOPBITS_1               0   // default
 #define DEVICE_OPT_STOPBITS_2               1
@@ -136,7 +139,7 @@ typedef struct hw_config_counter_t {
 
 typedef struct hw_config_uart_t {
     uint32_t baudrate;
-    uint8_t  data_bits;  // DEVICE_OPT_
+    uint8_t  data_bits;
     uint8_t  stop_bits;  // DEVICE_OPT_STOPBITS
     uint8_t  parity;     // DEVICE_OPT_PARITY
 } hw_config_uart_t;
@@ -176,6 +179,13 @@ typedef struct hw_driver_t {
     } io;
 } hw_driver_t;
 
+/****************************************************************/
+/* system utils                                                 */
+/****************************************************************/
+
+/****************************************************************/
+/* hardware implements                                          */
+/****************************************************************/
 extern uint32_t system_ticks_count;
 
 void hw_setup(void);
@@ -186,14 +196,14 @@ void hw_halt(void);
 
 void hw_info_get(hw_info_t *);
 
-int hw_memory_alloc(void **p, int size, int align);
+int  hw_memory_alloc(void **p, int size, int align);
 
 /* console */
-int hw_console_set_callback(void (*input)(void *, int), void (*drain)(void));
 int hw_console_putc(int ch);
 int hw_console_puts(const char *s);
 int hw_console_sync_putc(int ch);
 int hw_console_sync_puts(const char *s);
+int hw_console_set_callback(void (*input)(void *, int), void (*drain)(void));
 
 /* misc */
 int hw_scripts_erase(void);
@@ -201,11 +211,13 @@ int hw_scripts_remove(int id);
 int hw_scripts_save(const char *s);
 const char *hw_scripts_load(const char *prev);
 
-int hw_pin_map(int id, int port, int pin);
-
+int  hw_led_map(int port, int pin);
 void hw_led_set(void);
 void hw_led_clear(void);
 void hw_led_toggle(void);
+
+/* gpio */
+int hw_pin_map(int id, int port, int pin);
 
 /* device */
 const hw_driver_t *hw_device_request(int type, int inst);

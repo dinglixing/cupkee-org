@@ -12,5 +12,7 @@ void cupkee_do_callback_error(env_t *env, val_t *cb, int code);
 val_t cupkee_error(env_t *env, int code);
 int cupkee_id(val_t *in, int max, const char **names);
 
+int utils_init(void);
+
 #endif /* __UTIL_INC__ */
 

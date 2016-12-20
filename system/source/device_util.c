@@ -70,6 +70,24 @@ int device_set_uint8(val_t *val, uint8_t *conf)
     return CUPKEE_EINVAL;
 }
 
+int device_set_uint16(val_t *val, uint16_t *conf)
+{
+    if (val_is_number(val)) {
+        *conf = val_2_integer(val);
+        return CUPKEE_OK;
+    }
+    return CUPKEE_EINVAL;
+}
+
+int device_set_uint32(val_t *val, uint32_t *conf)
+{
+    if (val_is_number(val)) {
+        *conf = val_2_integer(val);
+        return CUPKEE_OK;
+    }
+    return CUPKEE_EINVAL;
+}
+
 int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list)
 {
     int opt = device_string_map_var(val, max, opt_list);

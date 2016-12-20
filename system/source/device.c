@@ -158,6 +158,7 @@ static const cupkee_device_desc_t device_uart = {
     .conf_num = 4,
     .event_mask = 0x7,
     .conf_names = device_uart_conf_names,
+    .def = device_uart_def,
     .set = device_uart_set,
     .get = device_uart_get,
 };
@@ -398,7 +399,12 @@ static cupkee_device_t *device_create(const char *name, int instance)
         device->inst = instance;
         device->desc = desc;
         device->driver = driver;
-        memset(&device->conf, 0, sizeof(hw_config_t));
+
+        if (device->desc->def) {
+            device->desc->def(&device->conf);
+        } else {
+            memset(&device->conf, 0, sizeof(hw_config_t));
+        }
     } else {
         driver->release(instance);
     }
@@ -449,7 +455,7 @@ static int device_config_set_all(cupkee_device_t *device, val_t *settings)
         }
 
         if (device->desc->set(&device->conf, which, val)) {
-            return CUPKEE_EINVAL;
+            return -CUPKEE_EINVAL;
         }
     }
 
@@ -546,7 +552,7 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
     setting = ac > 0 ? av : NULL;
     if (setting && val_is_object(setting)) {
         if (device_is_enabled(device)) {
-            err = CUPKEE_EENABLED;
+            err = -CUPKEE_EENABLED;
         } else {
             err = device_config_set_all(device, setting);
         }
@@ -560,7 +566,7 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
     if (ac && val_is_function(av)) {
         val_t args[2];
 
-        args[0] = err ? val_mk_number(-err) : VAL_UNDEFINED;
+        args[0] = err ? val_mk_number(err) : VAL_UNDEFINED;
         args[1] = *hnd;
 
         cupkee_do_callback(env, av, 2, args);

@@ -72,8 +72,15 @@ int cupkee_init(void)
     void *core_mem, *shell_mem;
     int   core_mem_sz, shell_mem_sz, heap_mem_sz, stack_mem_sz;
 
-    /* initial hardware */
+    /**********************************************/
+    /* initial hardware                           */
+    /**********************************************/
     hw_setup();
+
+    /**********************************************/
+    /* initial system                             */
+    /**********************************************/
+    utils_init();
 
     memory_distribution(
             &core_mem, &core_mem_sz,
@@ -95,7 +102,7 @@ int cupkee_init(void)
     /* Initial devices resource */
     device_init();
 
-    /* Initial shell resource */
+    /* Initial shell resource   */
     shell_init(&core_env, shell_mem, shell_mem_sz);
 
     return 0;
@@ -103,13 +110,13 @@ int cupkee_init(void)
 
 int cupkee_set_native(const native_t *entry, int n)
 {
-    /* Initialise all native functions */
+    /* Initialise all native functions       */
     return env_native_set(&core_env, entry, n);
 }
 
 int cupkee_start(const char *scripts)
 {
-    // Start shell & execute initial scripts
+    /* Start shell & execute initial scripts */
     return shell_start(scripts);
 }
 

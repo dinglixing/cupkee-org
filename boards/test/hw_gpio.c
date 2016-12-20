@@ -104,15 +104,16 @@ static void pin_reset(int instance)
 static int pin_setup(int instance, uint8_t dev_id, const hw_config_t *config)
 {
     hw_pin_t *control = &pin_controls[instance];
+    int err;
 
-    // hardware setup here
-    //
-    // return status;
-    control->dev_id = dev_id;
-    control->config = (const hw_config_pin_t *)config;
+    /* hardware setup here */
+    err = -dbg_setup_status[instance];
 
-    // debug code
-    return dbg_setup_status[instance];
+    if (!err) {
+        control->dev_id = dev_id;
+        control->config = (const hw_config_pin_t *)config;
+    }
+    return err;
 }
 
 static void pin_poll(int instance)

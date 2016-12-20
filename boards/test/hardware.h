@@ -27,13 +27,29 @@ SOFTWARE.
 #ifndef __HW_MOCK_INC__
 #define __HW_MOCK_INC__
 
+/******************************************************************************
+ * system interface
+******************************************************************************/
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
+#include <cupkee_errno.h>
+#include <cupkee_event.h>
+#include <cupkee_utils.h>
+#include <cupkee_bsp.h>
+
+/******************************************************************************
+ * Hardware interface
+******************************************************************************/
+#include "hw_console.h"
+
+#include "hw_gpio.h"
+#include "hw_uart.h"
+
 /******************************************************************************
  * Debug api
-*/
+******************************************************************************/
 
 // MISC
 void hw_dbg_reset(void);
@@ -52,28 +68,14 @@ uint32_t hw_dbg_pin_data_get(int instance, int offset);
 void hw_dbg_pin_trigger_error(int instance, int code);
 void hw_dbg_pin_trigger_data(int instance, uint32_t data);
 
-// Stream device
+// uart device
+void hw_dbg_uart_setup_status_set(int instance, int status);
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
 #else
 #define _TRACE(fmt, ...)    //
 #endif
-
-/* Debug api end
-******************************************************************************/
-
-#include <cupkee_errno.h>
-#include <cupkee_event.h>
-#include <cupkee_bsp.h>
-
-/******************************************************************************
- * Hardware interface not in bsp.h
-******************************************************************************/
-#include "hw_console.h"
-
-#include "hw_gpio.h"
-#include "hw_uart.h"
 
 #endif /* __HW_MOCK_INC__ */
 

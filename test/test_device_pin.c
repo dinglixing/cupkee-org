@@ -107,6 +107,7 @@ static void test_config(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dir')\r",                            "\"in\"\r\n", 1));
 
     // return undefined, query a configure not defined
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(3)\r",                                "undefined\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('other')\r",                          "undefined\r\n", 1));
 
     // config set valid
@@ -242,6 +243,8 @@ static void test_enable(void)
                                               "})\r",                                         "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("e < 0\r",                                      "true\r\n", 1));
+    test_reply_show(1);
+    test_reply_show(0);
 
     // callback with error, if config not acceptable
     hw_dbg_pin_setup_status_set(0, CUPKEE_EINVAL);
@@ -369,8 +372,6 @@ static void test_event(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("e != -2\r",                                    "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.error == -2\r",                              "true\r\n", 1));
 
-    test_reply_show(1);
-    test_reply_show(0);
 }
 
 CU_pSuite test_device_pin(void)
@@ -381,9 +382,9 @@ CU_pSuite test_device_pin(void)
         CU_add_test(suite, "create",    test_create);
         CU_add_test(suite, "config",    test_config);
         CU_add_test(suite, "enable",    test_enable);
-        CU_add_test(suite, "read",      test_read);
-        CU_add_test(suite, "write",     test_write);
-        CU_add_test(suite, "event",     test_event);
+        CU_add_test(suite, "read  ",    test_read);
+        CU_add_test(suite, "write ",    test_write);
+        CU_add_test(suite, "event ",    test_event);
     }
 
     return suite;

@@ -53,7 +53,7 @@ static void test_create(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("b.instance\r",                                  "1\r\n", 1));
 
     // return undefined, if instance out of range
-    CU_ASSERT(0 == test_cupkee_run_with_reply("Device('uart', 100)\r",                         "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("Device('uart', 999)\r",                         "undefined\r\n", 1));
 
     // return undefined, if instance already existed
     CU_ASSERT(0 == test_cupkee_run_with_reply("Device('uart')\r",                              "undefined\r\n", 1));
@@ -91,18 +91,235 @@ static void test_create(void)
     return;
 }
 
+static void test_config(void)
+{
+    test_cupkee_reset();
+
+    CU_ASSERT(0 == test_cupkee_start(NULL));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var d\r",                                      "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = Device('uart')\r",                         "<object>\r\n", 1));
+
+    // config get default setting
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(0)\r",                                "9600\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(1)\r",                                "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(2)\r",                                "\"1bit\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(3)\r",                                "\"none\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate')\r",                       "9600\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits')\r",                       "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits')\r",                       "\"1bit\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity')\r",                         "\"none\"\r\n", 1));
+
+    // return undefined, query a configure not defined
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(5)\r",                                "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('other')\r",                          "undefined\r\n", 1));
+
+    // config set valid
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(0, 115200)\r",                        "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(1, 9)\r",                             "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(2, 1)\r",                             "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(3, 1)\r",                             "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate')\r",                       "115200\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits')\r",                       "9\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits')\r",                       "\"2bit\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity')\r",                         "\"odd\"\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate', 38400)\r",                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits', 8)\r",                    "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits', '0.5bit')\r",             "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity', 'even')\r",                 "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate')\r",                       "38400\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits')\r",                       "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits')\r",                       "\"0.5bit\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity')\r",                         "\"even\"\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config({"
+                                                "baudrate: 9600,"
+                                                "dataBits: 9,"
+                                                "stopBits: 0,"
+                                                "parity: 0"
+                                              "})\r",                                         "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate')\r",                       "9600\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits')\r",                       "9\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits')\r",                       "\"1bit\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity')\r",                         "\"none\"\r\n", 1));
+
+    // config set invalid
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(0, true)\r",                          "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(0, NaN)\r",                           "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(1, 'hello')\r",                       "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(1, [])\r",                            "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(2, 5)\r",                             "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(2, 'other')\r",                       "false\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config(4, 'other')\r",                       "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('other', 1)\r",                       "false\r\n", 1));
+
+    return;
+}
+
+static void test_enable(void)
+{
+    test_cupkee_reset();
+
+    CU_ASSERT(0 == test_cupkee_start(NULL));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var d, e, h;\r",                               "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = Device('uart')\r",                         "<object>\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.instance == 0\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.type == 'uart'\r",                           "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.category == 'stream'\r",                     "true\r\n", 1));
+
+    // Enable & Disable
+    hw_dbg_uart_setup_status_set(0, CUPKEE_OK);
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.disable()\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "false\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
+
+    // return true if device already enabled
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.disable()\r",                                "true\r\n", 1));
+
+    // return false if hardware setup fail
+    hw_dbg_uart_setup_status_set(0, CUPKEE_EINVAL);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "false\r\n", 1));
+
+    // return true if hardware setup ok
+    hw_dbg_uart_setup_status_set(0, CUPKEE_OK);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
+
+    // Config set is forbidden, when device is enabled.
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate', 9600)\r",                 "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits', 8)\r",                    "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits', 0)\r",                    "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity', 0)\r",                      "false\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config({"
+                                                "baudrate: 9600,"
+                                                "dataBits: 9,"
+                                                "stopBits: 0,"
+                                                "parity: 0"
+                                              "})\r",                                         "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable({"
+                                                "baudrate: 9600,"
+                                                "dataBits: 9,"
+                                                "stopBits: 0,"
+                                                "parity: 0"
+                                              "})\r",                                         "false\r\n", 1));
+
+    // Disable & Reset configures
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.disable()\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "false\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate', 9600)\r",                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits', 8)\r",                    "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits', 0)\r",                    "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity', 0)\r",                      "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate')\r",                       "9600\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits')\r",                       "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits')\r",                       "\"1bit\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity')\r",                         "\"none\"\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config({"
+                                                "baudrate: 19200,"
+                                                "dataBits: 7,"
+                                                "stopBits: 1,"
+                                                "parity: 1"
+                                              "})\r",                                         "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate')\r",                       "19200\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits')\r",                       "7\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits')\r",                       "\"2bit\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity')\r",                         "\"odd\"\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable({"
+                                                "baudrate: 9600,"
+                                                "dataBits: 8,"
+                                                "stopBits: 0,"
+                                                "parity: 0"
+                                              "})\r",                                         "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('baudrate')\r",                       "9600\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('dataBits')\r",                       "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('stopBits')\r",                       "\"1bit\"\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.config('parity')\r",                         "\"none\"\r\n", 1));
+
+    // Enable & Callback
+    CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",                                          "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h\r",                                          "undefined\r\n", 1));
+
+    // callback with handle, if config setting was accept
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.disable()\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable({"
+                                                "baudrate: 9600,"
+                                                "dataBits: 8,"
+                                                "stopBits: 0,"
+                                                "parity: 0"
+                                              "}, def (err, hnd) {"
+                                                 "if (err) e = err else h = hnd"
+                                              "})\r",                                         "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",                                          "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h == d\r",                                     "true\r\n", 1));
+
+    // callback with handle, if device already enabled
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable(def (err, hnd) {"
+                                                 "if (err) e = err else h = true"
+                                              "})\r",                                         "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",                                          "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("h\r",                                          "true\r\n", 1));
+
+    // callback with error, if give config and device already enabled
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable({"
+                                                "baudrate: 9600,"
+                                                "dataBits: 8,"
+                                                "stopBits: 0,"
+                                                "parity: 0"
+                                              "}, def (err, hnd) {"
+                                                 "if (err) e = err"
+                                              "})\r",                                         "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("e < 0\r",                                      "true\r\n", 1));
+
+    // callback with error, if config not acceptable
+    hw_dbg_uart_setup_status_set(0, CUPKEE_EINVAL);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.disable()\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable(function (err, hnd) {"
+                                                 "if (err) e = true"
+                                              "})\r",                                         "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",                                          "true\r\n", 1));
+
+    test_reply_show(1);
+    test_reply_show(0);
+    return;
+}
+
 CU_pSuite test_device_uart(void)
 {
     CU_pSuite suite = CU_add_suite("device uart", test_setup, test_clean);
 
     if (suite) {
         CU_add_test(suite, "create",    test_create);
-#if 0
         CU_add_test(suite, "config",    test_config);
         CU_add_test(suite, "enable",    test_enable);
-        CU_add_test(suite, "read",      test_read);
-        CU_add_test(suite, "write",     test_write);
-        CU_add_test(suite, "event",     test_event);
+#if 0
+        CU_add_test(suite, "read  ",    test_read);
+        CU_add_test(suite, "write ",    test_write);
+        CU_add_test(suite, "event ",    test_event);
 #endif
     }
 

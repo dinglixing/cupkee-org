@@ -38,6 +38,14 @@ static hw_uart_t uart_controls[HW_INSTANCES_UART];
 
 /****************************************************************************
  * Debug start                                                             */
+static int dbg_setup_status[HW_INSTANCES_UART];
+
+void hw_dbg_uart_setup_status_set(int instance, int status)
+{
+    dbg_setup_status[instance] = status;
+}
+
+
 /* Debug end                                                               *
  ***************************************************************************/
 static inline hw_uart_t *uart_get(int instance) {
@@ -66,9 +74,10 @@ static void uart_reset(int instance)
 static int uart_setup(int instance, uint8_t dev_id, const hw_config_t *config)
 {
     hw_uart_t *control = uart_get(instance);
-    int err = 0;
+    int err;
 
     /* Do hardware setup here */
+    err = -dbg_setup_status[instance];
 
     if (!err) {
         control->dev_id = dev_id;
