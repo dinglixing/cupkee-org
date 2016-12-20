@@ -76,9 +76,13 @@ int main(int argc, const char *argv[])
      * Test suites here:
      ***********************************************/
     test_hello();
-    test_misc();
+
+    test_util_buffer();
+
+    test_system_misc();
     test_device_pin();
     test_device_uart();
+
     // add test suite
 
     CU_basic_set_mode(CU_BRM_VERBOSE);

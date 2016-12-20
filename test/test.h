@@ -30,8 +30,8 @@ SOFTWARE.
 #include "CUnit.h"
 #include "CUnit_Basic.h"
 
-#include "hardware.h"
-#include "cupkee.h"
+#include <hardware.h>
+#include <cupkee.h>
 
 int  test_cupkee_reset(void);
 int  test_cupkee_start(const char *init);
@@ -41,7 +41,8 @@ int  test_cupkee_run_with_reply(const char *input, const char *expected, int try
 int  test_cupkee_run_without_reply(const char *input, int try_max);
 
 CU_pSuite test_hello(void);
-CU_pSuite test_misc(void);
+CU_pSuite test_util_buffer(void);
+CU_pSuite test_system_misc(void);
 CU_pSuite test_device_pin(void);
 CU_pSuite test_device_uart(void);
 

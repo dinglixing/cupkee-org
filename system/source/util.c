@@ -34,7 +34,7 @@ SOFTWARE.
 #define CK_BUF_SIZE             32
 
 typedef struct cupkee_buf_t {
-    uint16_t size;
+    uint16_t cap;
     uint16_t bgn;
     uint16_t len;
     uint8_t  ptr[CK_BUF_SIZE];
@@ -49,7 +49,7 @@ static void util_setup_buf(void)
 }
 
 static inline void _cupkee_buf_reset(cupkee_buf_t *b) {
-    b->size = CK_BUF_SIZE;
+    b->cap = CK_BUF_SIZE;
     b->len = 0;
     b->bgn = 0;
 }
@@ -89,26 +89,49 @@ void cupkee_buf_release(void *p)
     }
 }
 
-int cupkee_buf_is_empty(void *p) {
+int cupkee_buf_is_empty(void *p)
+{
     cupkee_buf_t *b = (cupkee_buf_t *)p;
 
     return b->len == 0;
 }
 
-int cupkee_buf_is_full(void *p) {
+int cupkee_buf_is_full(void *p)
+{
     cupkee_buf_t *b = (cupkee_buf_t *)p;
 
-    return b->len == b->size;
+    return b->len == b->cap;
+}
+
+int cupkee_buf_capacity(void *p)
+{
+    cupkee_buf_t *b = (cupkee_buf_t *)p;
+
+    return b->cap;
+}
+
+int cupkee_buf_space(void *p)
+{
+    cupkee_buf_t *b = (cupkee_buf_t *)p;
+
+    return b->cap - b->len;
+}
+
+int cupkee_buf_length(void *p)
+{
+    cupkee_buf_t *b = (cupkee_buf_t *)p;
+
+    return b->len;
 }
 
 int cupkee_buf_push(void *p, uint8_t d)
 {
     cupkee_buf_t *b = (cupkee_buf_t *)p;
 
-    if (b->len < b->size) {
+    if (b->len < b->cap) {
         int tail = b->bgn + b->len++;
-        if (tail >= b->size) {
-            tail -= b->size;
+        if (tail >= b->cap) {
+            tail -= b->cap;
         }
         b->ptr[tail] = d;
         return 1;
@@ -123,7 +146,7 @@ int cupkee_buf_shift(void *p, uint8_t *d)
 
     if (b->len) {
         *d = b->ptr[b->bgn++];
-        if (b->bgn >= b->size) {
+        if (b->bgn >= b->cap) {
             b->bgn = 0;
         }
         b->len--;
@@ -132,7 +155,7 @@ int cupkee_buf_shift(void *p, uint8_t *d)
     return 0;
 }
 
-int cupkee_buf_gets(void *p, int n, void *buf)
+int cupkee_buf_take(void *p, int n, void *buf)
 {
     cupkee_buf_t *b = (cupkee_buf_t *)p;
 
@@ -144,12 +167,12 @@ int cupkee_buf_gets(void *p, int n, void *buf)
         int tail = b->bgn + n;
         int size = n;
 
-        if (tail > b->size) {
-            tail -= b->size;
+        if (tail > b->cap) {
+            tail -= b->cap;
             size -= tail;
             memcpy(buf + size, b->ptr, tail);
         } else
-        if (tail == b->size) {
+        if (tail == b->cap) {
             tail = 0;
         }
 
@@ -161,23 +184,23 @@ int cupkee_buf_gets(void *p, int n, void *buf)
     return n;
 }
 
-int cupkee_buf_puts(void *p, int n, void *buf)
+int cupkee_buf_give(void *p, int n, void *buf)
 {
     cupkee_buf_t *b = (cupkee_buf_t *)p;
 
-    if (n + b->len > b->size) {
-        n = b->size - b->len;
+    if (n + b->len > b->cap) {
+        n = b->cap - b->len;
     }
 
     if (n) {
         int head = b->bgn + b->len;
         int size = n;
 
-        if (head >= b->size) {
-            head -= b->size;
+        if (head >= b->cap) {
+            head -= b->cap;
         } else
-        if (head + n > b->size) {
-            int wrap = head + n - b->size;
+        if (head + n > b->cap) {
+            int wrap = head + n - b->cap;
 
             size -= wrap;
             memcpy(b->ptr, buf + size, wrap);

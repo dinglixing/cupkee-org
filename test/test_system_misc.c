@@ -117,9 +117,7 @@ static void test_timeout(void)
 
     //test_reply_show(1);
     CU_ASSERT(0 == test_cupkee_run_with_reply("var a = 0\r",                    "undefined\r\n", 1));
-    test_reply_show(1);
     CU_ASSERT(0 == test_cupkee_run_with_reply("def f() return a++;\r",          "<function>\r\n", 1));
-    test_reply_show(0);
     CU_ASSERT(0 == test_cupkee_run_with_reply("f();\r",                         "0\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "1\r\n", 1));
 
@@ -179,9 +177,12 @@ static void test_timeout(void)
     hw_dbg_set_systicks(80);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("a\r",                            "8\r\n", 1));
+
+    test_reply_show(1);
+    test_reply_show(0);
 }
 
-CU_pSuite test_misc()
+CU_pSuite test_system_misc(void)
 {
     CU_pSuite suite = CU_add_suite("misc", test_setup, test_clean);
 
