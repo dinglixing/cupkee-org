@@ -495,8 +495,9 @@ static void test_event(void)
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.listen(0, def(e) err = e)\r",                "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.listen(1, def(d) data = d)\r",               "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d.listen(2, def(v) send = v)\r",               "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.listen(2, def() send = true)\r",             "true\r\n", 1));
 
+    // Data event, received timeout
     hw_dbg_set_systicks(0);
     hw_dbg_uart_data_give(0, "0123456789");
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
@@ -505,17 +506,29 @@ static void test_event(void)
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("data\r",                                       "<buffer>\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("data.toString() == '0123456789'\r",            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "0\r\n", 1));
 
-    return;
+    // Data event, received full
+    hw_dbg_uart_data_give(0, "01234567890123456789012345678901");
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data.length()\r",                              "32\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "0\r\n", 1));
+
+    // Drain event
+    hw_dbg_uart_send_state(0, 1);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("send\r",                                       "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write('hello')\r",                           "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("send\r",                                       "true\r\n", 1));
+
+    // Error event
+    hw_dbg_uart_data_give(0, "012345678901234567890123456789012");
+    CU_ASSERT(0 == test_cupkee_run_with_reply("err\r",                                        "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("err < 0\r",                                    "true\r\n", 1));
+
     test_reply_show(1);
     test_reply_show(0);
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read()\r",                                   "true\r\n", 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(999)\r",                                "true\r\n", 1));
-
-
-    hw_dbg_set_systicks(0);
-    hw_dbg_set_systicks(20);
-    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
 }
 
 
