@@ -70,6 +70,9 @@ void hw_dbg_pin_trigger_data(int instance, uint32_t data);
 
 // uart device
 void hw_dbg_uart_setup_status_set(int instance, int status);
+void hw_dbg_uart_data_give(int instance, const char *data);
+void hw_dbg_uart_send_state(int instance, int status);
+int  hw_dbg_uart_data_take(int instance, int n);
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)

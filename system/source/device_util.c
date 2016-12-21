@@ -99,3 +99,17 @@ int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list)
     return CUPKEE_EINVAL;
 }
 
+int device_convert_data(val_t *data, void **addr, int *size)
+{
+    if (val_is_buffer(data)) {
+        *size = _val_buffer_size(data);
+        *addr = _val_buffer_addr(data);
+    } else
+    if ((*size = string_len(data)) < 0) {
+        return 0;
+    } else {
+        *addr = (void *) val_2_cstring(data);
+    }
+    return 1;
+}
+

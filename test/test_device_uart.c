@@ -302,11 +302,222 @@ static void test_enable(void)
                                               "})\r",                                         "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("e\r",                                          "true\r\n", 1));
+}
 
+static void test_read(void)
+{
+    test_cupkee_reset();
+
+    CU_ASSERT(0 == test_cupkee_start(NULL));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var d, err, data;\r",                          "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = Device('uart')\r",                         "<object>\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.instance == 0\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.type == 'uart'\r",                           "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.category == 'stream'\r",                     "true\r\n", 1));
+
+    // Always false, when device is not enabled
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "false\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read()\r",                                   "false\r\n", 1));
+
+    // Enable device
+    hw_dbg_uart_setup_status_set(0, CUPKEE_OK);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "true\r\n", 1));
+
+    // Data received clean
+    CU_ASSERT(0 == test_cupkee_run_with_reply("function cb(e, d) {"
+                                                "if (e) {"
+                                                  "err = e;"
+                                                "} else {"
+                                                  "data = d;"
+                                                "}"
+                                              "}\r",                                          "<function>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read()\r",                                   "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(999)\r",                                "true\r\n", 1));
+
+    // read device no received
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(cb)\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data\r",                                       "<buffer>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data.length()\r",                              "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(1, cb)\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data\r",                                       "<buffer>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data.length()\r",                              "0\r\n", 1));
+
+    // read device had received
+    hw_dbg_uart_data_give(0, "0123456789");
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "10\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(2, cb)\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "8\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data\r",                                       "<buffer>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data.length()\r",                              "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data[0]\r",                                    "48\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data[1]\r",                                    "49\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(1)\r",                                  "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "7\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(5, cb)\r",                              "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data\r",                                       "<buffer>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data.length()\r",                              "5\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data.toString() == '34567'\r",                 "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(cb)\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data.length()\r",                              "2\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data[0]\r",                                    "56\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data[1]\r",                                    "57\r\n", 1));
+
+    hw_dbg_uart_data_give(0, "0123456789");
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "10\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read()\r",                                   "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "0\r\n", 1));
+
+    // error
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.disable()\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(cb)\r",                                 "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("err < 0\r",                                    "true\r\n", 1));
+}
+
+static void test_write(void)
+{
+    test_cupkee_reset();
+
+    CU_ASSERT(0 == test_cupkee_start(NULL));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var d, buf, err, data, send;\r",               "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = Device('uart')\r",                         "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("buf = Buffer('0123456789')\r",                 "<buffer>\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.instance == 0\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.type == 'uart'\r",                           "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.category == 'stream'\r",                     "true\r\n", 1));
+
+    // Always false, when device is not enabled
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "false\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write()\r",                                  "false\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("function cb(e, d, n) {"
+                                                "if (e) {"
+                                                  "err = e;"
+                                                "} else {"
+                                                  "data = d;"
+                                                  "send = n;"
+                                                "}"
+                                              "}\r",                                          "<function>\r\n", 1));
+
+    // Enable device
+    hw_dbg_uart_setup_status_set(0, CUPKEE_OK);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "true\r\n", 1));
+
+    // Write
+    hw_dbg_uart_send_state(0, 1);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(buf)\r",                               "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(10 == hw_dbg_uart_data_take(0, 10));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(buf, 20)\r",                           "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(10 == hw_dbg_uart_data_take(0, 20));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(buf, 7)\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(7 == hw_dbg_uart_data_take(0, 20));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(buf, 3, 20)\r",                        "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(7 == hw_dbg_uart_data_take(0, 20));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(buf, cb)\r",                           "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data == buf\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("send == 10\r",                                 "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(buf, 7, cb)\r",                        "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data == buf\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("send == 7\r",                                  "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(buf, 7, 20, cb)\r",                    "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data == buf\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("send == 3\r",                                  "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(buf, 10, 20, cb)\r",                   "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data == buf\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("send == 0\r",                                  "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(20 == hw_dbg_uart_data_take(0, 20));
+
+    // false write
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(cb)\r",                                "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("err < 0\r",                                    "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("err = 0\r",                                    "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(buf, -1, cb)\r",                       "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("err < 0\r",                                    "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("err = 0\r",                                    "0\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.disable()\r",                                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(cb)\r",                                "false\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("err < 0\r",                                    "true\r\n", 1));
+
+    return;
     test_reply_show(1);
     test_reply_show(0);
-    return;
 }
+
+static void test_event(void)
+{
+    test_cupkee_reset();
+
+    CU_ASSERT(0 == test_cupkee_start(NULL));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var d, buf, err, data, send;\r",               "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d = Device('uart')\r",                         "<object>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("buf = Buffer('0123456789')\r",                 "<buffer>\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.instance == 0\r",                            "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.type == 'uart'\r",                           "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.category == 'stream'\r",                     "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "false\r\n", 1));
+
+    // Enable device
+    hw_dbg_uart_setup_status_set(0, CUPKEE_OK);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable()\r",                                 "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
+
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.listen(0, def(e) err = e)\r",                "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.listen(1, def(d) data = d)\r",               "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.listen(2, def(v) send = v)\r",               "true\r\n", 1));
+
+    hw_dbg_set_systicks(0);
+    hw_dbg_uart_data_give(0, "0123456789");
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.received\r",                                 "10\r\n", 1));
+    hw_dbg_set_systicks(20);
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data\r",                                       "<buffer>\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("data.toString() == '0123456789'\r",            "true\r\n", 1));
+
+    return;
+    test_reply_show(1);
+    test_reply_show(0);
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read()\r",                                   "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.read(999)\r",                                "true\r\n", 1));
+
+
+    hw_dbg_set_systicks(0);
+    hw_dbg_set_systicks(20);
+    CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
+}
+
 
 CU_pSuite test_device_uart(void)
 {
@@ -316,11 +527,9 @@ CU_pSuite test_device_uart(void)
         CU_add_test(suite, "create",    test_create);
         CU_add_test(suite, "config",    test_config);
         CU_add_test(suite, "enable",    test_enable);
-#if 0
         CU_add_test(suite, "read  ",    test_read);
         CU_add_test(suite, "write ",    test_write);
         CU_add_test(suite, "event ",    test_event);
-#endif
     }
 
     return suite;

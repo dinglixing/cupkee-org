@@ -250,6 +250,16 @@ void cupkee_do_callback_error(env_t *env, val_t *cb, int code)
     cupkee_do_callback(env, cb, 1, &err);
 }
 
+void cupkee_do_callback_buffer(env_t *env, val_t *cb, type_buffer_t *buffer)
+{
+    val_t args[2];
+
+    val_set_undefined(args);
+    val_set_buffer(args + 1, buffer);
+
+    cupkee_do_callback(env, cb, 2, args);
+}
+
 int cupkee_id(val_t *in, int max, const char **names)
 {
     if (val_is_number(in)) {

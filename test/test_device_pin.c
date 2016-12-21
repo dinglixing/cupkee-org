@@ -316,7 +316,6 @@ static void test_write(void)
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable({pinNum: 4})\r",                      "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
 
-    return;
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.write(0)\r",                                 "true\r\n", 1));
     CU_ASSERT(0 == hw_dbg_pin_data_get(0, -1));
 
@@ -334,6 +333,8 @@ static void test_write(void)
     CU_ASSERT(1 == hw_dbg_pin_data_get(0, 2));
     CU_ASSERT(1 == hw_dbg_pin_data_get(0, 3));
     CU_ASSERT(15 == hw_dbg_pin_data_get(0, -1));
+
+    return;
 }
 
 static void test_event(void)

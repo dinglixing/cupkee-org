@@ -38,6 +38,7 @@ SOFTWARE.
 #define CUPKEE_ERESOURCE        20003   // not enought resource
 #define CUPKEE_EENABLED         20004   // config set for device that already enabled
 #define CUPKEE_ENOTENABLED      20005   // write & read device that not enabled
+#define CUPKEE_EOVERFLOW        20006   // stream revice overflow
 #define CUPKEE_EHARDWARE        21000   // hardware error
 #define CUPKEE_ESETTINGS        21001   // invalid settings
 

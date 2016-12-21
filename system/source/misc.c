@@ -168,8 +168,8 @@ static void print_array_value(val_t *v)
 
 static void print_buffer_value(val_t *v)
 {
-    int i, len = buffer_size(v);
-    uint8_t *ptr = buffer_addr(v);
+    int   i, len = _val_buffer_size(v);
+    uint8_t *ptr = _val_buffer_addr(v);
     char buf[16];
 
     snprintf(buf, 16, "<Buffer[%d]:", len);

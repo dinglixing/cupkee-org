@@ -37,21 +37,7 @@ int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list)
 
 void device_get_option(val_t *opt, int i, int max, const char **opt_list);
 
-static inline int device_param_stream(int ac, val_t *av, void **addr, int *size) {
-    if (ac) {
-        if (val_is_buffer(av)) {
-            *size = buffer_size(av);
-            *addr = buffer_addr(av);
-        } else
-        if ((*size = string_len(av)) < 0) {
-            return 0;
-        } else {
-            *addr = (void *) val_2_cstring(av);
-        }
-        return 1;
-    }
-    return 0;
-}
+int device_convert_data(val_t *data, void **addr, int *size);
 
 static inline int device_param_int(int ac, val_t *av, int *n) {
     if (ac > 0 && val_is_number(av)) {
