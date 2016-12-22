@@ -1,12 +1,4 @@
----
-title: cupkee简介
-date: 2016-12-09 00:07:33
-categories:
-  - cupkee
-tags:
-  - cupkee
-  - 简介
----
+
 
 cupkee是一个C语言编写的微型操作系统，它专门设计用于微控制器硬件板。
 
@@ -20,7 +12,7 @@ cupkee将板卡上的硬件资源抽象为设备，并定义了一组标准方�
 
 [关于cupkee的解释器](https://github.com/cupkee/panda)
 
-# 支持的硬件
+## 支持的硬件
 
 cupkee对硬件进行了抽象，定义为BSP接口，理论上能够被移植到所有GCC编译器支持的处理器上。
 
@@ -29,11 +21,11 @@ cupkee对硬件进行了抽象，定义为BSP接口，理论上能够被移植�
 * stm32f103 (当前的BSP是按照stm32f103rc的资源定义实现的)
 
 
-# 连接cupkee
+## 连接cupkee
 
 cupkee借用了板卡的usb作为console, 当你的PC或Mac通过usb与硬件板连接后(可能需要安装驱动)，通过常规的终端程序即可与cupkee进行交互。
 
-## mac用户
+### mac用户
 
 mac是非常方便的开发平台，其上自带的screen应用即可作为与cupkee的通信终端。(这是我在开发cupkee时的用法)
 
@@ -59,11 +51,11 @@ $ screen /dev/cu.usbmodemCUPKE1 115200
 > 
 ```
 
-## 非mac用户 或者不喜欢screen简陋功能
+### 非mac用户 或者不喜欢screen简陋功能
 
 你可以使用其它常用的应用软件，如：putty，xshell，超级终端...
 
-## 安装usb驱动
+### 安装usb驱动
 
 cupkee按照usb cdc规范，利用板卡上的usb口作为console。
 
@@ -78,7 +70,7 @@ cupkee按照usb cdc规范，利用板卡上的usb口作为console。
 * windows7, windowsxp: 市面上存在着各种usb转串口设备，理论上安装它们的驱动就可以 (因为没有windows环境，没有实际验证过)
 
 
-# cupkee使用简介
+## cupkee使用简介
 
 完成上述操作，就可以开始进行硬件编程了。
 
@@ -161,11 +153,11 @@ cupkee按照usb cdc规范，利用板卡上的usb口作为console。
 	...
 	```
 
-## cupkee提供的原生函数
+### cupkee提供的原生函数
 
 cupkee提供了一组原生函数供开发者使用
 
-### show
+#### show
 
 show函数被设计为一个即时帮助工具，它可以用来打印变量的内容，和当前cupkee支持的原生函数
 
@@ -202,7 +194,7 @@ show函数被设计为一个即时帮助工具，它可以用来打印变量的�
     undefined  // show函数的返回值, undefined表示该返回值无意义
     ```
 
-### systicks
+#### systicks
 
 cupkee内建有系统定时器，每秒1000次滴答（每毫秒一次）,作为系统程序的通用同步工具。
 
@@ -217,7 +209,7 @@ systicks函数返回系统启动后的总滴答数。
 }
 ```
 
-### ledMap & led
+#### ledMap & led
 
 点亮指示灯是硬件调整最基本的手段，cupkee为此专门提供了ledMap和led两个原生函数进行支持。
 
@@ -234,7 +226,7 @@ systicks函数返回系统启动后的总滴答数。
     3. 传入假值（0, false, ...）时，引脚设为低电平
 
 
-### setTimeout, setInterval, clearTimeout, clearInterval
+#### setTimeout, setInterval, clearTimeout, clearInterval
 
 cupkee提供了一组定时器函数，它们相对于使用systicks管理程序同步更加有效
 
@@ -278,7 +270,7 @@ clearTimeout()
 clearInterval()
 ```
 
-## cupkee上的设备
+### cupkee上的设备
 
 原生函数Device用来创建和查看可用设备。
 
@@ -296,7 +288,7 @@ undefined
 > adc = Device('adc', 0) // 申请adc设备实例0
 ```
 
-### pinMap & pin设备
+#### pinMap & pin设备
 
 采用相同处理器的不同的硬件板卡的引脚使用方案，往往并不同。cupkee需要一种处理机制，让一个处理器的固件程序支持多种板卡。
 
@@ -304,14 +296,14 @@ undefined
 PIN［1-15］可以分配给pin设备使用。
 
 
-# 获取cupkee固件程序
+## 获取cupkee固件程序
 
 1. 从cupkee网站下载
 
 2. 通过源代码编译
 
 
-# bug反馈
+## bug反馈
 
 在使用中发现bug的反馈，可以帮助我对程序持续进行完善。
 
@@ -320,11 +312,11 @@ PIN［1-15］可以分配给pin设备使用。
 1. 在github上提交issue（推荐）
 2. 发EMail到bug-report@cupkee.cn
 
-# 更多内容
+## 更多内容
 
 [请参考cupkee网站的手册](http://www.cupkee.cn)
 
-# 帮助cupkee成长
+## 帮助cupkee成长
 
 1. 使用并反馈bug或特性需求
 
