@@ -43,6 +43,7 @@ static const native_t native_entry[] = {
 
     {"Device",          device_native_create},
     {"pinMap",          device_native_pin_map},
+    {"ledMap",          device_native_led_map},
     {"led",             device_native_led},
 
     /* user native */

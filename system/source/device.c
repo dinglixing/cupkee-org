@@ -832,7 +832,7 @@ static val_t device_write_map(cupkee_device_t *device, env_t *env, int ac, val_t
 static val_t device_write_stream(cupkee_device_t *device, env_t *env, int ac, val_t *av)
 {
     void *addr;
-    int   size, offset, send, err = 0;
+    int   size, offset = 0, send = 0, err = 0;
     val_t *data;
 
     (void) env;
@@ -853,8 +853,6 @@ static val_t device_write_stream(cupkee_device_t *device, env_t *env, int ac, va
             offset = send;
             send = val_2_integer(av);
             ac--; av++;
-        } else {
-            offset = 0;
         }
 
         if (offset < 0 || send < 0) {
@@ -1275,6 +1273,26 @@ val_t device_native_pin_map(env_t *env, int ac, val_t *av)
     pin  = val_2_integer(av + 2);
 
     if (CUPKEE_OK == hw_pin_map(id, port, pin)) {
+        return VAL_TRUE;
+    } else {
+        return VAL_FALSE;
+    }
+}
+
+val_t device_native_led_map(env_t *env, int ac, val_t *av)
+{
+    int port, pin;
+
+    (void) env;
+
+    if (ac < 2 || !val_is_number(av) || !val_is_number(av + 1)) {
+        return VAL_FALSE;
+    }
+
+    port = val_2_integer(av);
+    pin  = val_2_integer(av + 1);
+
+    if (CUPKEE_OK == hw_led_map(port, pin)) {
         return VAL_TRUE;
     } else {
         return VAL_FALSE;

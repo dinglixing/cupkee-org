@@ -46,6 +46,7 @@ val_t native_clear_interval(env_t *env, int ac, val_t *av);
  */
 val_t device_native_create(env_t *env, int ac, val_t *av);
 val_t device_native_pin_map(env_t *env, int ac, val_t *av);
+val_t device_native_led_map(env_t *env, int ac, val_t *av);
 val_t device_native_led(env_t *env, int ac, val_t *av);
 
 // Filter api

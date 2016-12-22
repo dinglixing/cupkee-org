@@ -27,13 +27,14 @@ SOFTWARE.
 #ifndef __HW_GPIO_INC__
 #define __HW_GPIO_INC__
 
-int  hw_setup_gpio(void);
-void hw_poll_gpio(void);
+#define HW_INSTANCES_PIN    4
+
+int hw_setup_gpio(void);
 
 int hw_gpio_use(int port, uint16_t pins);
 int hw_gpio_release(int port, uint16_t pins);
 
-extern const hw_device_t hw_device_pin;
-extern const hw_driver_t hw_driver_pin;
+const hw_driver_t *hw_request_pin(int instance);
 
 #endif /* __HW_GPIO_INC__ */
+

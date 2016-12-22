@@ -27,6 +27,10 @@ SOFTWARE.
 #ifndef __CUPKEE_UTILS_INC__
 #define __CUPKEE_UTILS_INC__
 
+/* Todo: put to cupkee_type.h ? */
+#define CUPKEE_TRUE                 1
+#define CUPKEE_FALSE                0
+
 void *cupkee_buf_alloc(void);
 void  cupkee_buf_release(void *b);
 void  cupkee_buf_reset(void *b);

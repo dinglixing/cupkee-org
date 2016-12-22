@@ -1,5 +1,6 @@
 
 #include "timeout.h"
+#include "device.h"
 #include "misc.h"
 
 #define TIMEOUT_MAX   (16)
@@ -190,12 +191,7 @@ void systick_event_proc(env_t *env, int event)
         int repeat = 1;
 
         if (cur_ticks - to->from >= to->wait) {
-
             cupkee_do_callback(env, to->handle_ref, 0, NULL);
-            /*
-            env_push_call_function(env, to->handle_ref);
-            interp_execute_call(env, 0);
-            */
 
             if (to->repeat) {
                 to->from = cur_ticks;

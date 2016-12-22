@@ -27,11 +27,10 @@ SOFTWARE.
 #ifndef __HW_USART_INC__
 #define __HW_USART_INC__
 
-int  hw_setup_usart(void);
-void hw_poll_usart(void);
+#define HW_INSTANCES_UART         5
 
-extern const hw_device_t hw_device_uart;
-extern const hw_driver_t hw_driver_uart;
+void  hw_setup_usart(void);
+const hw_driver_t *hw_request_uart(int instance);
 
 #endif /* __HW_USART_INC__ */
 

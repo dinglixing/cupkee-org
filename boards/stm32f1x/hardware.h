@@ -47,68 +47,19 @@ SOFTWARE.
 
 #include <cupkee_errno.h>
 #include <cupkee_event.h>
+#include <cupkee_utils.h>
 #include <cupkee_bsp.h>
-
-#define PIN_DEVICE_NAME         "pin"
-#define PIN_DEVICE_ID           0
-#define PIN_EVENT_NUM           2
-#define PIN_CONFIG_NUM          3
-#define PIN_INSTANCE_NUM        2
-
-#define ADC_DEVICE_NAME         "adc"
-#define ADC_DEVICE_ID           2
-#define ADC_EVENT_NUM           2
-#define ADC_CONFIG_NUM          2
-#define ADC_INSTANCE_NUM        1
-
-#define DAC_DEVICE_NAME         "dac"
-#define DAC_DEVICE_ID           3
-#define DAC_EVENT_NUM           2
-#define DAC_CONFIG_NUM          2
-#define DAC_INSTANCE_NUM        1
-
-#define PULSE_DEVICE_NAME       "pulse"
-#define PULSE_DEVICE_ID         4
-#define PULSE_EVENT_NUM         1
-#define PULSE_CONFIG_NUM        2
-#define PULSE_INSTANCE_NUM      4
-
-#define PWM_DEVICE_NAME         "pwm"
-#define PWM_DEVICE_ID           5
-#define PWM_EVENT_NUM           1
-#define PWM_CONFIG_NUM          3
-#define PWM_INSTANCE_NUM        4
-
-#define COUNT_DEVICE_NAME       "counter"
-#define COUNT_DEVICE_ID         6
-#define COUNT_EVENT_NUM         2
-#define COUNT_CONFIG_NUM        3
-#define COUNT_INSTANCE_NUM      4
-
-#define TIMER_DEVICE_NAME       "timer"
-#define TIMER_DEVICE_ID         7
-#define TIMER_EVENT_NUM         2
-#define TIMER_CONFIG_NUM        2
-#define TIMER_INSTANCE_NUM      4
-
-#define HW_UART_DEVICE_NAME     "uart"
-#define HW_UART_DEVICE_ID       8
-#define HW_UART_EVENT_NUM       3
-#define HW_UART_CONFIG_NUM      3
-#define HW_UART_INSTANCE_NUM    5
-
-#define SPI_DEVICE_NAME         "spi"
-#define SPI_DEVICE_ID           10
-#define SPI_EVENT_NUM           3
-#define SPI_CONFIG_NUM          3
-#define SPI_INSTANCE_NUM        1
 
 #include "hw_usb.h"
 #include "hw_misc.h"
+
 #include "hw_gpio.h"
-#include "hw_adc.h"
 #include "hw_usart.h"
+
+/*
+#include "hw_adc.h"
 #include "hw_timer.h"
+*/
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
