@@ -30,11 +30,13 @@ SOFTWARE.
 int device_string_map(const char *name, int max, const char **str_list);
 int device_string_map_var(val_t *in, int max, const char **str_list);
 
-int device_set_uint8(val_t *val, uint8_t *conf);
+int device_set_uint8 (val_t *val, uint8_t *conf);
 int device_set_uint16(val_t *val, uint16_t *conf);
 int device_set_uint32(val_t *val, uint32_t *conf);
 int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list);
+int device_set_sequence(val_t *val, int max, uint8_t *n, uint8_t *seq);
 
+void device_get_sequence(env_t *env, val_t *val, uint8_t n, uint8_t *seq);
 void device_get_option(val_t *opt, int i, int max, const char **opt_list);
 
 int device_convert_data(val_t *data, void **addr, int *size);

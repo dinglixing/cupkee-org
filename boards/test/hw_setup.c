@@ -66,6 +66,7 @@ void hw_setup(void)
     /* device resouce setup */
     hw_setup_gpio();
     hw_setup_uart();
+    hw_setup_adc();
 }
 
 void hw_poll(void)
@@ -133,11 +134,19 @@ int hw_pin_map(int id, int port, int pin)
     return 0;
 }
 
+int hw_led_map(int port, int pin)
+{
+    (void) port;
+    (void) pin;
+
+    return 0;
+}
+
 const hw_driver_t *hw_device_request(int type, int instance)
 {
     switch (type) {
     case DEVICE_TYPE_PIN:       return hw_request_pin(instance);
-    case DEVICE_TYPE_ADC:
+    case DEVICE_TYPE_ADC:       return hw_request_adc(instance);
     case DEVICE_TYPE_DAC:
     case DEVICE_TYPE_PWM:
     case DEVICE_TYPE_PULSE:
@@ -154,7 +163,7 @@ int hw_device_instances(int type)
 {
     switch (type) {
     case DEVICE_TYPE_PIN:       return HW_INSTANCES_PIN;
-    case DEVICE_TYPE_ADC:
+    case DEVICE_TYPE_ADC:       return HW_INSTANCES_ADC;
     case DEVICE_TYPE_DAC:
     case DEVICE_TYPE_PWM:
     case DEVICE_TYPE_PULSE:

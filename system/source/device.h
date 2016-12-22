@@ -44,6 +44,10 @@ SOFTWARE.
 #define DEVICE_UART_CONF_PARITY     3
 #define DEVICE_UART_CONF_MAX        4
 
+#define DEVICE_ADC_CONF_CHANNELS    0
+#define DEVICE_ADC_CONF_INTERVAL    1
+#define DEVICE_ADC_CONF_MAX         2
+
 void device_init(void);
 void device_poll(void);
 void device_event_proc(env_t *env, int event);
@@ -67,8 +71,8 @@ typedef struct cupkee_device_desc_t {
     uint8_t event_mask;
     const char **conf_names;
     void (*def)(hw_config_t *conf);
-    int (*set)(hw_config_t *conf, int which, val_t *val);
-    int (*get)(hw_config_t *conf, int which, val_t *val);
+    int (*set)(env_t *env, hw_config_t *conf, int which, val_t *val);
+    int (*get)(env_t *env, hw_config_t *conf, int which, val_t *val);
 } cupkee_device_desc_t;
 
 typedef struct cupkee_device_t {

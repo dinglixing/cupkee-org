@@ -27,8 +27,8 @@ SOFTWARE.
 #ifndef __DEVICE_PWM_INC__
 #define __DEVICE_PWM_INC__
 
-int device_pwm_set(hw_config_t *conf, int which, val_t *val);
-int device_pwm_get(hw_config_t *conf, int which, val_t *val);
+int device_pwm_set(env_t *env, hw_config_t *conf, int which, val_t *val);
+int device_pwm_get(env_t *env, hw_config_t *conf, int which, val_t *val);
 
 #endif /* __DEVICE_PWM_INC__ */
 

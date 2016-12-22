@@ -27,8 +27,8 @@ SOFTWARE.
 #ifndef __DEVICE_PIN_INC__
 #define __DEVICE_PIN_INC__
 
-int device_pin_set(hw_config_t *conf, int which, val_t *val);
-int device_pin_get(hw_config_t *conf, int which, val_t *val);
+int device_pin_set(env_t *env, hw_config_t *conf, int which, val_t *val);
+int device_pin_get(env_t *env, hw_config_t *conf, int which, val_t *val);
 
 #endif /* __DEVICE_PIN_INC__ */
 

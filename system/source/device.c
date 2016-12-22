@@ -419,13 +419,13 @@ static int device_destroy(cupkee_device_t *device)
     return device_block_release(device);
 }
 
-static val_t device_config_set(cupkee_device_t *device, val_t *name, val_t *val)
+static val_t device_config_set(cupkee_device_t *device, env_t *env, val_t *name, val_t *val)
 {
     int which = device_string_map_var(name, device->desc->conf_num,
                                             device->desc->conf_names);
 
     if (which >= 0 && which < device->desc->conf_num) {
-        if (CUPKEE_OK == device->desc->set(&device->conf, which, val)) {
+        if (CUPKEE_OK == device->desc->set(env, &device->conf, which, val)) {
             return VAL_TRUE;
         } else {
             return VAL_FALSE;
@@ -435,7 +435,7 @@ static val_t device_config_set(cupkee_device_t *device, val_t *name, val_t *val)
     return VAL_FALSE;
 }
 
-static int device_config_set_all(cupkee_device_t *device, val_t *settings)
+static int device_config_set_all(cupkee_device_t *device, env_t *env, val_t *settings)
 {
     object_iter_t it;
     const char *key;
@@ -454,7 +454,7 @@ static int device_config_set_all(cupkee_device_t *device, val_t *settings)
             continue;
         }
 
-        if (device->desc->set(&device->conf, which, val)) {
+        if (device->desc->set(env, &device->conf, which, val)) {
             return -CUPKEE_EINVAL;
         }
     }
@@ -462,14 +462,14 @@ static int device_config_set_all(cupkee_device_t *device, val_t *settings)
     return CUPKEE_OK;
 }
 
-static val_t device_config_get(cupkee_device_t *device, val_t *name)
+static val_t device_config_get(cupkee_device_t *device, env_t *env, val_t *name)
 {
     int which = device_string_map_var(name, device->desc->conf_num,
                                             device->desc->conf_names);
 
     if (which >= 0 && which < device->desc->conf_num) {
         val_t setting;
-        if (CUPKEE_OK == device->desc->get(&device->conf, which, &setting)) {
+        if (CUPKEE_OK == device->desc->get(env, &device->conf, which, &setting)) {
             return setting;
         }
     }
@@ -527,10 +527,10 @@ static val_t device_native_config(env_t *env, int ac, val_t *av)
             return VAL_FALSE;
         }
 
-        return name ? device_config_set(device, name, setting) :
-                      device_config_set_all(device, setting) ? VAL_FALSE : VAL_TRUE;
+        return name ? device_config_set(device, env, name, setting) :
+                      device_config_set_all(device, env, setting) ? VAL_FALSE : VAL_TRUE;
     } else {
-        return name ? device_config_get(device, name) :
+        return name ? device_config_get(device, env, name) :
                       device_config_get_all(device);
     }
 }
@@ -554,7 +554,7 @@ static val_t device_native_enable(env_t *env, int ac, val_t *av)
         if (device_is_enabled(device)) {
             err = -CUPKEE_EENABLED;
         } else {
-            err = device_config_set_all(device, setting);
+            err = device_config_set_all(device, env, setting);
         }
         ac--; av++;
     }

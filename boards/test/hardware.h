@@ -46,6 +46,7 @@ SOFTWARE.
 
 #include "hw_gpio.h"
 #include "hw_uart.h"
+#include "hw_adc.h"
 
 /******************************************************************************
  * Debug api
@@ -73,6 +74,10 @@ void hw_dbg_uart_setup_status_set(int instance, int status);
 void hw_dbg_uart_data_give(int instance, const char *data);
 void hw_dbg_uart_send_state(int instance, int status);
 int  hw_dbg_uart_data_take(int instance, int n);
+
+// adc device
+void hw_dbg_adc_setup_status_set(int instance, int status);
+void hw_dbg_adc_update(int instance, int chn, uint16_t data);
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)

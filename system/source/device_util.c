@@ -61,13 +61,28 @@ void device_get_option(val_t *opt, int i, int max, const char **opt_list)
     val_set_foreign_string(opt, (intptr_t) opt_list[i]);
 }
 
+void device_get_sequence(env_t *env, val_t *val, uint8_t n, uint8_t *seq)
+{
+    array_t *a;
+    int i;
+
+    a = _array_create(env, n);
+    if (a) {
+        for (i = 0; i < n; i++) {
+            val_set_number(_array_elem(a, i), seq[i]);
+        }
+
+        val_set_array(val, (intptr_t) a);
+    }
+}
+
 int device_set_uint8(val_t *val, uint8_t *conf)
 {
     if (val_is_number(val)) {
         *conf = val_2_integer(val);
         return CUPKEE_OK;
     }
-    return CUPKEE_EINVAL;
+    return -CUPKEE_EINVAL;
 }
 
 int device_set_uint16(val_t *val, uint16_t *conf)
@@ -76,7 +91,7 @@ int device_set_uint16(val_t *val, uint16_t *conf)
         *conf = val_2_integer(val);
         return CUPKEE_OK;
     }
-    return CUPKEE_EINVAL;
+    return -CUPKEE_EINVAL;
 }
 
 int device_set_uint32(val_t *val, uint32_t *conf)
@@ -85,7 +100,7 @@ int device_set_uint32(val_t *val, uint32_t *conf)
         *conf = val_2_integer(val);
         return CUPKEE_OK;
     }
-    return CUPKEE_EINVAL;
+    return -CUPKEE_EINVAL;
 }
 
 int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list)
@@ -96,7 +111,51 @@ int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list)
         *conf = opt;
         return CUPKEE_OK;
     }
-    return CUPKEE_EINVAL;
+    return -CUPKEE_EINVAL;
+}
+
+int device_set_sequence(val_t *val, int max, uint8_t *n, uint8_t *seq)
+{
+    int i, len;
+    val_t *elems;
+
+    if (val_is_array(val)) {
+        array_t *array = (array_t *)val_2_intptr(val);
+
+        len   = array_len(array);
+        if (len > max) {
+            return -CUPKEE_EINVAL;
+        }
+        elems = array_values(array);
+    } else
+    if (val_is_number(val)) {
+        len = 1;
+        elems = val;
+    } else{
+        return -CUPKEE_EINVAL;
+    }
+
+    for (i = 0; i < len; i++) {
+        val_t *cur = elems + i;
+        int    num;
+
+        if (!val_is_number(cur)) {
+            return -CUPKEE_EINVAL;
+        }
+
+        num = val_2_integer(cur);
+        if (num > 255) {
+            return -CUPKEE_EINVAL;
+        }
+        seq[i] = num;
+    }
+
+    if (len) {
+        *n = len;
+        return CUPKEE_OK;
+    } else {
+        return -CUPKEE_EINVAL;
+    }
 }
 
 int device_convert_data(val_t *data, void **addr, int *size)

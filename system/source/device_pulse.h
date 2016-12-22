@@ -27,8 +27,8 @@ SOFTWARE.
 #ifndef __DEVICE_PULSE_INC__
 #define __DEVICE_PULSE_INC__
 
-int device_pulse_set(hw_config_t *conf, int which, val_t *val);
-int device_pulse_get(hw_config_t *conf, int which, val_t *val);
+int device_pulse_set(env_t *env, hw_config_t *conf, int which, val_t *val);
+int device_pulse_get(env_t *env, hw_config_t *conf, int which, val_t *val);
 
 #endif /* __DEVICE_PULSE_INC__ */
 

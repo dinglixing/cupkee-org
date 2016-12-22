@@ -28,8 +28,8 @@ SOFTWARE.
 #define __DEVICE_UART_INC__
 
 void device_uart_def(hw_config_t *conf);
-int device_uart_set(hw_config_t *conf, int which, val_t *val);
-int device_uart_get(hw_config_t *conf, int which, val_t *val);
+int device_uart_set(env_t *env, hw_config_t *conf, int which, val_t *val);
+int device_uart_get(env_t *env, hw_config_t *conf, int which, val_t *val);
 
 #endif /* __DEVICE_UART_INC__ */
 

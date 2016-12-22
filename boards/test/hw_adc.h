@@ -24,23 +24,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "device.h"
+#ifndef __HW_ADC_INC__
+#define __HW_ADC_INC__
 
-int device_timer_get(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    (void) env;
-    (void) conf;
-    (void) which;
-    (void) val;
-    return -CUPKEE_EINVAL;
-}
+#define HW_INSTANCES_ADC            1
 
-int device_timer_set(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    (void) env;
-    (void) conf;
-    (void) which;
-    (void) val;
-    return -CUPKEE_EINVAL;
-}
+void  hw_setup_adc(void);
+const hw_driver_t *hw_request_adc(int instance);
+
+#endif /* __HW_ADC_INC__ */
 
