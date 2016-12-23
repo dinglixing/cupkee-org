@@ -159,8 +159,9 @@ typedef struct hw_config_t {
 typedef struct hw_driver_t {
     void (*release) (int inst);
     void (*reset) (int inst);
-    void (*poll)  (int inst);
     int  (*setup) (int inst, uint8_t devid, const hw_config_t *conf);
+    void (*sync)  (int inst, uint32_t systicks);
+    void (*poll)  (int inst);
     union {
         struct {
             int (*get) (int inst, int offset, uint32_t*data);

@@ -218,10 +218,12 @@ DO_ERROR:
     return -err;
 }
 
-static void pin_poll(int instance)
+static void pin_sync(int instance, uint32_t systicks)
 {
     hw_pin_t *control = &pin_controls[instance];
     uint16_t data;
+
+    (void) systicks;
 
     if (control->config->dir == DEVICE_OPT_DIR_OUT) {
         return;
@@ -282,12 +284,11 @@ static int pin_size(int instance)
     return control->config->num;
 }
 
-
 static const hw_driver_t pin_driver = {
     .release = pin_release,
     .reset   = pin_reset,
     .setup   = pin_setup,
-    .poll    = pin_poll,
+    .sync    = pin_sync,
     .io.map  = {
         .get = pin_get,
         .set = pin_set,
@@ -384,6 +385,17 @@ int hw_gpio_use(int bank, uint16_t pins)
     hw_gpio_used[bank] |= pins;
 
     return CUPKEE_TRUE;
+}
+
+int hw_gpio_use_setup(int bank, uint16_t pins, uint8_t mode, uint8_t cnf)
+{
+    uint32_t bank_base = hw_gpio_bank[bank];
+
+    if (hw_gpio_use(bank, pins)) {
+        gpio_set_mode(bank_base, mode, cnf, pins);
+        return CUPKEE_TRUE;
+    }
+    return CUPKEE_FALSE;
 }
 
 int hw_gpio_release(int bank, uint16_t pins)

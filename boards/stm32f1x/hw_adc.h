@@ -24,47 +24,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __HARDWARE_INC__
-#define __HARDWARE_INC__
+#ifndef __HW_ADC_INC__
+#define __HW_ADC_INC__
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <libopencm3/cm3/systick.h>
-#include <libopencm3/cm3/cortex.h>
-#include <libopencm3/cm3/nvic.h>
-#include <libopencm3/cm3/vector.h>
-#include <libopencm3/stm32/desig.h>
-#include <libopencm3/stm32/rcc.h>
-#include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/flash.h>
-#include <libopencm3/stm32/usart.h>
-#include <libopencm3/stm32/timer.h>
-#include <libopencm3/stm32/adc.h>
-#include <libopencm3/usb/usbd.h>
-#include <libopencm3/usb/cdc.h>
+#define HW_INSTANCES_ADC            1
 
-#include <cupkee_errno.h>
-#include <cupkee_event.h>
-#include <cupkee_utils.h>
-#include <cupkee_bsp.h>
+void  hw_setup_adc(void);
+const hw_driver_t *hw_request_adc(int instance);
 
-#include "hw_usb.h"
-#include "hw_misc.h"
-
-#include "hw_gpio.h"
-#include "hw_usart.h"
-#include "hw_adc.h"
-/*
-#include "hw_timer.h"
-*/
-
-#if 0
-#define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)
-#else
-#define _TRACE(fmt, ...)    //
-#endif
-
-#endif /* __HARDWARE_INC__ */
+#endif /* __HW_ADC_INC__ */
 

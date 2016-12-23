@@ -84,7 +84,9 @@ static int adc_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
     for (i = 0; i < config->chn_num; i++) {
         control->data[i] = ADC_INVALID;
     }
+
     /* hardware setup here */
+
     err = -dbg_setup_status[instance];
 
     if (!err) {

@@ -50,6 +50,7 @@ SOFTWARE.
 
 void device_init(void);
 void device_poll(void);
+void device_sync(uint32_t systicks);
 void device_event_proc(env_t *env, int event);
 
 extern const char *device_opt_dir[];

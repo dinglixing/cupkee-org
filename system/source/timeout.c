@@ -219,5 +219,7 @@ void systick_event_proc(env_t *env, int event)
     } else {
         timeout_wait = tr;
     }
+
+    device_sync(cur_ticks);
 }
 

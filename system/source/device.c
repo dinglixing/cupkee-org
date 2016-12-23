@@ -1174,7 +1174,20 @@ void device_poll(void)
     cupkee_device_t *device = device_work;
 
     while (device) {
-        device->driver->poll(device->inst);
+        if (device->driver->poll)
+            device->driver->poll(device->inst);
+
+        device = device->next;
+    }
+}
+
+void device_sync(uint32_t systicks)
+{
+    cupkee_device_t *device = device_work;
+
+    while (device) {
+        if (device->driver->sync)
+            device->driver->sync(device->inst, systicks);
 
         device = device->next;
     }
