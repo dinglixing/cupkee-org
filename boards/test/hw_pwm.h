@@ -24,31 +24,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "device.h"
+#ifndef __HW_PWM_INC__
+#define __HW_PWM_INC__
 
-int device_pwm_get(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_pwm_t *pwm = (hw_config_pwm_t *) conf;
+#define HW_INSTANCES_PWM            4
 
-    switch (which) {
-    case DEVICE_PWM_CONF_CHANNELS: device_get_sequence(env, val, pwm->chn_num, pwm->chn_seq);   break;
-    case DEVICE_PWM_CONF_POLARITY: device_get_option(val, pwm->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    case DEVICE_PWM_CONF_PERIOD:   val_set_number(val, pwm->period);   break;
-    default:                       return -CUPKEE_EINVAL;
-    }
-    return CUPKEE_OK;
-}
+void  hw_setup_pwm(void);
+const hw_driver_t *hw_request_pwm(int instance);
 
-int device_pwm_set(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_pwm_t *pwm = (hw_config_pwm_t *) conf;
-
-    (void) env;
-    switch (which) {
-    case DEVICE_PWM_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_PWM, &pwm->chn_num, pwm->chn_seq);
-    case DEVICE_PWM_CONF_POLARITY: return device_set_option(val, &pwm->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    case DEVICE_PWM_CONF_PERIOD:   return device_set_uint16(val, &pwm->period);   break;
-    default:                       return -CUPKEE_EINVAL;
-    }
-}
+#endif /* __HW_PWM_INC__ */
 

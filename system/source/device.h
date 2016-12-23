@@ -48,6 +48,11 @@ SOFTWARE.
 #define DEVICE_ADC_CONF_INTERVAL    1
 #define DEVICE_ADC_CONF_MAX         2
 
+#define DEVICE_PWM_CONF_CHANNELS    0
+#define DEVICE_PWM_CONF_POLARITY    1
+#define DEVICE_PWM_CONF_PERIOD      2
+#define DEVICE_PWM_CONF_MAX         3
+
 void device_init(void);
 void device_poll(void);
 void device_sync(uint32_t systicks);

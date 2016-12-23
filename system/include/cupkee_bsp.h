@@ -113,8 +113,8 @@ typedef struct hw_config_adc_t {
 } hw_config_adc_t;
 
 typedef struct hw_config_pwm_t {
-    uint8_t  polarity;   // DEVICE_OPT_POLARITY
     uint16_t period;     // ms
+    uint8_t  polarity;   // DEVICE_OPT_POLARITY
     uint8_t chn_num;
     uint8_t chn_seq[HW_CHN_MAX_PWM];
 } hw_config_pwm_t;
@@ -132,6 +132,7 @@ typedef struct hw_config_timer_t {
 } hw_config_timer_t;
 
 typedef struct hw_config_counter_t {
+    uint16_t period;     // us
     uint8_t  polarity;   // DEVICE_OPT_POLARITY
     uint8_t chn_num;
     uint8_t chn_seq[HW_CHN_MAX_COUNTER];

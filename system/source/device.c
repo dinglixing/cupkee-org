@@ -678,6 +678,11 @@ static void device_read_map_all(cupkee_device_t *device, env_t *env, val_t *resu
 {
     uint32_t data;
 
+    if (!device->driver->io.map.get) {
+        val_set_undefined(result);
+        return;
+    }
+
     if (device->driver->io.map.get(device->inst, -1, &data) > 0) {
         // support combine read
         val_set_number(result, data);
@@ -709,7 +714,8 @@ static void device_read_map_elem(cupkee_device_t *device, env_t *env, int offset
     uint32_t data;
 
     if (offset >= 0) {
-        if (device->driver->io.map.get(device->inst, offset, &data) > 0) {
+        if (device->driver->io.map.get &&
+            device->driver->io.map.get(device->inst, offset, &data) > 0) {
             val_set_number(res, data);
         } else {
             *res = VAL_UNDEFINED;
@@ -821,6 +827,10 @@ static val_t device_write_map(cupkee_device_t *device, env_t *env, int ac, val_t
         } else {
             err = -CUPKEE_EINVAL;
         }
+    }
+
+    if (!device->driver->io.map.set) {
+        err = -CUPKEE_EIMPLEMENT;
     }
 
     if (!err) {

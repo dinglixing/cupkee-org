@@ -45,6 +45,8 @@ CU_pSuite test_util_buffer(void);
 CU_pSuite test_system_misc(void);
 CU_pSuite test_device_pin(void);
 CU_pSuite test_device_adc(void);
+CU_pSuite test_device_pwm(void);
 CU_pSuite test_device_uart(void);
 
 #endif /* __TEST_INC__ */
+

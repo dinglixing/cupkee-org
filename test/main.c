@@ -82,6 +82,7 @@ int main(int argc, const char *argv[])
     test_system_misc();
     test_device_pin();
     test_device_adc();
+    test_device_pwm();
     test_device_uart();
 
     // add test suite

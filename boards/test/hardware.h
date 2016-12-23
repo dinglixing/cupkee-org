@@ -47,6 +47,7 @@ SOFTWARE.
 #include "hw_gpio.h"
 #include "hw_uart.h"
 #include "hw_adc.h"
+#include "hw_pwm.h"
 
 /******************************************************************************
  * Debug api

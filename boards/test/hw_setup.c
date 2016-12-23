@@ -67,6 +67,7 @@ void hw_setup(void)
     hw_setup_gpio();
     hw_setup_uart();
     hw_setup_adc();
+    hw_setup_pwm();
 }
 
 void hw_poll(void)
@@ -147,8 +148,8 @@ const hw_driver_t *hw_device_request(int type, int instance)
     switch (type) {
     case DEVICE_TYPE_PIN:       return hw_request_pin(instance);
     case DEVICE_TYPE_ADC:       return hw_request_adc(instance);
-    case DEVICE_TYPE_DAC:
-    case DEVICE_TYPE_PWM:
+    case DEVICE_TYPE_DAC:       return NULL;
+    case DEVICE_TYPE_PWM:       return hw_request_pwm(instance);
     case DEVICE_TYPE_PULSE:
     case DEVICE_TYPE_TIMER:
     case DEVICE_TYPE_COUNTER:   return NULL;
@@ -164,8 +165,8 @@ int hw_device_instances(int type)
     switch (type) {
     case DEVICE_TYPE_PIN:       return HW_INSTANCES_PIN;
     case DEVICE_TYPE_ADC:       return HW_INSTANCES_ADC;
-    case DEVICE_TYPE_DAC:
-    case DEVICE_TYPE_PWM:
+    case DEVICE_TYPE_DAC:       return 0;
+    case DEVICE_TYPE_PWM:       return HW_INSTANCES_PWM;
     case DEVICE_TYPE_PULSE:
     case DEVICE_TYPE_TIMER:
     case DEVICE_TYPE_COUNTER:   return 0;
