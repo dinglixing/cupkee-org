@@ -48,10 +48,12 @@ static void hw_setup_systick(void)
 }
 
 /* systick interrupt handle routing  */
+static int system_tick_update = 0;
 uint32_t system_ticks_count = 0;
 void sys_tick_handler(void)
 {
     system_ticks_count++;
+    system_tick_update = 1;
 }
 
 int hw_memory_alloc(void **p, int size, int align)
@@ -107,7 +109,7 @@ void hw_setup(void)
     hw_setup_gpio();
     hw_setup_usart();
     hw_setup_adc();
-    //hw_setup_timer();
+    hw_setup_timer();
 
     /* initial resource system depend on */
     hw_setup_storage();
@@ -117,21 +119,20 @@ void hw_setup(void)
 
 void hw_poll(void)
 {
-    static uint32_t system_ticks_count_pre = 0;
-
     hw_poll_usb();
 
-    if (system_ticks_count_pre != system_ticks_count) {
+    if (system_tick_update) {
+        system_tick_update = 0;
         systick_event_post();
-        system_ticks_count_pre = system_ticks_count;
     }
 }
 
 void hw_halt(void)
 {
     hw_console_sync_puts("hardware halt!\r\n");
-    while (1) {
-    }
+
+    while (1)
+        ;
 }
 
 const hw_driver_t *hw_device_request(int type, int instance)
@@ -139,11 +140,11 @@ const hw_driver_t *hw_device_request(int type, int instance)
     switch (type) {
     case DEVICE_TYPE_PIN:       return hw_request_pin(instance);
     case DEVICE_TYPE_ADC:       return hw_request_adc(instance);
-    case DEVICE_TYPE_DAC:
-    case DEVICE_TYPE_PWM:
-    case DEVICE_TYPE_PULSE:
-    case DEVICE_TYPE_TIMER:
-    case DEVICE_TYPE_COUNTER:   return NULL;
+    case DEVICE_TYPE_DAC:       return NULL;
+    case DEVICE_TYPE_PWM:       return hw_request_pwm(instance);
+    case DEVICE_TYPE_PULSE:     return hw_request_pulse(instance);
+    case DEVICE_TYPE_TIMER:     return hw_request_timer(instance);
+    case DEVICE_TYPE_COUNTER:   return hw_request_counter(instance);
     case DEVICE_TYPE_UART:      return hw_request_uart(instance);
     case DEVICE_TYPE_USART:
     case DEVICE_TYPE_SPI:
@@ -156,11 +157,11 @@ int hw_device_instances(int type)
     switch (type) {
     case DEVICE_TYPE_PIN:       return HW_INSTANCES_PIN;
     case DEVICE_TYPE_ADC:       return HW_INSTANCES_ADC;
-    case DEVICE_TYPE_DAC:
-    case DEVICE_TYPE_PWM:
-    case DEVICE_TYPE_PULSE:
-    case DEVICE_TYPE_TIMER:
-    case DEVICE_TYPE_COUNTER:   return 0;
+    case DEVICE_TYPE_DAC:       return 0;
+    case DEVICE_TYPE_PWM:       return HW_INSTANCES_PWM;
+    case DEVICE_TYPE_PULSE:     return HW_INSTANCES_PULSE;
+    case DEVICE_TYPE_TIMER:     return HW_INSTANCES_TIMER;
+    case DEVICE_TYPE_COUNTER:   return HW_INSTANCES_COUNTER;
     case DEVICE_TYPE_UART:      return HW_INSTANCES_UART;
     case DEVICE_TYPE_USART:
     case DEVICE_TYPE_SPI:

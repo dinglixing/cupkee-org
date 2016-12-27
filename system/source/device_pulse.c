@@ -28,19 +28,27 @@ SOFTWARE.
 
 int device_pulse_get(env_t *env, hw_config_t *conf, int which, val_t *val)
 {
-    (void) env;
-    (void) conf;
-    (void) which;
-    (void) val;
-    return -CUPKEE_EINVAL;
+    hw_config_pulse_t *pulse= (hw_config_pulse_t *) conf;
+
+    switch (which) {
+    case DEVICE_PULSE_CONF_CHANNELS: device_get_sequence(env, val, pulse->chn_num, pulse->chn_seq);   break;
+    case DEVICE_PULSE_CONF_POLARITY: device_get_option(val, pulse->polarity, DEVICE_OPT_POLARITY_MAX - 1, device_opt_polarity); break;
+    default:                         return -CUPKEE_EINVAL;
+    }
+    return CUPKEE_OK;
 }
 
 int device_pulse_set(env_t *env, hw_config_t *conf, int which, val_t *val)
 {
+    hw_config_pulse_t *pulse= (hw_config_pulse_t *) conf;
+
     (void) env;
-    (void) conf;
-    (void) which;
-    (void) val;
-    return -CUPKEE_EINVAL;
+
+    switch (which) {
+    case DEVICE_PULSE_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_PULSE, &pulse->chn_num, pulse->chn_seq);
+    case DEVICE_PULSE_CONF_POLARITY: return device_set_option(val, &pulse->polarity, DEVICE_OPT_POLARITY_MAX - 1, device_opt_polarity);
+    default:                         return -CUPKEE_EINVAL;
+    }
+    return CUPKEE_OK;
 }
 

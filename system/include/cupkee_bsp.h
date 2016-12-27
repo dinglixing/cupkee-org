@@ -39,7 +39,7 @@ SOFTWARE.
 #define HW_CHN_MAX_ADC                      4
 #define HW_CHN_MAX_PWM                      4
 #define HW_CHN_MAX_PULSE                    4
-#define HW_CHN_MAX_TIMER                    1
+#define HW_CHN_MAX_TIMER                    2
 #define HW_CHN_MAX_COUNTER                  4
 
 #define HW_BUF_SIZE                         32

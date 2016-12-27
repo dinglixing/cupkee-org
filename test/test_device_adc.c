@@ -242,8 +242,6 @@ static void test_enable(void)
                                               "})\r",                                         "false\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.isEnabled()\r",                              "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("e < 0\r",                                      "true\r\n", 1));
-    test_reply_show(1);
-    test_reply_show(0);
 
     // callback with error, if config not acceptable
     hw_dbg_pin_setup_status_set(0, CUPKEE_EINVAL);
@@ -316,13 +314,14 @@ static void test_event(void)
 
     CU_ASSERT(0 == test_cupkee_start(NULL));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("var d, e, v;\r",                               "undefined\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("var d, e, v, i;\r",                            "undefined\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d = Device('adc')\r",                          "<object>\r\n", 1));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.read()\r",                                   "undefined\r\n", 1));
 
-    CU_ASSERT(0 == test_cupkee_run_with_reply("d.listen('data', function (data) {"
+    CU_ASSERT(0 == test_cupkee_run_with_reply("d.listen('data', function (data, idx) {"
                                                 "v = data;"
+                                                "i = idx;"
                                               "})\r",                                         "true\r\n", 1));
 
     CU_ASSERT(0 == test_cupkee_run_with_reply("d.enable({channel: [4, 1]})\r",                "true\r\n", 1));
@@ -330,13 +329,15 @@ static void test_event(void)
 
     hw_dbg_adc_update(0, 0, 100);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("v == 0\r",                                     "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v == 100\r",                                   "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("i == 0\r",                                     "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d[0]\r",                                       "100\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d[1]\r",                                       "undefined\r\n", 1));
 
     hw_dbg_adc_update(0, 1, 999);
     CU_ASSERT(0 == test_cupkee_run_without_reply(NULL, 1));
-    CU_ASSERT(0 == test_cupkee_run_with_reply("v == 1\r",                                     "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("v == 999\r",                                   "true\r\n", 1));
+    CU_ASSERT(0 == test_cupkee_run_with_reply("i == 1\r",                                     "true\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d[0]\r",                                       "100\r\n", 1));
     CU_ASSERT(0 == test_cupkee_run_with_reply("d[1]\r",                                       "999\r\n", 1));
     return;

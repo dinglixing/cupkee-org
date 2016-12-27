@@ -709,6 +709,34 @@ static void device_read_map_all(cupkee_device_t *device, env_t *env, val_t *resu
     }
 }
 
+static void device_read_map_last(cupkee_device_t *device, env_t *env, val_t *result)
+{
+    uint32_t i, v;
+
+    (void) env;
+
+    if (!device->driver->io.map.get) {
+        goto DO_ERROR;
+    }
+
+    // get updated channel index
+    if (device->driver->io.map.get(device->inst, -1, &i) != 1) {
+        goto DO_ERROR;
+    }
+
+    // get updated channel data
+    if (device->driver->io.map.get(device->inst, i, &v) != 1) {
+        goto DO_ERROR;
+    }
+    val_set_number(result, v);
+    val_set_number(result + 1, i);
+    return;
+
+DO_ERROR:
+    val_set_undefined(result);
+    val_set_undefined(result + 1);
+}
+
 static void device_read_map_elem(cupkee_device_t *device, env_t *env, int offset, val_t *res)
 {
     uint32_t data;
@@ -1066,11 +1094,20 @@ static void device_op_elem(void *env, intptr_t devid, val_t *which, val_t *elem)
 
 static void device_data_proc_map(cupkee_device_t *device, env_t *env)
 {
-    val_t data;
+    val_t args[2];
+    int   argc;
 
-    device_read_map_all(device, env, &data);
+    switch (device->desc->type) {
+    case DEVICE_TYPE_ADC:
+    case DEVICE_TYPE_TIMER:
+    case DEVICE_TYPE_COUNTER:
+        argc = 2; device_read_map_last(device, env, args);
+        break;
+    default:
+        argc = 1; device_read_map_all(device, env, args);
+    }
 
-    cupkee_do_callback(env, device->event_handle[DEVICE_EVENT_DATA], 1, &data);
+    cupkee_do_callback(env, device->event_handle[DEVICE_EVENT_DATA], argc, args);
 }
 
 static void device_data_proc_stream(cupkee_device_t *device, env_t *env)

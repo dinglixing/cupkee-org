@@ -31,27 +31,40 @@ SOFTWARE.
 
 #include "device_util.h"
 
-#define DEVICE_FL_ENABLE            1
+#define DEVICE_FL_ENABLE                1
 
-#define DEVICE_PIN_CONF_NUM         0
-#define DEVICE_PIN_CONF_START       1
-#define DEVICE_PIN_CONF_DIR         2
-#define DEVICE_PIN_CONF_MAX         3
+#define DEVICE_PIN_CONF_NUM             0
+#define DEVICE_PIN_CONF_START           1
+#define DEVICE_PIN_CONF_DIR             2
+#define DEVICE_PIN_CONF_MAX             3
 
-#define DEVICE_UART_CONF_BAUDRATE   0
-#define DEVICE_UART_CONF_DATABITS   1
-#define DEVICE_UART_CONF_STOPBITS   2
-#define DEVICE_UART_CONF_PARITY     3
-#define DEVICE_UART_CONF_MAX        4
+#define DEVICE_UART_CONF_BAUDRATE       0
+#define DEVICE_UART_CONF_DATABITS       1
+#define DEVICE_UART_CONF_STOPBITS       2
+#define DEVICE_UART_CONF_PARITY         3
+#define DEVICE_UART_CONF_MAX            4
 
-#define DEVICE_ADC_CONF_CHANNELS    0
-#define DEVICE_ADC_CONF_INTERVAL    1
-#define DEVICE_ADC_CONF_MAX         2
+#define DEVICE_ADC_CONF_CHANNELS        0
+#define DEVICE_ADC_CONF_INTERVAL        1
+#define DEVICE_ADC_CONF_MAX             2
 
-#define DEVICE_PWM_CONF_CHANNELS    0
-#define DEVICE_PWM_CONF_POLARITY    1
-#define DEVICE_PWM_CONF_PERIOD      2
-#define DEVICE_PWM_CONF_MAX         3
+#define DEVICE_PWM_CONF_CHANNELS        0
+#define DEVICE_PWM_CONF_POLARITY        1
+#define DEVICE_PWM_CONF_PERIOD          2
+#define DEVICE_PWM_CONF_MAX             3
+
+#define DEVICE_PULSE_CONF_CHANNELS      0
+#define DEVICE_PULSE_CONF_POLARITY      1
+#define DEVICE_PULSE_CONF_MAX           2
+
+#define DEVICE_TIMER_CONF_CHANNELS      0
+#define DEVICE_TIMER_CONF_POLARITY      1
+#define DEVICE_TIMER_CONF_MAX           2
+
+#define DEVICE_COUNTER_CONF_CHANNELS    0
+#define DEVICE_COUNTER_CONF_POLARITY    1
+#define DEVICE_COUNTER_CONF_PERIOD      2
+#define DEVICE_COUNTER_CONF_MAX         3
 
 void device_init(void);
 void device_poll(void);

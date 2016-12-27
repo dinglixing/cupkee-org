@@ -28,19 +28,25 @@ SOFTWARE.
 
 int device_timer_get(env_t *env, hw_config_t *conf, int which, val_t *val)
 {
-    (void) env;
-    (void) conf;
-    (void) which;
-    (void) val;
-    return -CUPKEE_EINVAL;
+    hw_config_timer_t *timer = (hw_config_timer_t *) conf;
+
+    switch (which) {
+    case DEVICE_TIMER_CONF_CHANNELS: device_get_sequence(env, val, timer->chn_num, timer->chn_seq);   break;
+    case DEVICE_TIMER_CONF_POLARITY: device_get_option(val, timer->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    default:                       return -CUPKEE_EINVAL;
+    }
+    return CUPKEE_OK;
 }
 
 int device_timer_set(env_t *env, hw_config_t *conf, int which, val_t *val)
 {
+    hw_config_timer_t *timer = (hw_config_timer_t *) conf;
+
     (void) env;
-    (void) conf;
-    (void) which;
-    (void) val;
-    return -CUPKEE_EINVAL;
+    switch (which) {
+    case DEVICE_TIMER_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_TIMER, &timer->chn_num, timer->chn_seq);
+    case DEVICE_TIMER_CONF_POLARITY: return device_set_option(val, &timer->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    default:                       return -CUPKEE_EINVAL;
+    }
 }
 

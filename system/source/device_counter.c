@@ -28,19 +28,27 @@ SOFTWARE.
 
 int device_counter_get(env_t *env, hw_config_t *conf, int which, val_t *val)
 {
-    (void) env;
-    (void) conf;
-    (void) which;
-    (void) val;
-    return -CUPKEE_EINVAL;
+    hw_config_counter_t *counter = (hw_config_counter_t *) conf;
+
+    switch (which) {
+    case DEVICE_COUNTER_CONF_CHANNELS: device_get_sequence(env, val, counter->chn_num, counter->chn_seq);   break;
+    case DEVICE_COUNTER_CONF_POLARITY: device_get_option(val, counter->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    case DEVICE_COUNTER_CONF_PERIOD:   val_set_number(val, counter->period);   break;
+    default:                       return -CUPKEE_EINVAL;
+    }
+    return CUPKEE_OK;
 }
 
 int device_counter_set(env_t *env, hw_config_t *conf, int which, val_t *val)
 {
+    hw_config_counter_t *counter = (hw_config_counter_t *) conf;
+
     (void) env;
-    (void) conf;
-    (void) which;
-    (void) val;
-    return -CUPKEE_EINVAL;
+    switch (which) {
+    case DEVICE_COUNTER_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_COUNTER, &counter->chn_num, counter->chn_seq);
+    case DEVICE_COUNTER_CONF_POLARITY: return device_set_option(val, &counter->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    case DEVICE_COUNTER_CONF_PERIOD:   return device_set_uint16(val, &counter->period);   break;
+    default:                       return -CUPKEE_EINVAL;
+    }
 }
 
