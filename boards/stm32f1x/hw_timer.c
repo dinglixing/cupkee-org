@@ -39,9 +39,10 @@ typedef struct hw_pulse_t {
 typedef struct hw_timer_t {
     uint8_t dev_id;
     uint8_t last;
+    uint8_t high_tail;
     uint8_t update;
-    int32_t duration[HW_CHN_MAX_TIMER];
-    int32_t data[HW_CHN_MAX_TIMER];
+    int32_t duration[4]; // 4 CCR
+    int32_t data[4];
     const hw_config_timer_t *config;
 } hw_timer_t;
 
@@ -75,12 +76,50 @@ static hw_counter_t *counter_controls   = (hw_counter_t *) device_controls;
 static void device_timer_isr(int instance, uint32_t base)
 {
     uint32_t status = TIM_SR(base);
+    hw_timer_t *control = &timer_controls[instance];
 
-    TIM_CNT(base) = 0;
     TIM_SR(base) = 0;
 
-    (void) status;
-    (void) instance;
+    if (status & TIM_SR_UIF) {
+        control->duration[0] += 50000; // add 1 second
+        control->duration[1] += 50000; // add 1 second
+        control->duration[2] += 50000; // add 1 second
+        control->duration[3] += 50000; // add 1 second
+    }
+
+    if (status & TIM_SR_CC1IF) {
+        uint32_t cnt = TIM_CCR1(base);
+
+        control->data[0] = control->duration[0] + cnt;
+        control->update |= 1;
+
+        control->duration[1] = -cnt;
+    } else
+    if (status & TIM_SR_CC2IF) {
+        uint32_t cnt = TIM_CCR2(base);
+
+        control->data[1] = control->duration[1] + cnt;
+        control->update |= 2;
+
+        control->duration[0] = -cnt;
+    }
+
+    if (status & TIM_SR_CC3IF) {
+        uint32_t cnt = TIM_CCR3(base);
+
+        control->data[2] = control->duration[2] + cnt;
+        control->update |= 4;
+
+        control->duration[3] = -cnt;
+    } else
+    if (status & TIM_SR_CC4IF) {
+        uint32_t cnt = TIM_CCR4(base);
+
+        control->data[3] = control->duration[3] + cnt;
+        control->update |= 8;
+
+        control->duration[2] = -cnt;
+    }
 }
 
 static void device_count_isr(int instance, uint32_t base)
@@ -336,11 +375,46 @@ static void device_setup_out(uint32_t base, uint32_t channel, uint8_t polarity)
     TIM_CR1(base) = TIM_CR1_CKD_CK_INT | TIM_CR1_CMS_EDGE;
 }
 
-static void device_setup_timer(uint32_t base, uint32_t channel, const hw_config_timer_t *config)
+static void device_setup_timer(int instance, uint32_t channel)
 {
-    (void) base;
-    (void) channel;
-    (void) config;
+    uint32_t base = device_base[instance];
+    uint32_t ccr_enable = 0, isr_enable = 0;
+
+    TIM_CR1(base) = TIM_CR1_CKD_CK_INT | TIM_CR1_CMS_EDGE | TIM_CR1_DIR_UP;
+    TIM_PSC(base) = 1440;     // 20uS pre tick
+    TIM_ARR(base) = 50000;
+    TIM_EGR(base) = TIM_EGR_UG; // update to real register
+
+    if (channel & 3) {
+        if (channel & 1) {
+            TIM_CCMR1(base) = TIM_CCMR1_CC1S_IN_TI1 | TIM_CCMR1_CC2S_IN_TI1 |
+                              TIM_CCMR1_IC1F_CK_INT_N_8;
+        } else {
+            TIM_CCMR1(base) = TIM_CCMR1_CC1S_IN_TI2 | TIM_CCMR1_CC2S_IN_TI2 |
+                              TIM_CCMR1_IC2F_CK_INT_N_8;
+        }
+        ccr_enable = TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC2P;
+        isr_enable = 3 << 1;
+    }
+
+    if (channel & 12) {
+        if (channel & 4) {
+            TIM_CCMR2(base) = TIM_CCMR2_CC3S_IN_TI1 | TIM_CCMR2_CC4S_IN_TI1 |
+                              TIM_CCMR2_IC3F_CK_INT_N_8;
+        } else {
+            TIM_CCMR2(base) = TIM_CCMR2_CC3S_IN_TI2 | TIM_CCMR2_CC4S_IN_TI2 |
+                              TIM_CCMR2_IC4F_CK_INT_N_8;
+        }
+        ccr_enable |= TIM_CCER_CC3E | TIM_CCER_CC4E | TIM_CCER_CC4P;
+        isr_enable |= 3 << 3;
+    }
+
+    nvic_enable_irq(device_irq[instance]);
+
+    TIM_SR(base) = 0;
+    TIM_DIER(base) = isr_enable | 1;
+    TIM_CCER(base) = ccr_enable;
+    TIM_CR1(base) |= TIM_CR1_CEN;
 }
 
 static int device_setup_counter(int instance, uint32_t channel)
@@ -649,6 +723,13 @@ static int timer_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
         control->duration[i] = 0;
     }
 
+    if (config->chn_num > 1 && config->chn_seq[1] > 1) {
+        // 2 channels & high channel in tail of sequence
+        control->high_tail = 1;
+    } else {
+        control->high_tail = 0;
+    }
+
     /* hardware setup here */
     err = device_channel_convert_timer(&channel, config->chn_num, config->chn_seq);
     if (err) {
@@ -661,10 +742,10 @@ static int timer_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
         goto DO_END;
     }
 
-    device_setup_timer(base, channel, config);
-
     control->dev_id = dev_id;
     control->config = config;
+
+    device_setup_timer(instance, channel);
 
 DO_END:
     return err;
@@ -672,7 +753,57 @@ DO_END:
 
 static void timer_poll(int instance)
 {
-    (void) instance;
+    hw_timer_t *control = &timer_controls[instance];
+
+    if (control->update) {
+        const hw_config_timer_t *config = control->config;
+        uint8_t update = control->update;
+        int trigger = 0;
+
+        if (update & 3) {
+            if (control->update & 1) {
+                if (config->polarity != DEVICE_OPT_POLARITY_POSITIVE) {
+                    trigger = 1;
+                }
+            } else {
+                if (config->polarity != DEVICE_OPT_POLARITY_NEGATIVE) {
+                    control->data[0] = control->data[1]; // Valid data always in data[0]
+                    trigger = 1;
+                }
+            }
+            control->update &= ~3;
+
+            if (trigger) {
+                if (config->chn_num > 1 && !control->high_tail) {
+                    control->last = 1;
+                } else {
+                    control->last = 0;
+                }
+                device_data_post(control->dev_id);
+            }
+        } else {
+            if (control->update & 4) {
+                if (config->polarity != DEVICE_OPT_POLARITY_POSITIVE) {
+                    trigger = 1;
+                }
+            } else {
+                if (config->polarity != DEVICE_OPT_POLARITY_NEGATIVE) {
+                    control->data[2] = control->data[3]; // Valid data always in data[2]
+                    trigger = 1;
+                }
+            }
+            control->update = 0;
+
+            if (trigger) {
+                if (config->chn_num > 1 && control->high_tail) {
+                    control->last = 1;
+                } else {
+                    control->last = 0;
+                }
+                device_data_post(control->dev_id);
+            }
+        }
+    }
 }
 
 static int timer_get(int instance, int off, uint32_t *data)
@@ -680,11 +811,17 @@ static int timer_get(int instance, int off, uint32_t *data)
     hw_timer_t *control = &timer_controls[instance];
     const hw_config_timer_t *config = control->config;
 
-    (void) config;
-    (void) off;
-    (void) data;
+    if (off < 0) {
+        *data = control->last;
+    } else
+    if (off < config->chn_num) {
+        off = config->chn_seq[off] > 1 ? 2 : 0;
+        *data = control->data[off];
+    } else {
+        return 0;
+    }
 
-    return 0;
+    return 1;
 }
 
 static int timer_size(int instance)
@@ -720,8 +857,6 @@ static int counter_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
         control->data[i] = 0;
         control->duration[i] = 0;
     }
-    control->dev_id = dev_id;
-    control->config = config;
 
     /* hardware setup here */
     err = device_channel_convert(&channel, config->chn_num, config->chn_seq);
@@ -730,6 +865,10 @@ static int counter_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
     }
 
     err = device_setup_counter(instance, channel);
+    if (!err) {
+        control->dev_id = dev_id;
+        control->config = config;
+    }
 
 DO_END:
     return err;
@@ -738,20 +877,21 @@ DO_END:
 static void counter_poll(int instance)
 {
     hw_counter_t *control = &counter_controls[instance];
-    const hw_config_counter_t *config = control->config;
-    int i;
 
-    (void) instance;
+    if (control->update) {
+        const hw_config_counter_t *config = control->config;
+        int i;
 
-    for (i = 0; i < config->chn_num; i++) {
-        uint8_t ch = config->chn_seq[i];
-        uint8_t x  = 1 << ch;
+        for (i = 0; i < config->chn_num; i++) {
+            uint8_t ch = config->chn_seq[i];
+            uint8_t x  = 1 << ch;
 
-        if (control->update & x) {
-            control->update &= ~x;
-            control->last = i;
-            device_data_post(control->dev_id);
-            break;
+            if (control->update & x) {
+                control->update &= ~x;
+                control->last = i;
+                device_data_post(control->dev_id);
+                break;
+            }
         }
     }
 }

@@ -68,6 +68,9 @@ void hw_setup(void)
     hw_setup_uart();
     hw_setup_adc();
     hw_setup_pwm();
+    hw_setup_pulse();
+    hw_setup_timer();
+    hw_setup_counter();
 }
 
 void hw_poll(void)
@@ -150,9 +153,9 @@ const hw_driver_t *hw_device_request(int type, int instance)
     case DEVICE_TYPE_ADC:       return hw_request_adc(instance);
     case DEVICE_TYPE_DAC:       return NULL;
     case DEVICE_TYPE_PWM:       return hw_request_pwm(instance);
-    case DEVICE_TYPE_PULSE:
-    case DEVICE_TYPE_TIMER:
-    case DEVICE_TYPE_COUNTER:   return NULL;
+    case DEVICE_TYPE_PULSE:     return hw_request_pulse(instance);
+    case DEVICE_TYPE_TIMER:     return hw_request_timer(instance);
+    case DEVICE_TYPE_COUNTER:   return hw_request_counter(instance);
     case DEVICE_TYPE_UART:      return hw_request_uart(instance);
     case DEVICE_TYPE_USART:
     case DEVICE_TYPE_SPI:
@@ -167,9 +170,9 @@ int hw_device_instances(int type)
     case DEVICE_TYPE_ADC:       return HW_INSTANCES_ADC;
     case DEVICE_TYPE_DAC:       return 0;
     case DEVICE_TYPE_PWM:       return HW_INSTANCES_PWM;
-    case DEVICE_TYPE_PULSE:
-    case DEVICE_TYPE_TIMER:
-    case DEVICE_TYPE_COUNTER:   return 0;
+    case DEVICE_TYPE_PULSE:     return HW_INSTANCES_PULSE;
+    case DEVICE_TYPE_TIMER:     return HW_INSTANCES_TIMER;
+    case DEVICE_TYPE_COUNTER:   return HW_INSTANCES_COUNTER;
     case DEVICE_TYPE_UART:      return HW_INSTANCES_UART;
     case DEVICE_TYPE_USART:
     case DEVICE_TYPE_SPI:

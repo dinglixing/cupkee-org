@@ -48,6 +48,9 @@ SOFTWARE.
 #include "hw_uart.h"
 #include "hw_adc.h"
 #include "hw_pwm.h"
+#include "hw_pulse.h"
+#include "hw_timer.h"
+#include "hw_counter.h"
 
 /******************************************************************************
  * Debug api

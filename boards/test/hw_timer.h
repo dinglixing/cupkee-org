@@ -24,32 +24,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __TEST_INC__
-#define __TEST_INC__
+#ifndef __HW_TIMER_INC__
+#define __HW_TIMER_INC__
 
-#include "CUnit.h"
-#include "CUnit_Basic.h"
+#define HW_INSTANCES_TIMER            4
 
-#include <hardware.h>
-#include <cupkee.h>
+void  hw_setup_timer(void);
+const hw_driver_t *hw_request_timer(int instance);
 
-int  test_cupkee_reset(void);
-int  test_cupkee_start(const char *init);
-
-void test_reply_show(int on);
-int  test_cupkee_run_with_reply(const char *input, const char *expected, int try);
-int  test_cupkee_run_without_reply(const char *input, int try_max);
-
-CU_pSuite test_hello(void);
-CU_pSuite test_util_buffer(void);
-CU_pSuite test_system_misc(void);
-CU_pSuite test_device_pin(void);
-CU_pSuite test_device_adc(void);
-CU_pSuite test_device_pwm(void);
-CU_pSuite test_device_pulse(void);
-CU_pSuite test_device_timer(void);
-CU_pSuite test_device_counter(void);
-CU_pSuite test_device_uart(void);
-
-#endif /* __TEST_INC__ */
+#endif /* __HW_TIMER_INC__ */
 
