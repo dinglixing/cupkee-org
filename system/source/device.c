@@ -283,7 +283,7 @@ static void device_show(void)
 {
     int i, max = sizeof(device_entrys) / sizeof(cupkee_device_desc_t *);
 
-    hw_console_sync_puts("DEVICE TYPE:CATEGORY CONF INST\r\n");
+    hw_console_sync_puts("DEVICE CONF INST TYPE:CATEGORY\r\n");
     for (i = 0; i < max; i++) {
         const cupkee_device_desc_t *desc = device_entrys[i];
         char buf[32];
@@ -292,30 +292,30 @@ static void device_show(void)
         // name
         n = strlen(desc->name);
         hw_console_sync_puts(desc->name);
-        while(n++ < 8) {
+        while(n++ < 9) {
             hw_console_sync_putc(' ');
         }
 
+        // conf & instance number
+        snprintf(buf, 32, " %2d\t%2d", desc->conf_num, hw_device_instances(desc->type));
+        hw_console_sync_puts(buf);
+
         // id
-        snprintf(buf, 16, "%2d ", desc->type);
+        snprintf(buf, 16, "  %2d ", desc->type);
         hw_console_sync_puts(buf);
 
         // type
         if (desc->category == DEVICE_CATEGORY_MAP) {
-            hw_console_sync_puts("  M  ");
+            hw_console_sync_puts(":M\r\n");
         } else
         if (desc->category == DEVICE_CATEGORY_STREAM) {
-            hw_console_sync_puts("  S  ");
+            hw_console_sync_puts(":S\r\n");
         } else
         if (desc->category == DEVICE_CATEGORY_BLOCK) {
-            hw_console_sync_puts("  B  ");
+            hw_console_sync_puts(":B\r\n");
         } else {
-            hw_console_sync_puts("  ?  ");
+            hw_console_sync_puts(":?\r\n");
         }
-
-        // conf
-        snprintf(buf, 32, " %2d\t%2d\r\n", desc->conf_num, hw_device_instances(desc->type));
-        hw_console_sync_puts(buf);
     }
 }
 
@@ -755,18 +755,21 @@ static void device_read_map_elem(cupkee_device_t *device, env_t *env, int offset
 
 static val_t device_read_map(cupkee_device_t *device, env_t *env, int ac, val_t *av)
 {
-    val_t result;
-    int offset;
+    if (device_is_enabled(device)) {
+        val_t result;
+        int offset;
 
-    if (ac && val_is_number(av)) {
-        offset = val_2_integer(av);
+        if (ac && val_is_number(av)) {
+            offset = val_2_integer(av);
+        } else {
+            offset = -1;
+        }
+
+        device_read_map_elem(device, env, offset, &result);
+        return result;
     } else {
-        offset = -1;
+        return VAL_UNDEFINED;
     }
-
-    device_read_map_elem(device, env, offset, &result);
-
-    return result;
 }
 
 static int device_read_stream_n(cupkee_device_t *device, env_t *env, int n, val_t *res)
@@ -1001,7 +1004,7 @@ static val_t device_native_write(env_t *env, int ac, val_t *av)
 
 static void device_element(cupkee_device_t *device, env_t *env, int index, val_t *elem)
 {
-    if (device->desc->category == DEVICE_CATEGORY_MAP) {
+    if (device_is_enabled(device) && device->desc->category == DEVICE_CATEGORY_MAP) {
         device_read_map_elem(device, env, index, elem);
     } else {
         val_set_undefined(elem);

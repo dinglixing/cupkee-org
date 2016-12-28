@@ -64,6 +64,7 @@ typedef union {
 
 static uint8_t     device_used;
 static uint8_t     device_type[HW_TIMER_INSTANCE];
+static uint16_t    device_status_mask[HW_TIMER_INSTANCE];
 static hw_device_t device_controls[HW_TIMER_INSTANCE];
 static const uint32_t device_base[] = {TIM2, TIM3, TIM4, TIM5};
 static const uint32_t device_irq[] = {NVIC_TIM2_IRQ, NVIC_TIM3_IRQ, NVIC_TIM4_IRQ, NVIC_TIM5_IRQ};
@@ -79,12 +80,15 @@ static void device_timer_isr(int instance, uint32_t base)
     hw_timer_t *control = &timer_controls[instance];
 
     TIM_SR(base) = 0;
-
     if (status & TIM_SR_UIF) {
         control->duration[0] += 50000; // add 1 second
         control->duration[1] += 50000; // add 1 second
         control->duration[2] += 50000; // add 1 second
         control->duration[3] += 50000; // add 1 second
+
+        // Hardware bug?
+        // Disabled cc channel IF be set!
+        status &= device_status_mask[instance];
     }
 
     if (status & TIM_SR_CC1IF) {
@@ -134,6 +138,10 @@ static void device_count_isr(int instance, uint32_t base)
         control->duration[1] += 50000; // add 1 second
         control->duration[2] += 50000; // add 1 second
         control->duration[3] += 50000; // add 1 second
+
+        // Hardware bug?
+        // Disabled cc channel IF be set!
+        status &= device_status_mask[instance];
     }
 
     if (status & TIM_SR_CC1IF) {
@@ -336,6 +344,7 @@ static void device_reset(int instance, uint32_t channel)
     device_channel_reset(instance, channel);
 
     TIM_DIER(base) = 0;
+    TIM_CCER(base) = 0;
     TIM_CR2(base) = 0;
     TIM_CR1(base) = 0;
 }
@@ -385,6 +394,8 @@ static void device_setup_timer(int instance, uint32_t channel)
     TIM_ARR(base) = 50000;
     TIM_EGR(base) = TIM_EGR_UG; // update to real register
 
+    device_status_mask[instance] = 0;
+    TIM_CCER(base) = 0;
     if (channel & 3) {
         if (channel & 1) {
             TIM_CCMR1(base) = TIM_CCMR1_CC1S_IN_TI1 | TIM_CCMR1_CC2S_IN_TI1 |
@@ -394,25 +405,37 @@ static void device_setup_timer(int instance, uint32_t channel)
                               TIM_CCMR1_IC2F_CK_INT_N_8;
         }
         ccr_enable = TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC2P;
-        isr_enable = 3 << 1;
+        isr_enable = TIM_DIER_CC1IE | TIM_DIER_CC2IE;
+        device_status_mask[instance] |= 6;
+    } else {
+        TIM_CCMR1(base) = 0;
     }
 
+#ifndef TIM_CCMR2_CC3S_IN_TI3
+#define TIM_CCMR2_CC3S_IN_TI3  (1 << 0)
+#define TIM_CCMR2_CC3S_IN_TI4  (2 << 0)
+#define TIM_CCMR2_CC4S_IN_TI4  (1 << 8)
+#define TIM_CCMR2_CC4S_IN_TI3  (2 << 8)
+#endif
     if (channel & 12) {
         if (channel & 4) {
-            TIM_CCMR2(base) = TIM_CCMR2_CC3S_IN_TI1 | TIM_CCMR2_CC4S_IN_TI1 |
+            TIM_CCMR2(base) = TIM_CCMR2_CC3S_IN_TI3 | TIM_CCMR2_CC4S_IN_TI3 |
                               TIM_CCMR2_IC3F_CK_INT_N_8;
         } else {
-            TIM_CCMR2(base) = TIM_CCMR2_CC3S_IN_TI2 | TIM_CCMR2_CC4S_IN_TI2 |
+            TIM_CCMR2(base) = TIM_CCMR2_CC3S_IN_TI4 | TIM_CCMR2_CC4S_IN_TI4 |
                               TIM_CCMR2_IC4F_CK_INT_N_8;
         }
         ccr_enable |= TIM_CCER_CC3E | TIM_CCER_CC4E | TIM_CCER_CC4P;
-        isr_enable |= 3 << 3;
+        isr_enable |= TIM_DIER_CC3IE | TIM_DIER_CC4IE;
+        device_status_mask[instance] |= 0x18;
+    } else {
+        TIM_CCMR2(base) = 0;
     }
 
     nvic_enable_irq(device_irq[instance]);
 
     TIM_SR(base) = 0;
-    TIM_DIER(base) = isr_enable | 1;
+    TIM_DIER(base) = isr_enable | TIM_DIER_UIE;
     TIM_CCER(base) = ccr_enable;
     TIM_CR1(base) |= TIM_CR1_CEN;
 }
@@ -430,23 +453,28 @@ static int device_setup_counter(int instance, uint32_t channel)
 
     TIM_CCMR1(base) = 0;
     TIM_CCMR2(base) = 0;
+    device_status_mask[instance] = 0;
     if (channel & 1) {
         TIM_CCMR1(base) |= TIM_CCMR1_IC1F_CK_INT_N_8 | 1;
         enable |= TIM_CCER_CC1P | TIM_CCER_CC1E;
+        device_status_mask[instance] |= 0x2;
     }
     if (channel & 2) {
         TIM_CCMR1(base) |= TIM_CCMR1_IC2F_CK_INT_N_8 | (1 << 8);
         enable |= TIM_CCER_CC2P | TIM_CCER_CC2E;
+        device_status_mask[instance] |= 0x4;
     }
     if (channel & 4) {
         TIM_CCMR2(base) |= TIM_CCMR2_IC3F_CK_INT_N_8 | 1;
         enable |= TIM_CCER_CC3P | TIM_CCER_CC3E;
+        device_status_mask[instance] |= 0x8;
     }
     if (channel & 8) {
         TIM_CCMR2(base) |= TIM_CCMR2_IC4F_CK_INT_N_8 | (1 << 8);
         enable |= TIM_CCER_CC4P | TIM_CCER_CC4E;
+        device_status_mask[instance] |= 0x10;
     }
-    if (config->polarity == DEVICE_OPT_POLARITY_NEGATIVE) {
+    if (config->polarity != DEVICE_OPT_POLARITY_NEGATIVE) {
         enable &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P | TIM_CCER_CC3P | TIM_CCER_CC4P);
     }
     TIM_CCER(base) = enable;
@@ -816,7 +844,7 @@ static int timer_get(int instance, int off, uint32_t *data)
     } else
     if (off < config->chn_num) {
         off = config->chn_seq[off] > 1 ? 2 : 0;
-        *data = control->data[off];
+        *data = control->data[off] * 20;
     } else {
         return 0;
     }
