@@ -42,7 +42,7 @@ static const native_t native_entry[] = {
 
     {"scripts",         native_scripts},
 
-    {"xxx",             device_native_create},
+    {"Device",          device_native_create},
     /* user native */
 };
 
@@ -72,10 +72,23 @@ int main(int argc, const char *argv[])
         return CU_get_error();
     }
 
-    // add test suite here:
+    /***********************************************
+     * Test suites here:
+     ***********************************************/
     test_hello();
-    test_misc();
-    test_devices();
+
+    test_util_buffer();
+
+    test_system_misc();
+    test_device_pin();
+    test_device_adc();
+    test_device_pwm();
+    test_device_pulse();
+    test_device_timer();
+    test_device_counter();
+    test_device_uart();
+
+    // add test suite
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();

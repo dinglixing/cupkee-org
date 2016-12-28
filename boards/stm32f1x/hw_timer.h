@@ -27,19 +27,17 @@ SOFTWARE.
 #ifndef __HW_TIMER_INC__
 #define __HW_TIMER_INC__
 
-void hw_setup_timer(void);
-void hw_poll_timer(void);
+#define HW_TIMER_INSTANCE           4
+#define HW_INSTANCES_PWM            HW_TIMER_INSTANCE
+#define HW_INSTANCES_PULSE          HW_TIMER_INSTANCE
+#define HW_INSTANCES_TIMER          HW_TIMER_INSTANCE
+#define HW_INSTANCES_COUNTER        HW_TIMER_INSTANCE
 
-extern const hw_driver_t hw_driver_pulse;
-extern const hw_device_t hw_device_pulse;
-
-extern const hw_driver_t hw_driver_pwm;
-extern const hw_device_t hw_device_pwm;
-
-extern const hw_driver_t hw_driver_count;
-extern const hw_device_t hw_device_count;
-
-extern const hw_driver_t hw_driver_timer;
-extern const hw_device_t hw_device_timer;
+void  hw_setup_timer(void);
+const hw_driver_t *hw_request_pwm(int instance);
+const hw_driver_t *hw_request_pulse(int instance);
+const hw_driver_t *hw_request_timer(int instance);
+const hw_driver_t *hw_request_counter(int instance);
 
 #endif /* __HW_TIMER_INC__ */
+

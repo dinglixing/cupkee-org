@@ -27,8 +27,13 @@ SOFTWARE.
 #ifndef __CUPKEE_EVENT_INC__
 #define __CUPKEE_EVENT_INC__
 
-void devices_event_post(int dev, int which, int event);
+// defined in event.c
 void systick_event_post(void);
+
+// devinde in device.c
+void device_error_post(uint8_t dev_id, int16_t code);
+void device_data_post(uint8_t dev_id);
+void device_drain_post(uint8_t dev_id);
 
 #endif /* __CUPKEE_EVENT_INC__ */
 

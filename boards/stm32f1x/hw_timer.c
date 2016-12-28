@@ -26,144 +26,194 @@ SOFTWARE.
 
 #include "hardware.h"
 
-#define INSTANCE_NUM    4       // instance of all timer devices
+typedef struct hw_pwm_t {
+    uint8_t dev_id;
+    const hw_config_pwm_t *config;
+} hw_pwm_t;
 
-#define CONFIG_CHN      0       // channel selected
-#define CONFIG_POLARITY 1       // output polarity
-#define CONFIG_PERIOD   2       // output polarity
-#define CONFIG_NUM      3       // config number of all timer devies
+typedef struct hw_pulse_t {
+    uint8_t dev_id;
+    const hw_config_pulse_t *config;
+} hw_pulse_t;
 
-#define MODE_OUT        0
-#define MODE_COUNT      1
-#define MODE_TIMER      2
+typedef struct hw_timer_t {
+    uint8_t dev_id;
+    uint8_t last;
+    uint8_t high_tail;
+    uint8_t update;
+    int32_t duration[4]; // 4 CCR
+    int32_t data[4];
+    const hw_config_timer_t *config;
+} hw_timer_t;
 
-#define FLAG_ACTIVE     4
-#define FLAG_EDGE_UP    1
-#define FLAG_EDGE_DOWN  2
+typedef struct hw_counter_t {
+    uint8_t dev_id;
+    uint8_t last;
+    uint8_t update;
+    int32_t duration[HW_CHN_MAX_COUNTER];
+    int32_t data[HW_CHN_MAX_COUNTER];
+    const hw_config_counter_t *config;
+} hw_counter_t;
 
-#define VAL_POSI_20US   0
-#define VAL_POSI_S      1
-#define VAL_NEGA_20US   2
-#define VAL_NEGA_S      3
-#define CHANNEL_NUM     4
+typedef union {
+    hw_pwm_t        pwm;
+    hw_pulse_t      pulse;
+    hw_timer_t      timer;
+    hw_counter_t    counter;
+} hw_device_t;
 
-static uint8_t device_used = 0;
-static uint8_t device_work = 0;
-
+static uint8_t     device_used;
+static uint8_t     device_type[HW_TIMER_INSTANCE];
+static uint16_t    device_status_mask[HW_TIMER_INSTANCE];
+static hw_device_t device_controls[HW_TIMER_INSTANCE];
 static const uint32_t device_base[] = {TIM2, TIM3, TIM4, TIM5};
 static const uint32_t device_irq[] = {NVIC_TIM2_IRQ, NVIC_TIM3_IRQ, NVIC_TIM4_IRQ, NVIC_TIM5_IRQ};
 
-static int device_error[INSTANCE_NUM];
-static int device_data[INSTANCE_NUM][CHANNEL_NUM];
-static int device_settings[INSTANCE_NUM][CONFIG_NUM];
-static uint8_t device_flag[INSTANCE_NUM];
-static uint8_t device_type[INSTANCE_NUM];
-static uint8_t device_events[INSTANCE_NUM];
+static hw_pwm_t   *pwm_controls         = (hw_pwm_t *)     device_controls;
+static hw_pulse_t *pulse_controls       = (hw_pulse_t *)   device_controls;
+static hw_timer_t *timer_controls       = (hw_timer_t *)   device_controls;
+static hw_counter_t *counter_controls   = (hw_counter_t *) device_controls;
 
-static const char *device_config_names[] = {
-    "channel", "polarity", "period"
-};
-static const char *device_opt_names[] = {
-    "positive", "negative", "edge", "chn1", "chn2", "chn3", "chn4"
-};
-static const hw_config_desc_t pulse_pwm_count_config_descs[] = {
-    {
-        .type = HW_CONFIG_NUM,
-    },
-    {
-        .type = HW_CONFIG_OPT,
-        .opt_num = 2,
-        .opt_start = 0,
-    },
-    {
-        .type = HW_CONFIG_NUM,
-    }
-};
-static const hw_config_desc_t timer_config_descs[] = {
-    {
-        .type = HW_CONFIG_OPT,
-        .opt_num = 2,
-        .opt_start = 3,
-    },
-    {
-        .type = HW_CONFIG_OPT,
-        .opt_num = 3,
-        .opt_start = 0,
-    }
-};
+static void device_timer_isr(int instance, uint32_t base)
+{
+    uint32_t status = TIM_SR(base);
+    hw_timer_t *control = &timer_controls[instance];
 
-static inline int device_is_inused(int inst) {
-    if (inst < INSTANCE_NUM) {
-        return device_used & (1 << inst);
+    TIM_SR(base) = 0;
+    if (status & TIM_SR_UIF) {
+        control->duration[0] += 50000; // add 1 second
+        control->duration[1] += 50000; // add 1 second
+        control->duration[2] += 50000; // add 1 second
+        control->duration[3] += 50000; // add 1 second
+
+        // Hardware bug?
+        // Disabled cc channel IF be set!
+        status &= device_status_mask[instance];
+    }
+
+    if (status & TIM_SR_CC1IF) {
+        uint32_t cnt = TIM_CCR1(base);
+
+        control->data[0] = control->duration[0] + cnt;
+        control->update |= 1;
+
+        control->duration[1] = -cnt;
+    } else
+    if (status & TIM_SR_CC2IF) {
+        uint32_t cnt = TIM_CCR2(base);
+
+        control->data[1] = control->duration[1] + cnt;
+        control->update |= 2;
+
+        control->duration[0] = -cnt;
+    }
+
+    if (status & TIM_SR_CC3IF) {
+        uint32_t cnt = TIM_CCR3(base);
+
+        control->data[2] = control->duration[2] + cnt;
+        control->update |= 4;
+
+        control->duration[3] = -cnt;
+    } else
+    if (status & TIM_SR_CC4IF) {
+        uint32_t cnt = TIM_CCR4(base);
+
+        control->data[3] = control->duration[3] + cnt;
+        control->update |= 8;
+
+        control->duration[2] = -cnt;
+    }
+}
+
+static void device_count_isr(int instance, uint32_t base)
+{
+    uint32_t status = TIM_SR(base);
+    hw_counter_t *control = &counter_controls[instance];
+    const hw_config_counter_t *config = control->config;
+    TIM_SR(base) = 0;
+
+    if (status & TIM_SR_UIF) {
+        control->duration[0] += 50000; // add 1 second
+        control->duration[1] += 50000; // add 1 second
+        control->duration[2] += 50000; // add 1 second
+        control->duration[3] += 50000; // add 1 second
+
+        // Hardware bug?
+        // Disabled cc channel IF be set!
+        status &= device_status_mask[instance];
+    }
+
+    if (status & TIM_SR_CC1IF) {
+        if ((control->duration[0] + TIM_CCR1(base)) * 20 > config->period) {
+            control->duration[0] = -TIM_CCR1(base);
+            control->data[0]++;
+            control->update |= 1;
+        }
+    }
+    if (status & TIM_SR_CC2IF) {
+        if ((control->duration[1] + TIM_CCR2(base)) * 20 > config->period) {
+            control->duration[1] = -TIM_CCR2(base);
+            control->data[1]++;
+            control->update |= 2;
+        }
+    }
+    if (status & TIM_SR_CC3IF) {
+        if ((control->duration[2] + TIM_CCR3(base)) * 20 > config->period) {
+            control->duration[2] = -TIM_CCR3(base);
+            control->data[2]++;
+            control->update |= 4;
+        }
+    }
+    if (status & TIM_SR_CC4IF) {
+        if ((control->duration[3] + TIM_CCR4(base)) * 20 > config->period) {
+            control->duration[3] = -TIM_CCR4(base);
+            control->data[3]++;
+            control->update |= 8;
+        }
+    }
+}
+
+void tim2_isr(void)
+{
+    if (device_type[0]) {
+        device_timer_isr(0, TIM2);
     } else {
-        return 0;
+        device_count_isr(0, TIM2);
     }
 }
 
-static inline int device_is_work(int inst) {
-    return (device_used & device_work) & (1 << inst);
-}
-
-static inline void device_set_work(int inst) {
-    device_work |= (1 << inst);
-}
-
-static inline void device_clr_work(int inst) {
-    device_work |= (1 << inst);
-}
-
-static inline void device_clr_error(int inst) {
-    device_error[inst] = 0;
-}
-
-static inline void device_clr_event(int inst) {
-    device_events[inst] = 0;
-}
-
-static void device_set_error(int inst, int error)
+void tim3_isr(void)
 {
-    device_error[inst] = error;
-
-    if (device_events[inst] & 1) {
-        devices_event_post(device_type[inst], inst, DEVICE_EVENT_ERR);
+    if (device_type[1]) {
+        device_timer_isr(1, TIM3);
+    } else {
+        device_count_isr(1, TIM3);
     }
 }
 
-static int device_get_error(int id, int inst)
+void tim4_isr(void)
 {
-    (void) id;
-
-    if (device_is_inused(inst)) {
-        return device_error[inst];
+    if (device_type[2]) {
+        device_timer_isr(2, TIM4);
+    } else {
+        device_count_isr(2, TIM4);
     }
-    return 0;
 }
 
-static inline uint32_t device_conf_channel(int inst) {
-    uint32_t channel = device_settings[inst][CONFIG_CHN] & 0xf;
-
-    return channel ? channel : 0xf; // 0 as all channels
+void tim5_isr(void)
+{
+    if (device_type[3]) {
+        device_timer_isr(3, TIM5);
+    } else {
+        device_count_isr(3, TIM5);
+    }
 }
 
-static inline uint32_t device_timer_conf_channel(int inst) {
-    uint32_t channel = device_settings[inst][CONFIG_CHN];
-
-    // a: use channel 1
-    // b: use channel 2
-    return channel ? 2 : 1;
-}
-
-static inline int device_conf_polarity(int inst) {
-    return device_settings[inst][CONFIG_POLARITY];
-}
-
-static inline uint16_t device_conf_period(int inst) {
-    uint16_t period = device_settings[inst][CONFIG_PERIOD];
+static inline int pwm_period(uint16_t setting) {
+    uint16_t period = setting + 1;
 
     // 1 - 1000 ms
-    if (period < 1) {
-        period = 1;
-    } else
     if (period > 1000) {
         period = 1000;
     }
@@ -171,219 +221,49 @@ static inline uint16_t device_conf_period(int inst) {
     return period * 50 - 1;
 }
 
-static void device_isr(int inst, uint32_t base)
+static int device_alloc(int instance)
 {
-    uint32_t status = TIM_SR(base);
-
-    if (device_type[inst] == COUNT_DEVICE_ID) {
-        if (status & TIM_SR_CC1IF) {
-            device_data[inst][0]++;
-            device_flag[inst]++;
-        }
-        if (status & TIM_SR_CC2IF) {
-            device_data[inst][1]++;
-            device_flag[inst]++;
-        }
-        if (status & TIM_SR_CC3IF) {
-            device_data[inst][2]++;
-            device_flag[inst]++;
-        }
-        if (status & TIM_SR_CC4IF) {
-            device_data[inst][3]++;
-            device_flag[inst]++;
-        }
+    if (device_used & (1 << instance)) {
+        return 0;
     }
-
-    if (device_type[inst] == TIMER_DEVICE_ID) {
-        TIM_CNT(base) = 0;
-        if (status & TIM_SR_CC1IF) {
-            if (device_flag[inst]) {
-                device_data[inst][VAL_NEGA_20US] = TIM_CCR1(base);
-                device_flag[inst] = FLAG_ACTIVE | FLAG_EDGE_UP;
-            } else {
-                device_flag[inst] = FLAG_EDGE_UP;
-            }
-            device_data[inst][VAL_POSI_S] = 0;
-        }
-        if (status & TIM_SR_CC2IF) {
-            if (device_flag[inst]) {
-                device_data[inst][VAL_POSI_20US] = TIM_CCR2(base);
-                device_flag[inst] = FLAG_ACTIVE | FLAG_EDGE_DOWN;
-            } else {
-                device_flag[inst] = FLAG_EDGE_DOWN;
-            }
-            device_data[inst][VAL_NEGA_S] = 0;
-        }
-
-        if (status & TIM_SR_UIF) {
-            if (device_flag[inst] & FLAG_EDGE_UP) {
-                device_data[inst][VAL_POSI_S]++;
-            }
-            if (device_flag[inst] & FLAG_EDGE_DOWN) {
-                device_data[inst][VAL_NEGA_S]++;
-            }
-        }
-    }
-
-    TIM_SR(base) = 0;
+    device_used |= 1 << instance;
+    return 1;
 }
 
-static void device_setup_mode_out(int inst, uint32_t base, uint32_t channel)
+static void device_release(int instance)
 {
-    uint32_t enable = 0;
-
-    if (channel & 1) {
-        TIM_CCMR1(base) &= 0xff00;
-        TIM_CCMR1(base) |= TIM_CCMR1_OC1M_PWM1 | TIM_CCMR1_OC1PE;
-        TIM_CCR1(base) = 0;
-        enable |= TIM_CCER_CC1P | TIM_CCER_CC1E;
-    }
-    if (channel & 2) {
-        TIM_CCMR1(base) &= 0xff;
-        TIM_CCMR1(base) |= TIM_CCMR1_OC2M_PWM1 | TIM_CCMR1_OC2PE;
-        TIM_CCR2(base) = 0;
-        enable |= TIM_CCER_CC2P | TIM_CCER_CC2E;
-    }
-    if (channel & 4) {
-        TIM_CCMR2(base) &= 0xff00;
-        TIM_CCMR2(base) |= TIM_CCMR2_OC3M_PWM1 | TIM_CCMR2_OC3PE;
-        TIM_CCR3(base) = 0;
-        enable |= TIM_CCER_CC3P | TIM_CCER_CC3E;
-    }
-    if (channel & 8) {
-        TIM_CCMR2(base) &= 0xff;
-        TIM_CCMR2(base) |= TIM_CCMR2_OC4M_PWM1 | TIM_CCMR2_OC4PE;
-        TIM_CCR4(base) = 0;
-        enable |= TIM_CCER_CC4P | TIM_CCER_CC4E;
-    }
-
-    if (device_conf_polarity(inst)) {
-        enable &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P | TIM_CCER_CC3P | TIM_CCER_CC4P);
-    }
-
-    TIM_CCER(base) = enable;
-
-    TIM_CR1(base) = TIM_CR1_CKD_CK_INT | TIM_CR1_CMS_EDGE;
+    device_used &= ~(1 << instance);
+    device_type[instance] = 0;
 }
 
-static void device_setup_mode_count(int inst, uint32_t base, uint32_t channel)
-{
-    uint32_t enable = 0;
+static int device_channel_convert(uint32_t *channel, uint8_t n, const uint8_t *seq) {
+    uint32_t setting = 0;
+    uint32_t i;
 
-    TIM_CCMR1(base) = 0;
-    TIM_CCMR2(base) = 0;
-
-    if (channel & 1) {
-        TIM_CCMR1(base) |= TIM_CCMR1_IC1F_CK_INT_N_8 | 1;
-        enable |= TIM_CCER_CC1P | TIM_CCER_CC1E;
+    for (i = 0; i < n; i++) {
+        if (seq[i] > 3) {
+            return -CUPKEE_EINVAL;
+        }
+        setting |= 1 << seq[i];
     }
-    if (channel & 2) {
-        TIM_CCMR1(base) |= TIM_CCMR1_IC2F_CK_INT_N_8 | (1 << 8);
-        enable |= TIM_CCER_CC2P | TIM_CCER_CC2E;
-    }
-    if (channel & 4) {
-        TIM_CCMR2(base) |= TIM_CCMR2_IC3F_CK_INT_N_8 | 1;
-        enable |= TIM_CCER_CC3P | TIM_CCER_CC3E;
-    }
-    if (channel & 8) {
-        TIM_CCMR2(base) |= TIM_CCMR2_IC4F_CK_INT_N_8 | (1 << 8);
-        enable |= TIM_CCER_CC4P | TIM_CCER_CC4E;
-    }
-
-    if (device_conf_polarity(inst)) {
-        enable &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P | TIM_CCER_CC3P | TIM_CCER_CC4P);
-    }
-
-    TIM_CCER(base) = enable;
-    TIM_DIER(base) = (channel & 0x0f) << 1;
-    TIM_SR(base) = 0;
-
-    TIM_CR1(base) = TIM_CR1_CKD_CK_INT | TIM_CR1_CMS_EDGE;
+    *channel = setting;
+    return CUPKEE_OK;
 }
 
-static uint32_t device_channel_setup(int inst, int in_mode)
-{
-    uint32_t channel = device_conf_channel(inst);
-    uint32_t base;
-    uint8_t mod, cnf;
+static int device_channel_convert_timer(uint32_t *channel, uint8_t n, const uint8_t *seq) {
+    int err = device_channel_convert(channel, n, seq);
 
-    if (in_mode) {
-        mod = GPIO_MODE_INPUT;
-        cnf = GPIO_CNF_INPUT_FLOAT;
-    } else {
-        mod = GPIO_MODE_OUTPUT_10_MHZ;
-        cnf = GPIO_CNF_OUTPUT_ALTFN_PUSHPULL;
+    if (!err) {
+        if ((*channel & 3) == 3 || (*channel & 12) == 12) {
+            err = -CUPKEE_EINVAL;
+        }
     }
-
-    switch(inst) {
-    case 0:
-        if (!hw_gpio_use(0, channel)) {
-            device_set_error(inst, 789);
-            return 0;
-        }
-        gpio_set_mode(GPIOA, mod, cnf, channel);
-        rcc_periph_clock_enable(RCC_TIM2);
-        break;
-    case 1: {
-        uint16_t chn12 = (channel & 3) << 6;
-        uint16_t chn34 = (channel >> 2) & 3;
-
-        if (chn12) {
-            if (hw_gpio_use(0, chn12)) {
-                gpio_set_mode(GPIOA, mod, cnf, chn12);
-            } else {
-                device_set_error(inst, 789);
-                return 0;
-            }
-        }
-        if (chn34) {
-            if (hw_gpio_use(1, chn34)) {
-                gpio_set_mode(GPIOB, mod, cnf, chn34);
-            } else {
-                hw_gpio_release(1, chn12);
-                device_set_error(inst, 789);
-                return 0;
-            }
-        }
-        rcc_periph_clock_enable(RCC_TIM3);
-        break;
-    }
-    case 2:
-        if (!hw_gpio_use(1, channel << 6)) {
-            device_set_error(inst, 789);
-            return 0;
-        }
-        gpio_set_mode(GPIOB, mod, cnf, channel << 6);
-        rcc_periph_clock_enable(RCC_TIM4);
-        break;
-    case 3:
-        if (!hw_gpio_use(0, channel)) {
-            device_set_error(inst, 789);
-            return 0;
-        }
-        gpio_set_mode(GPIOA, mod, cnf, channel);
-        rcc_periph_clock_enable(RCC_TIM5);
-        break;
-    default: return 0;
-    }
-
-    base = device_base[inst];
-
-    if (!in_mode) {
-        device_setup_mode_out(inst, base, channel);
-    } else
-    if (in_mode == MODE_COUNT) {
-        device_setup_mode_count(inst, base, channel);
-    }
-
-    return base;
+    return err;
 }
 
-static void device_channel_reset(int inst)
+static void device_channel_reset(int instance, uint32_t channel)
 {
-    uint32_t channel = device_conf_channel(inst);
-
-    switch(inst) {
+    switch(instance) {
     case 0:
         hw_gpio_release(0, channel);
         rcc_periph_clock_disable(RCC_TIM2);
@@ -391,13 +271,10 @@ static void device_channel_reset(int inst)
     case 1: {
         uint16_t chn12 = (channel & 3) << 6;
         uint16_t chn34 = (channel >> 2) & 3;
-
-        if (chn12) {
+        if (chn12)
             hw_gpio_release(0, chn12);
-        }
-        if (chn34) {
+        if (chn34)
             hw_gpio_release(1, chn34);
-        }
         rcc_periph_clock_disable(RCC_TIM3);
         break;
     }
@@ -414,623 +291,758 @@ static void device_channel_reset(int inst)
     }
 }
 
-static int device_channel_get(int inst, int off, uint32_t *v)
+static uint32_t device_channel_setup(int instance, uint32_t channel, uint8_t mode, uint8_t cnf)
 {
-    uint32_t channel = device_conf_channel(inst);
-    uint32_t base = device_base[inst];
-
-    switch (off) {
-    case 0: if (channel & 1) {*v = TIM_CCR1(base); return 1; } break;
-    case 1: if (channel & 2) {*v = TIM_CCR2(base); return 1; } break;
-    case 2: if (channel & 4) {*v = TIM_CCR3(base); return 1; } break;
-    case 3: if (channel & 8) {*v = TIM_CCR4(base); return 1; } break;
-    default: break;
+    switch(instance) {
+    case 0:
+        if (!hw_gpio_use_setup(0, channel, mode, cnf)) {
+            return 0;
+        }
+        rcc_periph_clock_enable(RCC_TIM2);
+        break;
+    case 1: {
+        uint16_t chn12 = (channel & 3) << 6;
+        uint16_t chn34 = (channel >> 2) & 3;
+        if (chn12) {
+            if (!hw_gpio_use_setup(0, chn12, mode, cnf)) {
+                return 0;
+            }
+        }
+        if (chn34) {
+            if (!hw_gpio_use_setup(1, chn34, mode, cnf)) {
+                hw_gpio_release(1, chn12);
+                return 0;
+            }
+        }
+        rcc_periph_clock_enable(RCC_TIM3);
+        break;
     }
-    return 0;
-}
-
-static int device_channel_set(int inst, int off, uint32_t v)
-{
-    uint32_t channel = device_conf_channel(inst);
-    uint32_t base = device_base[inst];
-
-    switch (off) {
-    case 0: if (channel & 1) {TIM_CCR1(base) = v; return 1; } break;
-    case 1: if (channel & 2) {TIM_CCR2(base) = v; return 1; } break;
-    case 2: if (channel & 4) {TIM_CCR3(base) = v; return 1; } break;
-    case 3: if (channel & 8) {TIM_CCR4(base) = v; return 1; } break;
-    default: break;
-    }
-    return 0;
-}
-
-static int device_channel_set_all(int inst, uint32_t v)
-{
-    uint32_t channel = device_conf_channel(inst);
-    uint32_t base = device_base[inst];
-
-    if (channel & 1) TIM_CCR1(base) = v;
-    if (channel & 2) TIM_CCR2(base) = v;
-    if (channel & 4) TIM_CCR3(base) = v;
-    if (channel & 8) TIM_CCR4(base) = v;
-
-    return 1;
-}
-
-static int device_pulse_setup(int inst)
-{
-    return device_channel_setup(inst, MODE_OUT) ? 1 : 0;
-}
-
-static int device_pwm_setup(int inst)
-{
-    uint32_t base = device_channel_setup(inst, MODE_OUT);
-
-    if (!base) {
+    case 2:
+        if (!hw_gpio_use_setup(1, channel << 6, mode, cnf)) {
+            return 0;
+        }
+        rcc_periph_clock_enable(RCC_TIM4);
+        break;
+    case 3:
+        if (!hw_gpio_use_setup(0, channel, mode, cnf)) {
+            return 0;
+        }
+        rcc_periph_clock_enable(RCC_TIM5);
+        break;
+    default:
         return 0;
     }
 
-    TIM_PSC(base) = 1440;  // 20uS pre tick
-    TIM_ARR(base) = device_conf_period(inst);
-    TIM_CNT(base) = 0;
-    TIM_EGR(base) = TIM_EGR_UG; // update to real register
-
-    TIM_CR1(base) |= TIM_CR1_ARPE | TIM_CR1_CEN;
-
-    return 1;
+    return device_base[instance];
 }
 
-static int device_count_setup(int inst)
+static void device_reset(int instance, uint32_t channel)
 {
-    uint32_t base = device_channel_setup(inst, MODE_COUNT);
+    uint32_t base = device_base[instance];
 
-    if (!base) {
-        return 0;
-    }
+    nvic_disable_irq(device_irq[instance]);
+    device_channel_reset(instance, channel);
 
-    device_flag[inst] = 0;
-    device_data[inst][0] = 0;
-    device_data[inst][1] = 0;
-    device_data[inst][2] = 0;
-    device_data[inst][3] = 0;
-
-    TIM_CNT(base) = 0;
-    TIM_PSC(base) = 720;     // 10uS pre tick
-    TIM_ARR(base) = 65535;
-    // update PSC,ARR to shadow register
-    TIM_EGR(base) = TIM_EGR_UG;
-
-    TIM_SR(base) = 0;
-    nvic_enable_irq(device_irq[inst]);
-
-    TIM_CR1(base) |= TIM_CR1_ARPE | TIM_CR1_CEN;
-
-    return 1;
+    TIM_DIER(base) = 0;
+    TIM_CCER(base) = 0;
+    TIM_CR2(base) = 0;
+    TIM_CR1(base) = 0;
 }
 
-static int device_timer_setup(int inst)
+static void device_setup_out(uint32_t base, uint32_t channel, uint8_t polarity)
 {
-    uint32_t base;
-    uint32_t channel;
+    uint32_t enable = 0;
+    TIM_CCMR1(base) = 0;
+    TIM_CCMR2(base) = 0;
 
-    // revise channel setting
-    if (device_settings[inst][CONFIG_CHN]) {
-        channel = device_settings[inst][CONFIG_CHN] = 2;
-    } else {
-        channel = device_settings[inst][CONFIG_CHN] = 1;
+    if (channel & 1) {
+        TIM_CCMR1(base) |= TIM_CCMR1_OC1M_PWM1 | TIM_CCMR1_OC1PE;
+        TIM_CCR1(base) = 0;
+        enable |= TIM_CCER_CC1P | TIM_CCER_CC1E;
+    }
+    if (channel & 2) {
+        TIM_CCMR1(base) |= TIM_CCMR1_OC2M_PWM1 | TIM_CCMR1_OC2PE;
+        TIM_CCR2(base) = 0;
+        enable |= TIM_CCER_CC2P | TIM_CCER_CC2E;
+    }
+    if (channel & 4) {
+        TIM_CCMR2(base) |= TIM_CCMR2_OC3M_PWM1 | TIM_CCMR2_OC3PE;
+        TIM_CCR3(base) = 0;
+        enable |= TIM_CCER_CC3P | TIM_CCER_CC3E;
+    }
+    if (channel & 8) {
+        TIM_CCMR2(base) |= TIM_CCMR2_OC4M_PWM1 | TIM_CCMR2_OC4PE;
+        TIM_CCR4(base) = 0;
+        enable |= TIM_CCER_CC4P | TIM_CCER_CC4E;
     }
 
-    base = device_channel_setup(inst, MODE_TIMER);
-    if (!base) {
-        return 0;
+    if (polarity == DEVICE_OPT_POLARITY_NEGATIVE) {
+        enable &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P | TIM_CCER_CC3P | TIM_CCER_CC4P);
     }
 
-    device_data[inst][0] = 0;
-    device_data[inst][1] = 0;
+    TIM_CCER(base) = enable;
+    TIM_CR1(base) = TIM_CR1_CKD_CK_INT | TIM_CR1_CMS_EDGE;
+}
+
+static void device_setup_timer(int instance, uint32_t channel)
+{
+    uint32_t base = device_base[instance];
+    uint32_t ccr_enable = 0, isr_enable = 0;
 
     TIM_CR1(base) = TIM_CR1_CKD_CK_INT | TIM_CR1_CMS_EDGE | TIM_CR1_DIR_UP;
     TIM_PSC(base) = 1440;     // 20uS pre tick
     TIM_ARR(base) = 50000;
     TIM_EGR(base) = TIM_EGR_UG; // update to real register
 
-    if (channel & 1) {
-        TIM_CCMR1(base) = TIM_CCMR1_CC1S_IN_TI1 | TIM_CCMR1_CC2S_IN_TI1 |
-                          TIM_CCMR1_IC1F_CK_INT_N_8;
-    } else {
-        TIM_CCMR1(base) = TIM_CCMR1_CC1S_IN_TI2 | TIM_CCMR1_CC2S_IN_TI2 |
-                          TIM_CCMR1_IC2F_CK_INT_N_8;
-    }
-
-    TIM_DIER(base) = 3 << 1;
-    TIM_SR(base) = 0;
-
-    nvic_enable_irq(device_irq[inst]);
-
-    TIM_CCER(base) = TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC2P;
-    TIM_CR1(base) |= TIM_CR1_CEN;
-
-    return 1;
-}
-
-static int device_enable(int id, int inst)
-{
-    int status;
-
-    switch(id) {
-    case PULSE_DEVICE_ID: status = device_pulse_setup(inst); break;
-    case PWM_DEVICE_ID:   status = device_pwm_setup(inst);   break;
-    case COUNT_DEVICE_ID: status = device_count_setup(inst); break;
-    case TIMER_DEVICE_ID: status = device_timer_setup(inst); break;
-    default: status = 0;
-    }
-
-    if (status) {
-        device_set_work(inst);
-    }
-
-    return status;
-}
-
-static int device_disable(int id, int inst)
-{
-    (void) id;
-
-    if (device_is_work(inst)) {
-        uint32_t base = device_base[inst];
-
-        nvic_disable_irq(device_irq[inst]);
-        device_channel_reset(inst);
-
-        TIM_DIER(base) = 0;
-        TIM_CR2(base) = 0;
-        TIM_CR1(base) = 0;
-
-        device_clr_work(inst);
-    }
-    return 1;
-}
-
-// 0: fail
-// 1: ok
-static int device_request(int id, int inst)
-{
-    (void) id;
-    if (inst < INSTANCE_NUM) {
-        int used = device_used & (1 << inst);
-
-        if (!used) {
-            int c;
-
-            device_clr_work(inst);
-            device_clr_error(inst);
-            device_clr_event(inst);
-
-            device_used |= 1 << inst;
-            for (c = 0; c < CONFIG_NUM; c++) {
-                device_settings[inst][c] = 0;
-            }
-
-            device_type[inst] = id;
-
-            return 1;
+    device_status_mask[instance] = 0;
+    TIM_CCER(base) = 0;
+    if (channel & 3) {
+        if (channel & 1) {
+            TIM_CCMR1(base) = TIM_CCMR1_CC1S_IN_TI1 | TIM_CCMR1_CC2S_IN_TI1 |
+                              TIM_CCMR1_IC1F_CK_INT_N_8;
+        } else {
+            TIM_CCMR1(base) = TIM_CCMR1_CC1S_IN_TI2 | TIM_CCMR1_CC2S_IN_TI2 |
+                              TIM_CCMR1_IC2F_CK_INT_N_8;
         }
+        ccr_enable = TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC2P;
+        isr_enable = TIM_DIER_CC1IE | TIM_DIER_CC2IE;
+        device_status_mask[instance] |= 6;
+    } else {
+        TIM_CCMR1(base) = 0;
     }
 
-    return 0;
+#ifndef TIM_CCMR2_CC3S_IN_TI3
+#define TIM_CCMR2_CC3S_IN_TI3  (1 << 0)
+#define TIM_CCMR2_CC3S_IN_TI4  (2 << 0)
+#define TIM_CCMR2_CC4S_IN_TI4  (1 << 8)
+#define TIM_CCMR2_CC4S_IN_TI3  (2 << 8)
+#endif
+    if (channel & 12) {
+        if (channel & 4) {
+            TIM_CCMR2(base) = TIM_CCMR2_CC3S_IN_TI3 | TIM_CCMR2_CC4S_IN_TI3 |
+                              TIM_CCMR2_IC3F_CK_INT_N_8;
+        } else {
+            TIM_CCMR2(base) = TIM_CCMR2_CC3S_IN_TI4 | TIM_CCMR2_CC4S_IN_TI4 |
+                              TIM_CCMR2_IC4F_CK_INT_N_8;
+        }
+        ccr_enable |= TIM_CCER_CC3E | TIM_CCER_CC4E | TIM_CCER_CC4P;
+        isr_enable |= TIM_DIER_CC3IE | TIM_DIER_CC4IE;
+        device_status_mask[instance] |= 0x18;
+    } else {
+        TIM_CCMR2(base) = 0;
+    }
+
+    nvic_enable_irq(device_irq[instance]);
+
+    TIM_SR(base) = 0;
+    TIM_DIER(base) = isr_enable | TIM_DIER_UIE;
+    TIM_CCER(base) = ccr_enable;
+    TIM_CR1(base) |= TIM_CR1_CEN;
 }
 
-// 0: fail
-// other: ok
-static int device_release(int id, int inst)
+static int device_setup_counter(int instance, uint32_t channel)
 {
-    (void) id;
-    if (device_is_inused(inst)) {
-        device_disable(id, inst);
-        device_used &= ~(1 << inst);
-        return 1;
+    uint32_t base, enable = 0;
+    hw_counter_t *control = &counter_controls[instance];
+    const hw_config_counter_t *config = control->config;
+
+    base = device_channel_setup(instance, channel, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT);
+    if (!base) {
+        return -CUPKEE_ERESOURCE;
+    }
+
+    TIM_CCMR1(base) = 0;
+    TIM_CCMR2(base) = 0;
+    device_status_mask[instance] = 0;
+    if (channel & 1) {
+        TIM_CCMR1(base) |= TIM_CCMR1_IC1F_CK_INT_N_8 | 1;
+        enable |= TIM_CCER_CC1P | TIM_CCER_CC1E;
+        device_status_mask[instance] |= 0x2;
+    }
+    if (channel & 2) {
+        TIM_CCMR1(base) |= TIM_CCMR1_IC2F_CK_INT_N_8 | (1 << 8);
+        enable |= TIM_CCER_CC2P | TIM_CCER_CC2E;
+        device_status_mask[instance] |= 0x4;
+    }
+    if (channel & 4) {
+        TIM_CCMR2(base) |= TIM_CCMR2_IC3F_CK_INT_N_8 | 1;
+        enable |= TIM_CCER_CC3P | TIM_CCER_CC3E;
+        device_status_mask[instance] |= 0x8;
+    }
+    if (channel & 8) {
+        TIM_CCMR2(base) |= TIM_CCMR2_IC4F_CK_INT_N_8 | (1 << 8);
+        enable |= TIM_CCER_CC4P | TIM_CCER_CC4E;
+        device_status_mask[instance] |= 0x10;
+    }
+    if (config->polarity != DEVICE_OPT_POLARITY_NEGATIVE) {
+        enable &= ~(TIM_CCER_CC1P | TIM_CCER_CC2P | TIM_CCER_CC3P | TIM_CCER_CC4P);
+    }
+    TIM_CCER(base) = enable;
+    TIM_DIER(base) = ((channel & 0x0f) << 1) | 1;
+    TIM_CR1(base) = TIM_CR1_CKD_CK_INT | TIM_CR1_CMS_EDGE;
+
+    TIM_CNT(base) = 0;
+    TIM_PSC(base) = 1440;           // 20uS pre tick
+    TIM_ARR(base) = 50000;
+    TIM_EGR(base) = TIM_EGR_UG;     // update PSC,ARR to shadow register
+
+    TIM_SR(base) = 0;
+    nvic_enable_irq(device_irq[instance]);
+
+    TIM_CR1(base) |= TIM_CR1_ARPE | TIM_CR1_CEN;
+
+    return CUPKEE_OK;
+}
+
+static uint32_t device_channel_get(int instance, uint8_t chn)
+{
+    uint32_t base = device_base[instance];
+
+    switch (chn) {
+    case 0: return TIM_CCR1(base);
+    case 1: return TIM_CCR2(base);
+    case 2: return TIM_CCR3(base);
+    case 3: return TIM_CCR4(base);
+    default: return 0;
+    }
+}
+
+static void device_channel_set(int instance, uint8_t chn, uint32_t data)
+{
+    uint32_t base = device_base[instance];
+
+    switch (chn) {
+    case 0: TIM_CCR1(base) = data; break;
+    case 1: TIM_CCR2(base) = data; break;
+    case 2: TIM_CCR3(base) = data; break;
+    case 3: TIM_CCR4(base) = data; break;
+    default: break;
+    }
+}
+
+static void device_channel_set_all(int instance, uint32_t channel, uint32_t data)
+{
+    uint32_t base = device_base[instance];
+
+    if (channel & 1) TIM_CCR1(base) = data;
+    if (channel & 2) TIM_CCR2(base) = data;
+    if (channel & 4) TIM_CCR3(base) = data;
+    if (channel & 8) TIM_CCR4(base) = data;
+}
+
+static void pwm_reset(int instance)
+{
+    hw_pwm_t *control = &pwm_controls[instance];
+    const hw_config_pwm_t *config = control->config;
+    uint32_t channel;
+
+    if (!device_channel_convert(&channel, config->chn_num, config->chn_seq)) {
+        device_reset(instance, channel);
+    }
+
+    control->dev_id = DEVICE_ID_INVALID;
+    control->config = NULL;
+}
+
+static int pwm_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
+{
+    hw_pwm_t *control = &pwm_controls[instance];
+    const hw_config_pwm_t *config = (const hw_config_pwm_t*)conf;
+    uint32_t base, channel;
+    int err = CUPKEE_OK;
+
+    /* hardware setup here */
+    err = device_channel_convert(&channel, config->chn_num, config->chn_seq);
+    if (err) {
+        goto DO_END;
+    }
+
+    base = device_channel_setup(instance, channel, GPIO_MODE_OUTPUT_10_MHZ,
+                                                GPIO_CNF_OUTPUT_ALTFN_PUSHPULL);
+    if (!base) {
+        err = -CUPKEE_ERESOURCE;
+        goto DO_END;
+    }
+
+    device_setup_out(base, channel, config->polarity);
+
+    TIM_PSC(base) = 1440;  // 20uS
+    TIM_ARR(base) = pwm_period(config->period);
+    TIM_CNT(base) = 0;
+    TIM_EGR(base) = TIM_EGR_UG; // update to real register
+
+    TIM_CR1(base) |= TIM_CR1_ARPE | TIM_CR1_CEN;
+
+    control->dev_id = dev_id;
+    control->config = config;
+
+DO_END:
+    return err;
+}
+
+static int pwm_get(int instance, int off, uint32_t *data)
+{
+    hw_pwm_t *control = &pwm_controls[instance];
+    const hw_config_pwm_t *config = control->config;
+    uint32_t duty, max = pwm_period(config->period);
+
+    if (off < 0 || off >= config->chn_num) {
+        return 0;
+    }
+
+    duty = device_channel_get(instance, config->chn_seq[off]);
+    *data = 1000 - (duty * 1000 / max);
+
+    return 1;
+}
+
+static int pwm_set(int instance, int off, uint32_t data)
+{
+    hw_pwm_t *control = &pwm_controls[instance];
+    const hw_config_pwm_t *config = control->config;
+    uint32_t max = pwm_period(config->period);
+
+    if (data > 1000) {
+        data = 0;
+    } else {
+        data = (max * (1000 - data)) / 1000;
+    }
+
+    if (off < 0) {
+        uint32_t channel;
+        if (!device_channel_convert(&channel, config->chn_num, config->chn_seq)) {
+            device_channel_set_all(instance, channel, data);
+        } else {
+            return 0;
+        }
+    } else
+    if (off < control->config->chn_num) {
+        device_channel_set(instance, config->chn_seq[off], data);
     } else {
         return 0;
     }
+
+    return 1;
 }
 
-static int device_config_set(int id, int inst, int which, int setting)
+static int pwm_size(int instance)
 {
-    (void) id;
-    if (device_is_inused(inst) && which < CONFIG_NUM) {
-        device_settings[inst][which] = setting;
-        return 1;
+    hw_pwm_t *control = &pwm_controls[instance];
+
+    return control->config->chn_num;
+}
+
+static void pulse_reset(int instance)
+{
+    hw_pulse_t *control = &pulse_controls[instance];
+    const hw_config_pulse_t *config = control->config;
+    uint32_t channel;
+
+    if (!device_channel_convert(&channel, config->chn_num, config->chn_seq)) {
+        device_reset(instance, channel);
     }
-    return 0;
+
+    control->dev_id = DEVICE_ID_INVALID;
+    control->config = NULL;
 }
 
-static int device_config_get(int id, int inst, int which, int *setting)
+static int pulse_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
 {
-    (void) id;
-    if (device_is_inused(inst) && which < CONFIG_NUM && setting) {
-        *setting = device_settings[inst][which];
-        return 1;
+    hw_pulse_t *control = &pulse_controls[instance];
+    const hw_config_pulse_t *config = (const hw_config_pulse_t*)conf;
+    uint32_t base, channel;
+    int err = CUPKEE_OK;
+
+    /* hardware setup here */
+    err = device_channel_convert(&channel, config->chn_num, config->chn_seq);
+    if (err) {
+        goto DO_END;
     }
-    return 0;
-}
 
-static void device_listen(int id, int inst, int event)
-{
-    (void) id;
-    if (device_is_inused(inst) && event < DEVICE_EVENT_MAX) {
-        device_events[inst] |= 1 << event;
+    base = device_channel_setup(instance, channel, GPIO_MODE_OUTPUT_10_MHZ,
+                                                GPIO_CNF_OUTPUT_ALTFN_PUSHPULL);
+    if (!base) {
+        err = -CUPKEE_ERESOURCE;
+        goto DO_END;
     }
+
+    device_setup_out(base, channel, config->polarity);
+
+    control->dev_id = dev_id;
+    control->config = config;
+
+DO_END:
+    return err;
 }
 
-static void device_ignore(int id, int inst, int event)
+static int pulse_set(int instance, int off, uint32_t data)
 {
-    (void) id;
-    if (device_is_inused(inst) && event < DEVICE_EVENT_MAX) {
-        device_events[inst] &= ~(1 << event);
-    }
-}
-
-static int device_size(int id, int inst)
-{
-    (void) id;
-    (void) inst;
-
-    return 4;
-}
-
-static int device_pulse_get(int id, int inst, int off, uint32_t *v)
-{
-    uint32_t base = device_base[inst];
-
-    (void) id;
-    (void) off;
-
-    if (TIM_CR1(base) & TIM_CR1_CEN) {
-        *v = 1;
-    } else {
-        *v = 0;
-    }
-    return 0;
-}
-
-static int device_pulse_set(int id, int inst, int off, uint32_t v)
-{
-    uint32_t base = device_base[inst];
-    int n;
-
-    (void) id;
+    hw_pulse_t *control = &pulse_controls[instance];
+    const hw_config_pulse_t *config = control->config;
+    uint32_t base = device_base[instance];
 
     if (TIM_CR1(base) & TIM_CR1_CEN) {
         // Pulse busy
         return 0;
     }
 
-    v = v / 10; // 10uS
-    if (v < 1) {
-        v = 1;
+    data /= 10;         //
+    if (data < 1) {
+        data = 1;       // 10us is bottom limit
     } else
-    if (v > 50000) {
-        v = 50000; // 500ms is limit
+    if (data > 50000) {
+        data = 50000;   // 500ms is upper limit
     }
 
     if (off < 0) {
-        n = device_channel_set_all(inst, 1);
+        uint32_t channel;
+        if (!device_channel_convert(&channel, config->chn_num, config->chn_seq)) {
+            device_channel_set_all(instance, channel, 1);
+        } else {
+            return 0;
+        }
+    } else
+    if (off < control->config->chn_num) {
+        device_channel_set(instance, config->chn_seq[off], 1);
     } else {
-        n = device_channel_set(inst, off, 1);
-    }
-
-    if (n) {
-        TIM_PSC(base) = 720;        // 10uS pre tick
-        TIM_ARR(base) = v + 1;
-        TIM_CNT(base) = 0;
-        TIM_EGR(base) = TIM_EGR_UG;
-        TIM_CR1(base) |= TIM_CR1_ARPE | TIM_CR1_OPM | TIM_CR1_CEN;
-    }
-    return n;
-}
-
-static int device_pwm_get(int id, int inst, int off, uint32_t *v)
-{
-    uint32_t duty, max = device_conf_period(inst);
-
-    (void) id;
-
-    if (!device_channel_get(inst, off, &duty)) {
         return 0;
     }
-    *v = 1000 - duty * 1000 / max;
+
+    TIM_PSC(base) = 720;        // 10uS pre tick
+    TIM_ARR(base) = data + 1;
+    TIM_CNT(base) = 0;
+    TIM_EGR(base) = TIM_EGR_UG;
+    TIM_CR1(base) |= TIM_CR1_ARPE | TIM_CR1_OPM | TIM_CR1_CEN;
 
     return 1;
 }
 
-static int device_pwm_set(int id, int inst, int off, uint32_t v)
+static int pulse_size(int instance)
 {
-    int max = device_conf_period(inst);
+    hw_pulse_t *control = &pulse_controls[instance];
 
-    (void) id;
-
-    if (v > 1000) {
-        v = 1000;
-    }
-    v = max * (1000 - v) / 1000;
-
-    if (off < 0) {
-        return device_channel_set_all(inst, v);
-    } else {
-        return device_channel_set(inst, off, v);
-    }
+    return control->config->chn_num;
 }
 
-static int device_count_get(int id, int inst, int off, uint32_t *v)
+static void hw_timer_reset(int instance)
 {
-    uint32_t channel = device_conf_channel(inst);
+    hw_timer_t *control = &timer_controls[instance];
+    const hw_config_timer_t *config = control->config;
+    uint32_t channel;
 
-    (void) id;
-
-    if (off < 0) {
-        *v = device_data[inst][0] + device_data[inst][1] +
-             device_data[inst][2] + device_data[inst][3];
-        return 1;
+    if (!device_channel_convert(&channel, config->chn_num, config->chn_seq)) {
+        device_reset(instance, channel);
     }
 
-    if (channel & (1 << off)) {
-        *v = device_data[inst][off];
-        return 1;
-    } else {
-        return 0;
-    }
+    control->dev_id = DEVICE_ID_INVALID;
+    control->config = NULL;
 }
 
-static int device_count_set(int id, int inst, int off, uint32_t v)
+static int timer_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
 {
-    uint32_t channel = device_conf_channel(inst);
+    hw_timer_t *control = &timer_controls[instance];
+    const hw_config_timer_t *config = (const hw_config_timer_t*)conf;
+    uint32_t base, channel;
+    int err = CUPKEE_OK, i;
 
-    (void) id;
-
-    if (off < 0) {
-        device_data[inst][0] = v;
-        device_data[inst][1] = v;
-        device_data[inst][2] = v;
-        device_data[inst][3] = v;
-        return 1;
+    control->update = 0;
+    for (i = 0; i < HW_CHN_MAX_TIMER; i++) {
+        control->data[i] = 0;
+        control->duration[i] = 0;
     }
 
-    if (channel & (1 << off)) {
-        device_data[inst][off] = v;
-        return 1;
+    if (config->chn_num > 1 && config->chn_seq[1] > 1) {
+        // 2 channels & high channel in tail of sequence
+        control->high_tail = 1;
+    } else {
+        control->high_tail = 0;
     }
 
-    return 0;
+    /* hardware setup here */
+    err = device_channel_convert_timer(&channel, config->chn_num, config->chn_seq);
+    if (err) {
+        goto DO_END;
+    }
+
+    base = device_channel_setup(instance, channel, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT);
+    if (!base) {
+        err = -CUPKEE_ERESOURCE;
+        goto DO_END;
+    }
+
+    control->dev_id = dev_id;
+    control->config = config;
+
+    device_setup_timer(instance, channel);
+
+DO_END:
+    return err;
 }
 
-static int device_timer_get(int id, int inst, int off, uint32_t *v)
+static void timer_poll(int instance)
 {
-    int polarity = device_conf_polarity(inst);
+    hw_timer_t *control = &timer_controls[instance];
 
-    (void) id;
+    if (control->update) {
+        const hw_config_timer_t *config = control->config;
+        uint8_t update = control->update;
+        int trigger = 0;
 
-    if (off < 0 || off > 1) {
-        return 0;
-    }
+        if (update & 3) {
+            if (control->update & 1) {
+                if (config->polarity != DEVICE_OPT_POLARITY_POSITIVE) {
+                    trigger = 1;
+                }
+            } else {
+                if (config->polarity != DEVICE_OPT_POLARITY_NEGATIVE) {
+                    control->data[0] = control->data[1]; // Valid data always in data[0]
+                    trigger = 1;
+                }
+            }
+            control->update &= ~3;
 
-    if (polarity == 0) {
-        *v = device_data[inst][VAL_POSI_20US + off];
-    } else
-    if (polarity == 1) {
-        *v = device_data[inst][VAL_NEGA_20US + off];
-    } else {
-        if (device_flag[inst] & FLAG_EDGE_UP) {
-            *v = device_data[inst][VAL_NEGA_20US + off];
+            if (trigger) {
+                if (config->chn_num > 1 && !control->high_tail) {
+                    control->last = 1;
+                } else {
+                    control->last = 0;
+                }
+                device_data_post(control->dev_id);
+            }
         } else {
-            *v = device_data[inst][VAL_POSI_20US + off];
+            if (control->update & 4) {
+                if (config->polarity != DEVICE_OPT_POLARITY_POSITIVE) {
+                    trigger = 1;
+                }
+            } else {
+                if (config->polarity != DEVICE_OPT_POLARITY_NEGATIVE) {
+                    control->data[2] = control->data[3]; // Valid data always in data[2]
+                    trigger = 1;
+                }
+            }
+            control->update = 0;
+
+            if (trigger) {
+                if (config->chn_num > 1 && control->high_tail) {
+                    control->last = 1;
+                } else {
+                    control->last = 0;
+                }
+                device_data_post(control->dev_id);
+            }
         }
     }
+}
 
-    if (off == 0) {
-        *v *= 20;
+static int timer_get(int instance, int off, uint32_t *data)
+{
+    hw_timer_t *control = &timer_controls[instance];
+    const hw_config_timer_t *config = control->config;
+
+    if (off < 0) {
+        *data = control->last;
+    } else
+    if (off < config->chn_num) {
+        off = config->chn_seq[off] > 1 ? 2 : 0;
+        *data = control->data[off] * 20;
+    } else {
+        return 0;
     }
 
     return 1;
 }
 
-static int device_timer_set(int id, int inst, int off, uint32_t v)
+static int timer_size(int instance)
 {
-    (void) id;
-    (void) inst;
-    (void) off;
-    (void) v;
+    hw_timer_t *control = &timer_controls[instance];
 
-    return 0;
+    return control->config->chn_num;
 }
 
-static int device_timer_size(int id, int inst)
+static void counter_reset(int instance)
 {
-    (void) id;
-    (void) inst;
+    hw_counter_t *control = &counter_controls[instance];
+    const hw_config_counter_t *config = control->config;
+    uint32_t channel;
 
-    if (device_is_work(inst)) {
-        return 2;
+    if (!device_channel_convert(&channel, config->chn_num, config->chn_seq)) {
+        device_reset(instance, channel);
     }
 
-    return 0;
+    control->dev_id = DEVICE_ID_INVALID;
+    control->config = NULL;
+}
+
+static int counter_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
+{
+    hw_counter_t *control = &counter_controls[instance];
+    const hw_config_counter_t *config = (const hw_config_counter_t*)conf;
+    uint32_t channel;
+    int err = CUPKEE_OK, i;
+
+    control->update = 0;
+    for (i = 0; i < HW_CHN_MAX_COUNTER; i++) {
+        control->data[i] = 0;
+        control->duration[i] = 0;
+    }
+
+    /* hardware setup here */
+    err = device_channel_convert(&channel, config->chn_num, config->chn_seq);
+    if (err) {
+        goto DO_END;
+    }
+
+    err = device_setup_counter(instance, channel);
+    if (!err) {
+        control->dev_id = dev_id;
+        control->config = config;
+    }
+
+DO_END:
+    return err;
+}
+
+static void counter_poll(int instance)
+{
+    hw_counter_t *control = &counter_controls[instance];
+
+    if (control->update) {
+        const hw_config_counter_t *config = control->config;
+        int i;
+
+        for (i = 0; i < config->chn_num; i++) {
+            uint8_t ch = config->chn_seq[i];
+            uint8_t x  = 1 << ch;
+
+            if (control->update & x) {
+                control->update &= ~x;
+                control->last = i;
+                device_data_post(control->dev_id);
+                break;
+            }
+        }
+    }
+}
+
+static int counter_get(int instance, int off, uint32_t *data)
+{
+    hw_counter_t *control = &counter_controls[instance];
+    const hw_config_counter_t *config = control->config;
+
+    if (off < 0) {
+        *data = control->last;
+    } else
+    if (off < config->chn_num){
+        *data = control->data[off];
+    } else {
+        return 0;
+    }
+
+    return 1;
+}
+
+static int counter_size(int instance)
+{
+    hw_counter_t *control = &counter_controls[instance];
+
+    return control->config->chn_num;
+}
+
+static const hw_driver_t pwm_driver = {
+    .release = device_release,
+    .reset   = pwm_reset,
+    .setup   = pwm_setup,
+    .io.map  = {
+        .get  = pwm_get,
+        .set  = pwm_set,
+        .size = pwm_size
+    }
+};
+
+static const hw_driver_t pulse_driver = {
+    .release = device_release,
+    .reset   = pulse_reset,
+    .setup   = pulse_setup,
+    .io.map  = {
+        .set  = pulse_set,
+        .size = pulse_size
+    }
+};
+
+static const hw_driver_t timer_driver = {
+    .release = device_release,
+    .reset   = hw_timer_reset,
+    .setup   = timer_setup,
+    .poll    = timer_poll,
+    .io.map  = {
+        .get  = timer_get,
+        .size = timer_size
+    }
+};
+
+static const hw_driver_t counter_driver = {
+    .release = device_release,
+    .reset   = counter_reset,
+    .setup   = counter_setup,
+    .poll    = counter_poll,
+    .io.map  = {
+        .get  = counter_get,
+        .size = counter_size
+    }
+};
+
+const hw_driver_t *hw_request_pwm(int instance)
+{
+    if (instance >= HW_TIMER_INSTANCE || !device_alloc(instance)) {
+        return NULL;
+    }
+
+    pwm_controls[instance].dev_id = DEVICE_ID_INVALID;
+    pwm_controls[instance].config = NULL;
+
+    return &pwm_driver;
+}
+
+const hw_driver_t *hw_request_pulse(int instance)
+{
+    if (instance >= HW_TIMER_INSTANCE || !device_alloc(instance)) {
+        return NULL;
+    }
+
+    pulse_controls[instance].dev_id = DEVICE_ID_INVALID;
+    pulse_controls[instance].config = NULL;
+
+    return &pulse_driver;
+}
+
+const hw_driver_t *hw_request_timer(int instance)
+{
+    if (instance >= HW_TIMER_INSTANCE || !device_alloc(instance)) {
+        return NULL;
+    }
+
+    device_type[instance] = 1;
+    timer_controls[instance].dev_id = DEVICE_ID_INVALID;
+    timer_controls[instance].config = NULL;
+
+    return &timer_driver;
+}
+
+const hw_driver_t *hw_request_counter(int instance)
+{
+    if (instance >= HW_TIMER_INSTANCE || !device_alloc(instance)) {
+        return NULL;
+    }
+
+    device_type[instance] = 0;
+    counter_controls[instance].dev_id = DEVICE_ID_INVALID;
+    counter_controls[instance].config = NULL;
+
+    return &counter_driver;
 }
 
 void hw_setup_timer(void)
 {
     device_used = 0;
-    device_work = 0;
-}
-
-void hw_poll_timer(void)
-{
-    int i;
-
-    for (i = 0; i < INSTANCE_NUM; i++) {
-        if (device_is_work(i) && (device_events[i] & (1 << DEVICE_EVENT_DATA))) {
-            if (device_type[i] == COUNT_DEVICE_ID) {
-                if (device_flag[i]) {
-                    device_flag[i] = 0;
-                    devices_event_post(COUNT_DEVICE_ID, i, DEVICE_EVENT_DATA);
-                }
-            }
-            if (device_type[i] == TIMER_DEVICE_ID) {
-                uint8_t flag = device_flag[i];
-                if (flag & FLAG_ACTIVE) {
-                    int polarity = device_conf_polarity(i);
-                    if (polarity == 0) {
-                        if (flag & FLAG_EDGE_DOWN) {
-                            devices_event_post(TIMER_DEVICE_ID, i, DEVICE_EVENT_DATA);
-                        }
-                    } else
-                    if (polarity == 1) {
-                        char buf[64];
-                        snprintf(buf, 64, "flag: %x\r\n", flag);
-                        hw_console_sync_puts(buf);
-                        if (flag & FLAG_EDGE_UP) {
-                            devices_event_post(TIMER_DEVICE_ID, i, DEVICE_EVENT_DATA);
-                        }
-                    } else {
-                        devices_event_post(TIMER_DEVICE_ID, i, DEVICE_EVENT_DATA);
-                    }
-                    device_flag[i] &= ~FLAG_ACTIVE;
-                }
-            }
-        }
-    }
-}
-
-const hw_driver_t hw_driver_pulse = {
-    .request = device_request,
-    .release = device_release,
-    .get_err = device_get_error,
-    .enable  = device_enable,
-    .disable = device_disable,
-    .config_set = device_config_set,
-    .config_get = device_config_get,
-    .listen = device_listen,
-    .ignore = device_ignore,
-    .io.map = {
-        .get = device_pulse_get,
-        .set = device_pulse_set,
-        .size = device_size,
-    }
-};
-
-const hw_device_t hw_device_pulse = {
-    .name = PULSE_DEVICE_NAME,
-    .id   = PULSE_DEVICE_ID,
-    .type = HW_DEVICE_MAP,
-    .inst_num   = PULSE_INSTANCE_NUM,
-    .conf_num   = PULSE_CONFIG_NUM,
-    .event_num  = PULSE_EVENT_NUM,
-    .conf_names = device_config_names,
-    .conf_descs = pulse_pwm_count_config_descs,
-    .opt_names  = device_opt_names,
-};
-
-const hw_driver_t hw_driver_pwm = {
-    .request = device_request,
-    .release = device_release,
-    .get_err = device_get_error,
-    .enable  = device_enable,
-    .disable = device_disable,
-    .config_set = device_config_set,
-    .config_get = device_config_get,
-    .listen = device_listen,
-    .ignore = device_ignore,
-    .io.map = {
-        .get = device_pwm_get,
-        .set = device_pwm_set,
-        .size = device_size,
-    }
-};
-
-const hw_device_t hw_device_pwm = {
-    .name = PWM_DEVICE_NAME,
-    .id   = PWM_DEVICE_ID,
-    .type = HW_DEVICE_MAP,
-    .inst_num   = PWM_INSTANCE_NUM,
-    .conf_num   = PWM_CONFIG_NUM,
-    .event_num  = PWM_EVENT_NUM,
-    .conf_names = device_config_names,
-    .conf_descs = pulse_pwm_count_config_descs,
-    .opt_names  = device_opt_names,
-};
-
-const hw_driver_t hw_driver_count = {
-    .request = device_request,
-    .release = device_release,
-    .get_err = device_get_error,
-    .enable  = device_enable,
-    .disable = device_disable,
-    .config_set = device_config_set,
-    .config_get = device_config_get,
-    .listen = device_listen,
-    .ignore = device_ignore,
-    .io.map = {
-        .get = device_count_get,
-        .set = device_count_set,
-        .size = device_size,
-    }
-};
-
-const hw_device_t hw_device_count= {
-    .name = COUNT_DEVICE_NAME,
-    .id   = COUNT_DEVICE_ID,
-    .type = HW_DEVICE_MAP,
-    .inst_num   = COUNT_INSTANCE_NUM,
-    .conf_num   = COUNT_CONFIG_NUM,
-    .event_num  = COUNT_EVENT_NUM,
-    .conf_names = device_config_names,
-    .conf_descs = pulse_pwm_count_config_descs,
-    .opt_names  = device_opt_names,
-};
-
-const hw_driver_t hw_driver_timer = {
-    .request = device_request,
-    .release = device_release,
-    .get_err = device_get_error,
-    .enable  = device_enable,
-    .disable = device_disable,
-    .config_set = device_config_set,
-    .config_get = device_config_get,
-    .listen = device_listen,
-    .ignore = device_ignore,
-    .io.map = {
-        .get = device_timer_get,
-        .set = device_timer_set,
-        .size = device_timer_size,
-    }
-};
-
-const hw_device_t hw_device_timer = {
-    .name = TIMER_DEVICE_NAME,
-    .id   = TIMER_DEVICE_ID,
-    .type = HW_DEVICE_MAP,
-    .inst_num   = TIMER_INSTANCE_NUM,
-    .conf_num   = TIMER_CONFIG_NUM,
-    .event_num  = TIMER_EVENT_NUM,
-    .conf_names = device_config_names,
-    .conf_descs = timer_config_descs,
-    .opt_names  = device_opt_names,
-};
-
-void tim2_isr(void)
-{
-    device_isr(0, TIM2);
-}
-
-void tim3_isr(void)
-{
-    device_isr(1, TIM3);
-}
-
-void tim4_isr(void)
-{
-    device_isr(2, TIM4);
-}
-
-void tim5_isr(void)
-{
-    device_isr(3, TIM5);
 }
 

@@ -59,6 +59,7 @@ void print_error(int error)
     case ERR_InvalidByteCode:   console_puts("Error: Invalid Byte code\r\n");       break;
     case ERR_InvalidInput:      console_puts("Error: Invalid input\r\n");           break;
     case ERR_InvalidCallor:     console_puts("Error: Invalid callor\r\n");          break;
+    case ERR_NotDefinedId:      console_puts("Error: Not defined ID\r\n");          break;
 
     case ERR_SysError:          console_puts("Error: System error\r\n");            break;
 
@@ -131,14 +132,14 @@ static void print_object_value(val_t *o)
     hw_console_sync_puts("{");
 
     _object_iter_init(&it, obj);
-    if (_object_iter_next(&it, &k, &v)) {
+    if (object_iter_next(&it, &k, &v)) {
         hw_console_sync_puts("\r\n");
         do {
             hw_console_sync_puts("  ");
             hw_console_sync_puts(k);
             hw_console_sync_puts(": ");
             print_simple_value(v);
-        }while(_object_iter_next(&it, &k, &v));
+        }while(object_iter_next(&it, &k, &v));
     }
     hw_console_sync_puts("}\r\n");
 }
@@ -167,8 +168,8 @@ static void print_array_value(val_t *v)
 
 static void print_buffer_value(val_t *v)
 {
-    int i, len = buffer_size(v);
-    uint8_t *ptr = buffer_addr(v);
+    int   i, len = _val_buffer_size(v);
+    uint8_t *ptr = _val_buffer_addr(v);
     char buf[16];
 
     snprintf(buf, 16, "<Buffer[%d]:", len);

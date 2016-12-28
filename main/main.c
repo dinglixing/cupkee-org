@@ -41,8 +41,9 @@ static const native_t native_entry[] = {
     {"clearTimeout",    native_clear_timeout},
     {"clearInterval",   native_clear_interval},
 
-    {"device",          device_native_create},
+    {"Device",          device_native_create},
     {"pinMap",          device_native_pin_map},
+    {"ledMap",          device_native_led_map},
     {"led",             device_native_led},
 
     /* user native */
