@@ -51,7 +51,6 @@ static const native_t native_entry[] = {
 };
 
 // system initial scripts
-//static char *initial = "setInterval(led, 1000);";
 static char *initial = NULL;
 
 int main(void)

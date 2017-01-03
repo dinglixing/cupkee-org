@@ -39,9 +39,10 @@ static int test_clean()
     return 0;
 }
 
-static void test_example(void)
+static void test_template(void)
 {
-    CU_ASSERT(1);
+    // add test code here
+    //CU_ASSERT(1);
 }
 
 CU_pSuite test_hello()
@@ -49,7 +50,7 @@ CU_pSuite test_hello()
     CU_pSuite suite = CU_add_suite("hello", test_setup, test_clean);
 
     if (suite) {
-        CU_add_test(suite, "example", test_example);
+        CU_add_test(suite, "template", test_template);
     }
 
     return suite;
