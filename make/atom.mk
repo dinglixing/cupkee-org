@@ -24,13 +24,13 @@
 ## SOFTWARE.
 ##
 
-elf_NAMES = cupkee_atom
+elf_NAMES = cupkee
 
-cupkee_atom_SRCS = ${notdir ${wildcard ${APP_DIR}/main/*.c}}
+cupkee_SRCS = ${notdir ${wildcard ${APP_DIR}/main/*.c}}
 
-cupkee_atom_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
-cupkee_atom_CFLAGS   =
-cupkee_atom_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -L${LANG_BUILD_DIR} -lsys -lbsp -llang
+cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
+cupkee_CFLAGS   =
+cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -L${LANG_BUILD_DIR} -lsys -lbsp -llang
 
 include ${MAKE_DIR}/cupkee.ruls.mk
 
