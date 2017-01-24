@@ -1,0 +1,91 @@
+#MIT License
+#
+#Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+
+AS  := ${PREFIX}as
+CC 	:= ${PREFIX}gcc
+LD  := ${PREFIX}gcc
+AR  := ${PREFIX}ar
+RM  := rm -rf
+MAKE := make
+
+# Marco build_obj_rule
+# param ${1}: source file
+# param ${2}: program or library name
+define build_obj_rule
+${1:%.c=%.o}: ${1}
+	@printf "[CC]\t$$@\n"
+	@${CC} ${TGT_CPPFLAGS} ${${2}_CPPFLAGS} ${TGT_CFLAGS} ${${2}_CFLAGS} -MD -c $$< -o $$@
+endef
+
+# Marco build_prog_rule
+# param ${1}: program name
+define build_prog_rule
+${1}_OBJS = ${${1}_SRCS:%.c=%.o}
+${1}_DEPS = ${${1}_SRCS:%.c=%.d}
+${1}: $${${1}_OBJS}
+	@printf "[LD]\t$$@\n"
+	@${LD} -o $$@ $${${1}_OBJS} ${TGT_LDFLAGS} $${${1}_LDFLAGS}
+
+${1}.clean:
+	@${RM} $${${1}_OBJS}
+	@${RM} $${${1}_DEPS}
+	@${RM} ${1}
+
+$(foreach src,${${1}_SRCS},$(eval $(call build_obj_rule,${src},${1})))
+-include $${${1}_DEPS}
+endef
+
+# Marco build_lib_rule
+# param ${1}: library name
+define build_lib_rule
+${1}_OBJS = ${${1}_SRCS:%.c=%.o}
+${1}_DEPS = ${${1}_SRCS:%.c=%.d}
+${1}: lib${1}.a
+
+lib${1}.a: $${${1}_OBJS}
+	@printf "[AR]\t$$@\n"
+	@${AR} rcs lib${1}.a $${${1}_OBJS}
+
+${1}.clean:
+	@${RM} $${${1}_OBJS}
+	@${RM} $${${1}_DEPS}
+	@${RM} lib${1}.a
+
+$(foreach src,${${1}_SRCS},$(eval $(call build_obj_rule,${src},${1})))
+-include $${${1}_DEPS}
+endef
+
+$(info ${lib_NAMES} ${PWD})
+all: lib bin
+
+lib: ${lib_NAMES}
+
+bin: ${bin_NAMES}
+
+clean: ${bin_NAMES:%=%.clean} ${lib_NAMES:%=%.clean}
+
+$(foreach lib,${lib_NAMES},$(eval $(call build_lib_rule,${lib})))
+
+$(foreach bin,${bin_NAMES},$(eval $(call build_prog_rule,${bin})))
+
+.PHONY: clean bin lib all
+

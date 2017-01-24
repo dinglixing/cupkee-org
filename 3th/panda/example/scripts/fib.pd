@@ -1,0 +1,23 @@
+
+def f(x) {
+    var a = 1;
+    var b = 1;
+    var c;
+
+    while(b < x) {
+        c = b;
+        b = a + b;
+        a = c;
+    }
+
+    return b;
+}
+
+
+var a = f(1024);
+
+if (a == 1597) {
+    print("test 1: ok");
+} else {
+    print("test 1: fail");
+}
