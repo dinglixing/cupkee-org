@@ -24,14 +24,14 @@
 ## SOFTWARE.
 ##
 
-elf_NAMES = cupkee
+elf_NAMES = cupkee_ogin
 
-cupkee_SRCS = ${notdir ${wildcard ${BASE_DIR}/nosys/*.c}}
+cupkee_ogin_SRCS = ${notdir ${wildcard ${BASE_DIR}/ogin/*.c}}
 
-cupkee_CPPFLAGS = -I${INC_DIR}
-cupkee_CFLAGS   =
-cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -lsys -lbsp
+cupkee_ogin_CPPFLAGS = -I${INC_DIR}
+cupkee_ogin_CFLAGS   =
+cupkee_ogin_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -lsys -lbsp
 
 include ${MAKE_DIR}/cupkee.ruls.mk
 
-VPATH = ${BASE_DIR}/nosys
+VPATH = ${BASE_DIR}/ogin

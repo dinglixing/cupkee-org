@@ -208,6 +208,8 @@ endef
 
 all: elf lib
 
+extend: elf bin hex list srec
+
 elf: ${elf_NAMES}
 
 lib: ${lib_NAMES}

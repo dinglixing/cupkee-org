@@ -46,7 +46,7 @@ export BSP_BUILD_DIR = ${BUILD_DIR}/bsp
 export SYS_BUILD_DIR = ${BUILD_DIR}/sys
 export LANG_BUILD_DIR = ${BUILD_DIR}/lang
 
-all: main
+all: ogin
 	@printf "ok\n"
 
 build:
@@ -61,23 +61,17 @@ sys:
 lang:
 	@make -C ${LANG_BUILD_DIR} -f ${MAKE_DIR}/lang.mk
 
-main:  build bsp sys lang
-	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk
+ogin: build bsp sys
+	@mkdir -p ${BUILD_DIR}/ogin
+	@make -C ${BUILD_DIR}/ogin -f ${MAKE_DIR}/ogin.mk extend
 
-nosys: build bsp sys
-	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/nosys.mk
+tiny:  build bsp sys lang
+	@mkdir -p ${BUILD_DIR}/tiny
+	@make -C ${BUILD_DIR}/tiny -f ${MAKE_DIR}/main.mk extend
 
-bin: main
-	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk bin
-
-hex: main
-	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk hex
-
-list: main
-	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk list
-
-serc: main
-	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk serc
+atom:  build bsp sys lang
+	@mkdir -p ${BUILD_DIR}/atom
+	@make -C ${BUILD_DIR}/atom -f ${MAKE_DIR}/main.mk extend
 
 test: build bsp sys lang
 	@rm -rf ${BUILD_DIR}/test.elf
@@ -91,4 +85,5 @@ load:
 	openocd -fopenocd/interface/jlink.cfg -fopenocd/target/stm32f1x.cfg \
 		-c "program ${BUILD_DIR}/cupkee.elf verify reset exit"
 
-.PHONY: clean load build bin hex list serc main bsp lang sys nosys
+.PHONY: clean load build main bsp lang sys ogin tiny atom
+
