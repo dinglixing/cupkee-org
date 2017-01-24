@@ -33,13 +33,17 @@ endif
 export BOARD ?= test
 
 export BASE_DIR = ${PWD}
-export MAKE_DIR = ${BASE_DIR}/mk
+export MAKE_DIR = ${BASE_DIR}/make
 
 export INC_DIR = ${BASE_DIR}/include
 export BSP_DIR = ${BASE_DIR}/boards
 export SYS_DIR = ${BASE_DIR}/system
-export LANG_DIR  = ${BASE_DIR}/panda
-export TEST_DIR  = ${BASE_DIR}/test
+export TST_DIR  = ${BASE_DIR}/test
+
+export MOD_DIR = ${BASE_DIR}/module
+export APP_DIR = ${BASE_DIR}/app
+
+export LANG_DIR  = ${MOD_DIR}/panda
 
 BUILD_DIR = ${BASE_DIR}/build/${BOARD}
 export BSP_BUILD_DIR = ${BUILD_DIR}/bsp
@@ -61,7 +65,7 @@ sys:
 lang:
 	@make -C ${LANG_BUILD_DIR} -f ${MAKE_DIR}/lang.mk
 
-ogin: build bsp sys
+ogin: build bsp sys lang
 	@mkdir -p ${BUILD_DIR}/ogin
 	@make -C ${BUILD_DIR}/ogin -f ${MAKE_DIR}/ogin.mk extend
 
