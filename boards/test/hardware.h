@@ -34,10 +34,7 @@ SOFTWARE.
 #include <stdint.h>
 #include <string.h>
 
-#include <cupkee_errno.h>
-#include <cupkee_event.h>
-#include <cupkee_utils.h>
-#include <cupkee_bsp.h>
+#include <cupkee.h>
 
 /******************************************************************************
  * Hardware interface

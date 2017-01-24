@@ -807,7 +807,7 @@ static void timer_poll(int instance)
                 } else {
                     control->last = 0;
                 }
-                device_data_post(control->dev_id);
+                cupkee_event_post_device_data(control->dev_id);
             }
         } else {
             if (control->update & 4) {
@@ -828,7 +828,7 @@ static void timer_poll(int instance)
                 } else {
                     control->last = 0;
                 }
-                device_data_post(control->dev_id);
+                cupkee_event_post_device_data(control->dev_id);
             }
         }
     }
@@ -917,7 +917,8 @@ static void counter_poll(int instance)
             if (control->update & x) {
                 control->update &= ~x;
                 control->last = i;
-                device_data_post(control->dev_id);
+                cupkee_event_post_device_data(control->dev_id);
+
                 break;
             }
         }

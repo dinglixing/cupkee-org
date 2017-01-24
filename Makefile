@@ -35,6 +35,7 @@ export BOARD ?= test
 export BASE_DIR = ${PWD}
 export MAKE_DIR = ${BASE_DIR}/mk
 
+export INC_DIR = ${BASE_DIR}/include
 export BSP_DIR = ${BASE_DIR}/boards
 export SYS_DIR = ${BASE_DIR}/system
 export LANG_DIR  = ${BASE_DIR}/panda
@@ -45,7 +46,7 @@ export BSP_BUILD_DIR = ${BUILD_DIR}/bsp
 export SYS_BUILD_DIR = ${BUILD_DIR}/sys
 export LANG_BUILD_DIR = ${BUILD_DIR}/lang
 
-all: build main
+all: main
 	@printf "ok\n"
 
 build:
@@ -60,10 +61,10 @@ sys:
 lang:
 	@make -C ${LANG_BUILD_DIR} -f ${MAKE_DIR}/lang.mk
 
-main: bsp sys lang
+main:  build bsp sys lang
 	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk
 
-nosys: build bsp
+nosys: build bsp sys
 	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/nosys.mk
 
 bin: main

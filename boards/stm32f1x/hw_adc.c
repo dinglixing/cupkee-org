@@ -227,7 +227,7 @@ static void adc_poll(int instance)
             if (data != last) {
                 control->data[curr] = data;
                 control->changed = curr;
-                device_data_post(control->dev_id);
+                cupkee_event_post_device_data(control->dev_id);
             }
 
             control->sleep = control->config->interval;

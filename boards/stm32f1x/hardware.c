@@ -123,7 +123,7 @@ void hw_poll(void)
 
     if (system_tick_update) {
         system_tick_update = 0;
-        systick_event_post();
+        cupkee_event_post_systick();
     }
 }
 

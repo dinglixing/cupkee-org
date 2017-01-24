@@ -163,7 +163,7 @@ static const struct usb_config_descriptor config = {
 static const char *usb_strings[] = {
 	"Cupkee",
 	"CDC-ACM Cupkee",
-	"CUPKEE",
+	"CUP",
 };
 
 /* Buffer to be used for control requests. */

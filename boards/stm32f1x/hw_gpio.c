@@ -232,7 +232,7 @@ static void pin_sync(int instance, uint32_t systicks)
     data = maps_read(control->config->start, control->config->num);
     if (data != control->data) {
         control->data = data;
-        device_data_post(control->dev_id);
+        cupkee_event_post_device_data(control->dev_id);
     }
 }
 

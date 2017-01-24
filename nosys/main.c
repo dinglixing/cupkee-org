@@ -23,185 +23,231 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
 
-#include <bsp.h>
-#include "key.h"
-#include "timer.h"
+#include "app.h"
 
-void systick_event_post(void);
-void devices_event_post(int dev, int which, int event);
+#define COMMAND_SIZ_MAX      512
+#define COMMAND_ARG_MAX      8
 
-typedef struct event_info_t {
-    int dev;
-    int which;
-    int event;
-} event_info_t;
+static uint32_t systick_pass = 0;
+static char     command_str[COMMAND_SIZ_MAX];
+static char    *args[COMMAND_ARG_MAX];
 
-static uint32_t systicks = 0;
-static event_info_t event_queue[4];
-static int event_len = 0;
+static uint32_t seconds = 0;
+static const gprs_host_t gprs_hosts[] = {
+    {"TCP", "www.cupkee.cn", "8124"},
+    {"TCP", "www.cupkee.cn", "8124"}  // second host
+};
 
-static char command_buf[80];
-static int command_len = 0;
-static int command_done = 1;
-
-void systick_event_post(void)
+static void app_systick_proc(void)
 {
-    systicks++;
-}
+    gprs_systick_proc();
 
-void devices_event_post(int dev, int which, int event)
-{
-    (void) dev;
-    (void) which;
-    (void) event;
+    if (++systick_pass > 1000) {
+        char buf[16];
+        int  n;
 
-    if (event_len < 4) {
-        event_info_t *e = event_queue + event_len++;
+        systick_pass = 0;
+        seconds++;
 
-        e->dev = dev;
-        e->which = which;
-        e->event = event;
-    }
+        n = snprintf(buf, 16, "PASS %u\r\n", seconds);
+        gprs_send(n, buf);
 
-    return;
-}
-
-static void console_input_handle(void *data, int n)
-{
-    int pos = 0;
-    char *s = data;
-
-    while (pos < n) {
-        char ch = s[pos++];
-        if (command_done && command_len < 80) {
-            command_buf[command_len++] = ch;
-        }
-
-        hw_console_sync_putc(ch);
-
-        if (ch == '\r') {
-            hw_console_sync_putc('\n');
-            command_buf[command_len] = 0;
-            command_done = 0;
-            command_len = 0;
-        }
+        hw_led_toggle();
     }
 }
 
-static void console_drain_handle(void)
+static void app_gprs_cb(int len, void *data)
 {
+    char *msg = (char *) data;
+
+    (void) len;
+
+    console_log(msg);
 }
 
-static void nosys_setup(void)
-{
-
-    hw_setup();
-
-    hw_console_set_callback(console_input_handle, console_drain_handle);
-}
-
-static void event_proc(void)
+static int app_command_parse(char *input)
 {
     int i;
-    for (i = 0; i < event_len; i++) {
-        char buf[64];
-        event_info_t *e = event_queue + i;
+    char *word, *p;
+    const char *sep = " \t\r\n";
 
-        snprintf(buf, 64, "from: [%d:%d] event %d\r\n", e->dev, e->which, e->event);
-        hw_console_sync_puts(buf);
+
+    for (word = strtok_r(input, sep, &p), i = 0;
+         word;
+         word = strtok_r(NULL, sep, &p)) {
+        args[i++] = word;
     }
-    event_len = 0;
+
+    return i;
 }
 
-static void command_proc(void)
+static void app_command_do(int ac, char **av)
 {
-    if (command_done) {
-        return;
+    if (!strcmp(av[0], "send")) {
+        if (ac < 2) {
+            gprs_send(5, "hello");
+        } else {
+            gprs_send(strlen(av[1]), av[1]);
+        }
+    } else
+    if (!strcmp(av[0], "show")) {
+        if (ac < 2) {
+            gprs_show_msg(1);
+        } else {
+            gprs_show_msg(0);
+        }
+    } else
+    if (!strcmp(av[0], "at")) {
+        if (ac < 2) {
+            gprs_send_command(NULL);
+        } else {
+            gprs_send_command(av[1]);
+        }
+    } else
+    if (!strcmp(av[0], "ss")) {
+        if (ac < 2) {
+            gprs_send_data(NULL);
+        } else {
+            gprs_send_data(av[1]);
+        }
+    } else
+    if (!strcmp(av[0], "hello")) {
+        console_log("hi\r\n");
+    }
+}
+
+static const char *commands[] = {
+    "hello", "world", "nihao", "wohao", "welcome"
+};
+
+static int app_console_handle(int type, int ch)
+{
+    if (type == CON_CTRL_ENTER) {
+        int len = console_input_load(COMMAND_SIZ_MAX, command_str);
+        int argc;
+
+        if (len < 1) {
+            return 0;
+        }
+        command_str[len] = 0;
+        cupkee_history_push(len, command_str);
+
+        argc = app_command_parse(command_str);
+        if (argc) {
+            app_command_do(argc, args);
+        }
+    } else
+    if (type == CON_CTRL_TABLE) {
+        return cupkee_auto_complete(5, commands);
+    } else
+    if (type == CON_CTRL_UP) {
+        return cupkee_history_load(-1);
+    } else
+    if (type == CON_CTRL_DOWN) {
+        return cupkee_history_load(1);
     }
 
-    if (strcmp("hello\r", command_buf) == 0) {
-        hw_console_sync_puts("hi\r\n");
-    } else
-    if (!strcmp("led\r", command_buf)) {
-        hw_led_toggle();
-    } else
-    if (!strcmp("pulse\r", command_buf)) {
-        if (pulse_enable()) {
-            hw_console_sync_puts("ok\r\n");
-        } else {
-            hw_console_sync_puts("fail\r\n");
-        }
-    } else
-    if (!strcmp("trigger\r", command_buf)) {
-        if (pulse_trigger()) {
-            hw_console_sync_puts("ok\r\n");
-        } else {
-            hw_console_sync_puts("fail\r\n");
-        }
-    } else
-    if (!strcmp("pwm\r", command_buf)) {
-        if (pwm_enable()) {
-            hw_console_sync_puts("ok\r\n");
-        } else {
-            hw_console_sync_puts("fail\r\n");
-        }
-    } else
-    if (!strcmp("pwm10\r", command_buf)) {
-        if (pwm_set(10)) {
-            hw_console_sync_puts("ok\r\n");
-        } else {
-            hw_console_sync_puts("fail\r\n");
-        }
-    } else
-    if (!strcmp("pwm50\r", command_buf)) {
-        if (pwm_set(50)) {
-            hw_console_sync_puts("ok\r\n");
-        } else {
-            hw_console_sync_puts("fail\r\n");
-        }
-    } else
-    if (!strcmp("pwm80\r", command_buf)) {
-        if (pwm_set(80)) {
-            hw_console_sync_puts("ok\r\n");
-        } else {
-            hw_console_sync_puts("fail\r\n");
-        }
-    } else
-    if (!strcmp("pwm100\r", command_buf)) {
-        if (pwm_set(100)) {
-            hw_console_sync_puts("ok\r\n");
-        } else {
-            hw_console_sync_puts("fail\r\n");
-        }
-    } else
-    if (!strcmp("usart_send\r", command_buf)) {
-    }
+    return CON_EXECUTE_DEF;
+}
 
-    command_done = 1;
+static int app_event_handle(event_info_t *e)
+{
+    switch(e->type) {
+    case EVENT_SYSTICK: app_systick_proc(); break;
+    case EVENT_GPRS:    gprs_event_proc(e->which); break;
+    default: break;
+    }
+    return 0;
+}
+
+static device_t *uart1;
+static device_t *uart2;
+static device_t *io_gprs;
+
+static void reset_gprs_device(void)
+{
+    cupkee_device_set(io_gprs, 0, 0);
+    cupkee_device_set(io_gprs, 1, 0);
+}
+
+static void enable_gprs_device(void)
+{
+    cupkee_device_set(io_gprs, 0, 1);
+}
+
+static void start_gprs_device(void)
+{
+    cupkee_device_set(io_gprs, 1, 1);
 }
 
 int main(void)
 {
-    uint32_t tick = 0;
+    /**********************************************************
+     * Cupkee nosys initial
+     *********************************************************/
+    cupkee_init();
 
-    nosys_setup();
+    /**********************************************************
+     * Map pin of debug LED
+     *********************************************************/
+    hw_led_map(0, 8);
 
-    while(1) {
-        if (tick != systicks) {
-            tick = systicks;
-            if (tick % 1000 == 0) {
-            }
-        }
+    /**********************************************************
+     * Map pin of GPIOs
+     *********************************************************/
+    hw_pin_map(0, 2, 6); // PIN0(GPIO C6) GPRS_EN
+    hw_pin_map(1, 2, 7); // PIN1(GPIO C7) GPRS_PWR
 
-        event_proc();
+    hw_pin_map(2, 2, 8); // PIN1(GPIO C8) LOCK_CTL
+    hw_pin_map(3, 2, 9); // PIN1(GPIO C9) DOOR_ST
 
-        command_proc();
+    /**********************************************************
+     * User event handle register
+     *********************************************************/
+    cupkee_event_handle_register(app_event_handle);
 
-        hw_poll();
-    }
+    /**********************************************************
+     * Console initial
+     *********************************************************/
+    uart1 = cupkee_device_alloc(DEVICE_TYPE_UART, 0);
+    uart1->config.data.uart.baudrate = 115200;
+    uart1->config.data.uart.stop_bits = DEVICE_OPT_STOPBITS_1;
+    uart1->config.data.uart.data_bits = 8;
+    cupkee_device_enable(uart1);
+
+    cupkee_history_init();
+    cupkee_console_init(uart1, app_console_handle);
+
+    /**********************************************************
+     * Create & Setup
+     *********************************************************/
+    io_gprs = cupkee_device_alloc(DEVICE_TYPE_PIN, 0);
+    io_gprs->config.data.pin.num = 2;
+    io_gprs->config.data.pin.start = 0;
+    io_gprs->config.data.pin.dir = DEVICE_OPT_DIR_OUT;
+    cupkee_device_enable(io_gprs);
+
+    uart2 = cupkee_device_alloc(DEVICE_TYPE_UART, 1);
+    uart2->config.data.uart.baudrate = 115200;
+    uart2->config.data.uart.stop_bits = DEVICE_OPT_STOPBITS_1;
+    uart2->config.data.uart.data_bits = 8;
+    cupkee_device_enable(uart2);
+
+    gprs_init(uart2, sizeof(gprs_hosts) / sizeof(gprs_host_t), gprs_hosts);
+    gprs_recv_cb_register(app_gprs_cb);
+
+    /**********************************************************
+     * Let's Go!
+     *********************************************************/
+    gprs_start(reset_gprs_device, enable_gprs_device, start_gprs_device);
+    console_log("APP start!\r\n");
+
+    cupkee_loop();
+
+    /**********************************************************
+     * Should not go here, make gcc happy!
+     *********************************************************/
+    return 0;
 }
 

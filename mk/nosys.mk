@@ -28,9 +28,9 @@ elf_NAMES = cupkee
 
 cupkee_SRCS = ${notdir ${wildcard ${BASE_DIR}/nosys/*.c}}
 
-cupkee_CPPFLAGS = -I${BSP_DIR}/include
+cupkee_CPPFLAGS = -I${INC_DIR}
 cupkee_CFLAGS   =
-cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -lbsp
+cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -lsys -lbsp
 
 include ${MAKE_DIR}/cupkee.ruls.mk
 

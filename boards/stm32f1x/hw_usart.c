@@ -200,19 +200,20 @@ static void uart_poll(int instance)
     if (uart_has_data(instance)) {
         do {
             if (cupkee_buf_push(control->rx_buff, uart_data_get(instance)) == 0) {
-                device_error_post(control->dev_id, CUPKEE_EOVERFLOW);
+                //device_error_post(control->dev_id, CUPKEE_EOVERFLOW);
+                cupkee_event_post_device_error(control->dev_id);
                 break;
             }
             control->last_tick = system_ticks_count;
         } while (uart_has_data(instance));
 
         if (cupkee_buf_is_full(control->rx_buff)) {
-            device_data_post(control->dev_id);
+            cupkee_event_post_device_data(control->dev_id);
         }
     } else {
         if (!cupkee_buf_is_empty(control->rx_buff)) {
             if (system_ticks_count - control->last_tick > 10) {
-                device_data_post(control->dev_id);
+                cupkee_event_post_device_data(control->dev_id);
             }
         }
     }
@@ -223,7 +224,7 @@ static void uart_poll(int instance)
             if (cupkee_buf_shift(control->tx_buff, &d)) {
                 uart_data_put(instance, d);
             } else {
-                device_drain_post(control->dev_id);
+                cupkee_event_post_device_drain(control->dev_id);
                 break;
             }
         } while(uart_not_busy(instance));
