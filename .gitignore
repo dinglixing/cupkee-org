@@ -6,8 +6,11 @@
 *.bin
 *.elf
 *.map
+*.hex
+*.srec
 *.list
 
-out/
 doc/
+build/
 openocd
+do.sh
