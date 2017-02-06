@@ -173,6 +173,8 @@ typedef struct hw_driver_t {
         struct {
             int (*recv) (int inst, int max, void *buf);
             int (*send) (int inst, int n,   void *data);
+            int (*recv_sync) (int inst, int n, uint8_t *buf);
+            int (*send_sync) (int inst, int n, const uint8_t *data);
             int (*received) (int inst);
         } stream;
         struct {

@@ -52,8 +52,6 @@ static void app_systick_proc(void)
 
         n = snprintf(buf, 16, "PASS %u\r\n", seconds);
         gprs_send(n, buf);
-
-        hw_led_toggle();
     }
 }
 
@@ -240,7 +238,7 @@ int main(void)
     /**********************************************************
      * Let's Go!
      *********************************************************/
-    gprs_start(reset_gprs_device, enable_gprs_device, start_gprs_device);
+    //gprs_start(reset_gprs_device, enable_gprs_device, start_gprs_device);
     console_log("APP start!\r\n");
 
     cupkee_loop();

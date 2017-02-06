@@ -441,6 +441,7 @@ int console_log(const char *fmt, ...)
     va_end(va);
     buf[n] = 0;
 
+    //return hw_sync_puts(buf);
     return console_puts(buf);
 }
 

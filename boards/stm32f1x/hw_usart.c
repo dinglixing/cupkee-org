@@ -245,6 +245,32 @@ static int uart_send(int instance, int len, void *data)
     return cupkee_buf_give(control->tx_buff, len, data);
 }
 
+static int uart_send_sync(int instance, int len, const uint8_t *data)
+{
+    int i = 0;
+
+    while (i < len) {
+        while (!uart_not_busy(instance)) {
+        }
+        uart_data_put(instance, data[i++]);
+    }
+
+    return i;
+}
+
+static int uart_recv_sync(int instance, int len, uint8_t *data)
+{
+    int i = 0;
+
+    while (i < len) {
+        while (!uart_has_data(instance)) {
+        }
+        data[i++] = uart_data_get(instance);
+    }
+
+    return i;
+}
+
 static int uart_received(int instance)
 {
     hw_uart_t *control = uart_get(instance);
@@ -260,6 +286,8 @@ static const hw_driver_t uart_driver = {
     .io.stream = {
         .recv = uart_recv,
         .send = uart_send,
+        .recv_sync = uart_recv_sync,
+        .send_sync = uart_send_sync,
         .received = uart_received,
     }
 };
