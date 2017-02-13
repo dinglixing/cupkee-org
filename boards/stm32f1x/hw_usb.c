@@ -124,7 +124,7 @@ void hw_setup_usb(void)
 
 	ramdisk_init();
 
-	my_usb_msc_init(usbd_dev, 0x82, 64, 0x01, 64, "VendorID", "ProductID",
+	usb_msc_init(usbd_dev, 0x82, 64, 0x01, 64, "VendorID", "ProductID",
 		"0.00", ramdisk_blocks(), ramdisk_read, ramdisk_write);
 }
 

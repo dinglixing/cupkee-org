@@ -1,6 +1,6 @@
-[submodule "module/libopencm3"]
-	path = module/libopencm3
-	url = https://github.com/libopencm3/libopencm3.git
 [submodule "module/panda"]
 	path = module/panda
 	url = https://github.com/cupkee/panda.git
+[submodule "module/libopencm3"]
+	path = module/libopencm3
+	url = https://github.com/cupkee/libopencm3.git
