@@ -33,7 +33,7 @@ static uint32_t systick_pass = 0;
 static char     command_str[COMMAND_SIZ_MAX];
 static char    *args[COMMAND_ARG_MAX];
 
-static uint32_t seconds = 0;
+static int seconds = 0;
 static const gprs_host_t gprs_hosts[] = {
     {"TCP", "www.cupkee.cn", "8124"},
     {"TCP", "www.cupkee.cn", "8124"}  // second host
@@ -50,8 +50,9 @@ static void app_systick_proc(void)
         systick_pass = 0;
         seconds++;
 
-        n = snprintf(buf, 16, "PASS %u\r\n", seconds);
+        n = snprintf(buf, 16, "PASS %d\r\n", seconds);
         gprs_send(n, buf);
+        hw_led_toggle();
     }
 }
 
@@ -69,7 +70,6 @@ static int app_command_parse(char *input)
     int i;
     char *word, *p;
     const char *sep = " \t\r\n";
-
 
     for (word = strtok_r(input, sep, &p), i = 0;
          word;
@@ -121,12 +121,14 @@ static const char *commands[] = {
 
 static int app_console_handle(int type, int ch)
 {
+    (void) ch;
+
     if (type == CON_CTRL_ENTER) {
         int len = console_input_load(COMMAND_SIZ_MAX, command_str);
         int argc;
 
         if (len < 1) {
-            return 0;
+            return CON_EXECUTE_DEF;
         }
         command_str[len] = 0;
         cupkee_history_push(len, command_str);
@@ -159,9 +161,10 @@ static int app_event_handle(event_info_t *e)
     return 0;
 }
 
-static device_t *uart1;
-static device_t *uart2;
-static device_t *io_gprs;
+static cupkee_device_t *usb_cdc;
+static cupkee_device_t *uart1;
+static cupkee_device_t *uart2;
+static cupkee_device_t *io_gprs;
 
 static void reset_gprs_device(void)
 {
@@ -208,7 +211,8 @@ int main(void)
     /**********************************************************
      * Console initial
      *********************************************************/
-    uart1 = cupkee_device_alloc(DEVICE_TYPE_UART, 0);
+#if 1
+    uart1 = cupkee_device_request("uart", 0);
     uart1->config.data.uart.baudrate = 115200;
     uart1->config.data.uart.stop_bits = DEVICE_OPT_STOPBITS_1;
     uart1->config.data.uart.data_bits = 8;
@@ -217,16 +221,26 @@ int main(void)
     cupkee_history_init();
     cupkee_console_init(uart1, app_console_handle);
 
+#else
+    usb_cdc = cupkee_device_request("usb-cdc", 0);
+    if (usb_cdc) {
+        cupkee_device_enable(usb_cdc);
+
+        cupkee_history_init();
+        cupkee_console_init(usb_cdc, app_console_handle);
+    }
+#endif
+
     /**********************************************************
      * Create & Setup
      *********************************************************/
-    io_gprs = cupkee_device_alloc(DEVICE_TYPE_PIN, 0);
+    io_gprs = cupkee_device_request("pin", 0);
     io_gprs->config.data.pin.num = 2;
     io_gprs->config.data.pin.start = 0;
     io_gprs->config.data.pin.dir = DEVICE_OPT_DIR_OUT;
     cupkee_device_enable(io_gprs);
 
-    uart2 = cupkee_device_alloc(DEVICE_TYPE_UART, 1);
+    uart2 = cupkee_device_request("uart", 1);
     uart2->config.data.uart.baudrate = 115200;
     uart2->config.data.uart.stop_bits = DEVICE_OPT_STOPBITS_1;
     uart2->config.data.uart.data_bits = 8;
@@ -238,8 +252,9 @@ int main(void)
     /**********************************************************
      * Let's Go!
      *********************************************************/
-    //gprs_start(reset_gprs_device, enable_gprs_device, start_gprs_device);
     console_log("APP start!\r\n");
+
+    gprs_start(reset_gprs_device, enable_gprs_device, start_gprs_device);
 
     cupkee_loop();
 

@@ -28,7 +28,7 @@ enum CONSOLE_HANDLE_RET {
 
 typedef int (*console_handle_t)(int type, int ch);
 
-int cupkee_console_init(device_t *con_dev, console_handle_t handle);
+int cupkee_console_init(cupkee_device_t *con_dev, console_handle_t handle);
 
 int console_input_clean(void);
 int console_input_char(int ch);
@@ -42,6 +42,11 @@ int console_putc(int ch);
 int console_puts(const char *s);
 
 int console_log(const char *fmt, ...);
+
+int console_putc_sync(int ch);
+int console_puts_sync(const char *s);
+
+int console_log_sync(const char *fmt, ...);
 
 #endif /* __CONSOLE_INC__ */
 

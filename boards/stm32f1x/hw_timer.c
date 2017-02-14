@@ -411,12 +411,6 @@ static void device_setup_timer(int instance, uint32_t channel)
         TIM_CCMR1(base) = 0;
     }
 
-#ifndef TIM_CCMR2_CC3S_IN_TI3
-#define TIM_CCMR2_CC3S_IN_TI3  (1 << 0)
-#define TIM_CCMR2_CC3S_IN_TI4  (2 << 0)
-#define TIM_CCMR2_CC4S_IN_TI4  (1 << 8)
-#define TIM_CCMR2_CC4S_IN_TI3  (2 << 8)
-#endif
     if (channel & 12) {
         if (channel & 4) {
             TIM_CCMR2(base) = TIM_CCMR2_CC3S_IN_TI3 | TIM_CCMR2_CC4S_IN_TI3 |

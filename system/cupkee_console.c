@@ -13,7 +13,7 @@
 
 #define CONSOLE_BUF_SIZE 128
 
-static device_t *console_dev = NULL;
+static cupkee_device_t *console_dev = NULL;
 static console_handle_t user_handle = NULL;
 
 static uint32_t console_total_recv = 0;
@@ -24,6 +24,7 @@ static uint16_t console_cursor = 0;
 
 static rbuff_t  console_buff[CONSOLE_BUF_NUM];
 static char     console_buff_mem[CONSOLE_BUF_NUM][CONSOLE_BUF_SIZE];
+static const char *console_prompt = PROMPT;
 
 static int console_buf_write_byte(int x, char c)
 {
@@ -105,7 +106,7 @@ static void console_input_enter(void)
 {
     console_cursor = 0;
     rbuff_reset(&console_buff[CONSOLE_IN]);
-    console_puts(PROMPT);
+    console_puts(console_prompt);
 }
 
 static void console_input_seek(int n)
@@ -234,22 +235,22 @@ static void console_input_handle(int n, void *data)
 
 static char recv_buf[16];
 
-static void console_do_recv(void)
+static void console_do_recv(cupkee_device_t *dev)
 {
     int n;
 
-    while (0 < (n = cupkee_device_recv(console_dev, 16, recv_buf))) {
+    while (0 < (n = cupkee_device_recv(dev, 16, recv_buf))) {
         console_total_recv += n;
         console_input_handle(n, recv_buf);
     }
 }
 
-static void console_do_send(void)
+static void console_do_send(cupkee_device_t *dev)
 {
     char c;
 
     while (console_buf_read_byte(CONSOLE_OUT, &c)) {
-        if (!cupkee_device_send(console_dev, 1, &c)) {
+        if (!cupkee_device_send(dev, 1, &c)) {
             console_buf_unread_byte(CONSOLE_OUT, c);
             break;
         } else {
@@ -258,10 +259,23 @@ static void console_do_send(void)
     }
 }
 
-int cupkee_console_init(device_t *con_dev, console_handle_t handle)
+static void console_device_handle(cupkee_device_t *dev, uint8_t code, void *param)
+{
+    (void) param;
+
+    if (code == DEVICE_EVENT_DATA) {
+        console_do_recv(dev);
+    } else
+    if (code == DEVICE_EVENT_DRAIN) {
+        console_do_send(dev);
+    }
+}
+
+int cupkee_console_init(cupkee_device_t *con_dev, console_handle_t handle)
 {
     console_cursor = 0;
     console_total_recv = 0;
+
     rbuff_init(&console_buff[CONSOLE_IN],  CONSOLE_BUF_SIZE);
     rbuff_init(&console_buff[CONSOLE_OUT], CONSOLE_BUF_SIZE);
 
@@ -269,8 +283,8 @@ int cupkee_console_init(device_t *con_dev, console_handle_t handle)
         return -1;
     }
 
-    con_dev->handles[DEVICE_EVENT_DATA]  = console_do_recv;
-    con_dev->handles[DEVICE_EVENT_DRAIN] = console_do_send;
+    con_dev->handle = console_device_handle;
+    con_dev->handle_param = NULL;
 
     user_handle = handle;
     console_dev = con_dev;
@@ -377,7 +391,7 @@ int console_input_refresh(void)
 {
     int i = 0, ch;
 
-    console_puts(PROMPT);
+    console_puts(console_prompt);
 
     while ((ch = console_input_peek(i++)) > 0) {
         console_putc(ch);
@@ -430,6 +444,36 @@ int console_puts(const char *s)
 
 int console_log(const char *fmt, ...)
 {
+    char buf[128];
+    int  n;
+
+    va_list va;
+    va_start(va, fmt);
+
+    n = vsnprintf(buf, 128, fmt, va);
+
+    va_end(va);
+    buf[n] = 0;
+
+    return console_puts(buf);
+}
+
+int console_putc_sync(int c)
+{
+    char buf = c;
+
+    return cupkee_device_send_sync(console_dev, 1, &buf);
+}
+
+int console_puts_sync(const char *s)
+{
+    int len = strlen(s);
+
+    return cupkee_device_send_sync(console_dev, len, s);
+}
+
+int console_log_sync(const char *fmt, ...)
+{
     char buf[256];
     int  n;
 
@@ -441,7 +485,6 @@ int console_log(const char *fmt, ...)
     va_end(va);
     buf[n] = 0;
 
-    //return hw_sync_puts(buf);
-    return console_puts(buf);
+    return console_puts_sync(buf);
 }
 

@@ -96,3 +96,49 @@ int cupkee_auto_complete(int symbal_num, const char **symbals)
     return CON_EXECUTE_DEF;
 }
 
+void *cupkee_auto_complete_init(void *buf, unsigned size)
+{
+    auto_complete_t *ac;
+    int has;
+
+    if (!buf || size < sizeof(auto_complete_t)) {
+        return NULL;
+    }
+
+    ac  = (auto_complete_t *) buf;
+    has = console_input_token(TOKEN_MAX_SIZE - 1, ac->buf);
+
+    ac->pos = 0;
+    ac->prefix = has;
+    ac->supply = 0;
+    ac->same = 0;
+
+    return buf;
+}
+
+void cupkee_auto_complete_update(void *buf, const char *symbal)
+{
+    auto_complete_t *ac = (auto_complete_t *)buf;
+
+    if (ac && ac->prefix && symbal) {
+        do_complete(symbal, ac);
+    }
+}
+
+int cupkee_auto_complete_finish(void *buf)
+{
+    auto_complete_t *ac = (auto_complete_t *)buf;
+    if (ac && ac->same) {
+        if (ac->same > 1) {
+            console_puts("\r\n");
+            console_input_refresh();
+        } else {
+            char *suffix = ac->buf + ac->prefix;
+            console_input_insert(ac->supply, suffix);
+        }
+        return CON_PREVENT_DEF;
+    }
+
+    return CON_EXECUTE_DEF;
+}
+

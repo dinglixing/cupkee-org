@@ -59,17 +59,21 @@ SOFTWARE.
 #define DEVICE_CATEGORY_STREAM              1
 #define DEVICE_CATEGORY_BLOCK               2
 
-#define DEVICE_TYPE_PIN                     0
-#define DEVICE_TYPE_ADC                     1
-#define DEVICE_TYPE_DAC                     2
-#define DEVICE_TYPE_PWM                     3
-#define DEVICE_TYPE_PULSE                   4
-#define DEVICE_TYPE_TIMER                   5
-#define DEVICE_TYPE_COUNTER                 6
-#define DEVICE_TYPE_UART                    7
-#define DEVICE_TYPE_USART                   8
-#define DEVICE_TYPE_SPI                     9
-#define DEVICE_TYPE_DUMMY                   10
+enum DEVICE_TYPE {
+    DEVICE_TYPE_PIN = 0,
+    DEVICE_TYPE_ADC,
+    DEVICE_TYPE_DAC,
+    DEVICE_TYPE_PWM,
+    DEVICE_TYPE_PULSE,
+    DEVICE_TYPE_TIMER,
+    DEVICE_TYPE_COUNTER,
+    DEVICE_TYPE_UART,
+    DEVICE_TYPE_USART,
+    DEVICE_TYPE_SPI,
+    DEVICE_TYPE_I2C,
+    DEVICE_TYPE_USB_CDC,
+    DEVICE_TYPE_DUMMY
+};
 
 #define DEVICE_OPT_DIR_IN                   0   // default
 #define DEVICE_OPT_DIR_OUT                  1

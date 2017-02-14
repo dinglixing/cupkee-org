@@ -60,7 +60,7 @@ static const gprs_command_t gprs_setup_tab[] = {
 };
 
 static void (*gprs_recv_cb)(int, void *) = NULL;
-static device_t *gprs_tty = NULL;
+static cupkee_device_t *gprs_tty = NULL;
 
 static void gprs_recv_default(int len, void *data)
 {
@@ -124,6 +124,19 @@ static void gprs_do_recv(void)
         if (show_flags) {
             console_log(gprs_recv_buf);
         }
+    }
+}
+
+static void gprs_device_handle(cupkee_device_t *dev, uint8_t code, void *param)
+{
+    (void) dev;
+    (void) param;
+
+    if (code == DEVICE_EVENT_DATA) {
+        gprs_do_recv();
+    } else
+    if (code == DEVICE_EVENT_DRAIN) {
+        gprs_do_send();
     }
 }
 
@@ -376,15 +389,15 @@ void gprs_event_proc(uint8_t which)
     }
 }
 
-void gprs_init(device_t *gprs_dev, int host_num, const gprs_host_t *hosts)
+void gprs_init(cupkee_device_t *gprs_dev, int host_num, const gprs_host_t *hosts)
 {
     gprs_host_curr = 0;
     gprs_recv_cb   = gprs_recv_default;
 
 
     gprs_tty = gprs_dev;
-    gprs_tty->handles[DEVICE_EVENT_DATA]  = gprs_do_recv;
-    gprs_tty->handles[DEVICE_EVENT_DRAIN] = gprs_do_send;
+    gprs_tty->handle = gprs_device_handle;
+    gprs_tty->handle_param = NULL;
 
     gprs_host_num = host_num;
     gprs_hosts    = hosts;

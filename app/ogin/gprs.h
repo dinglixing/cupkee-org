@@ -7,7 +7,7 @@ typedef struct gprs_host_t {
     const char *port;
 } gprs_host_t;
 
-void gprs_init(device_t *gprs_dev, int host_num, const gprs_host_t *hosts);
+void gprs_init(cupkee_device_t *gprs_dev, int host_num, const gprs_host_t *hosts);
 
 void gprs_start(void (*reset)(void),
                 void (*enable)(void),
