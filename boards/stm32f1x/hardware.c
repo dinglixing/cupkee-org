@@ -129,8 +129,6 @@ void hw_poll(void)
 
 void hw_halt(void)
 {
-    hw_console_sync_puts("hardware halt!\r\n");
-
     while (1)
         ;
 }

@@ -223,12 +223,10 @@ int main(void)
 
 #else
     usb_cdc = cupkee_device_request("usb-cdc", 0);
-    if (usb_cdc) {
-        cupkee_device_enable(usb_cdc);
+    cupkee_device_enable(usb_cdc);
 
-        cupkee_history_init();
-        cupkee_console_init(usb_cdc, app_console_handle);
-    }
+    cupkee_history_init();
+    cupkee_console_init(usb_cdc, app_console_handle);
 #endif
 
     /**********************************************************

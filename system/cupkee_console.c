@@ -1,6 +1,8 @@
 #include "cupkee.h"
 #include "rbuff.h"
 
+#define CONSOLE_BUF_SIZE 128
+
 #define BELL    "\007"
 #define CRLF    "\r\n"
 #define RIGHT   "\033[C"
@@ -11,15 +13,12 @@
 #define CONSOLE_OUT      1
 #define CONSOLE_BUF_NUM  2
 
-#define CONSOLE_BUF_SIZE 128
-
 static cupkee_device_t *console_dev = NULL;
 static console_handle_t user_handle = NULL;
 
 static uint32_t console_total_recv = 0;
 static uint32_t console_total_send = 0;
 
-//static uint8_t  console_logo_show;
 static uint16_t console_cursor = 0;
 
 static rbuff_t  console_buff[CONSOLE_BUF_NUM];
@@ -290,6 +289,15 @@ int cupkee_console_init(cupkee_device_t *con_dev, console_handle_t handle)
     console_dev = con_dev;
 
     return 0;
+}
+
+void console_prompt_set(const char *prompt)
+{
+    if (prompt) {
+        console_prompt = prompt;
+    } else {
+        console_prompt = PROMPT;
+    }
 }
 
 int console_input_clean(void)

@@ -1,7 +1,5 @@
 #include "cupkee.h"
 
-#define TOKEN_MAX_SIZE 32
-
 typedef struct auto_complete_t {
     uint8_t prefix;
     uint8_t supply;

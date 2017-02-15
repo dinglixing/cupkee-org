@@ -35,9 +35,7 @@ static void cupkee_event_process(void)
     event_info_t e;
 
     while (cupkee_event_take(&e)) {
-        /****************************
-         * Cupkee process
-         ***************************/
+        /* Cupkee process */
         if (e.type == EVENT_SYSTICK) {
             systicks++;
             cupkee_device_sync(systicks);
@@ -47,9 +45,7 @@ static void cupkee_event_process(void)
             continue;
         }
 
-        /****************************
-         * User process
-         ***************************/
+        /* User process */
         if (user_event_handle) {
             user_event_handle(&e);
         }

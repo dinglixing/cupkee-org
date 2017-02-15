@@ -26,7 +26,7 @@
 
 elf_NAMES = cupkee
 
-cupkee_SRCS = ${notdir ${wildcard ${APP_DIR}/main/*.c}}
+cupkee_SRCS = ${notdir ${wildcard ${APP_DIR}/atom/*.c}}
 
 cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
 cupkee_CFLAGS   =

@@ -23,6 +23,7 @@
 #include "cupkee_console.h"
 #include "cupkee_auto_complete.h"
 #include "cupkee_history.h"
+#include "cupkee_shell.h"
 
 void cupkee_init(void);
 void cupkee_loop(void);

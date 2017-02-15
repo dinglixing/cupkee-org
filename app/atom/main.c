@@ -3,7 +3,7 @@ MIT License
 
 This file is part of cupkee project.
 
-Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+Copyright (c) 2016-2017 Lixing Ding <ding.lixing@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@ static const native_t native_entry[] = {
     {"Buffer",          buffer_native_create},
 
     /* cupkee natives */
+#if 0
     {"sysinfos",        native_sysinfos},
     {"systicks",        native_systicks},
     {"scripts",         native_scripts},
@@ -42,9 +43,10 @@ static const native_t native_entry[] = {
     {"clearInterval",   native_clear_interval},
 
     {"Device",          device_native_create},
-    {"pinMap",          device_native_pin_map},
-    {"ledMap",          device_native_led_map},
-    {"led",             device_native_led},
+    {"pinMap",          cupkee_native_pin_map},
+    {"ledMap",          cupkee_native_led_map},
+    {"led",             cupkee_native_led},
+#endif
 
     /* user native */
 
@@ -55,17 +57,30 @@ static char *initial = NULL;
 
 int main(void)
 {
+
+    /**********************************************************
+     * Cupkee system initial
+     *********************************************************/
     cupkee_init();
 
-    /* user code here */
+    /**********************************************************
+     * user setup code
+     *********************************************************/
 
-    cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
-    cupkee_start(initial);
 
-    while (1)
-        cupkee_poll();
+    /**********************************************************
+     * Cupkee shell initial
+     *********************************************************/
+    cupkee_shell_init(sizeof(native_entry)/sizeof(native_t), native_entry);
 
-    // Should not go here
+    /**********************************************************
+     * Let's Go!
+     *********************************************************/
+    cupkee_shell_loop(initial);
+
+    /**********************************************************
+     * Let's Go!
+     *********************************************************/
     return 0;
 }
 

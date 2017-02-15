@@ -75,7 +75,7 @@ tiny:  build bsp sys lang
 
 atom:  build bsp sys lang
 	@mkdir -p ${BUILD_DIR}/atom
-	@make -C ${BUILD_DIR}/atom -f ${MAKE_DIR}/main.mk extend
+	@make -C ${BUILD_DIR}/atom -f ${MAKE_DIR}/atom.mk extend
 
 test: build bsp sys lang
 	@rm -rf ${BUILD_DIR}/test.elf
