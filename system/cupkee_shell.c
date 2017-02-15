@@ -27,8 +27,8 @@ SOFTWARE.
 #include <cupkee.h>
 
 #include "cupkee_shell_misc.h"
+#include "cupkee_shell_systick.h"
 
-#define VARIABLE_REF_MAX    (16)
 static const char *logo = "\r\n\
     ______               __                  \r\n\
   /   ___ \\ __ ________ |  | __ ____   ____  \r\n\
@@ -46,44 +46,6 @@ static int   input_cached;
 static uint8_t   shell_mode;
 static uint8_t   shell_logo_show;
 static env_t shell_env;
-static val_t reference_vals[VARIABLE_REF_MAX];
-
-static void reference_init(env_t *env)
-{
-    int i;
-
-    for (i = 0; i < VARIABLE_REF_MAX; i++) {
-        val_set_undefined(&reference_vals[i]);
-    }
-
-    env_reference_set(env, reference_vals, VARIABLE_REF_MAX);
-}
-
-val_t *reference_create(val_t *v)
-{
-    int i;
-
-    for (i = 0; i < VARIABLE_REF_MAX; i++) {
-        val_t *r = reference_vals + i;
-
-        if (val_is_undefined(r)) {
-            *r = *v;
-            return r;
-        }
-    }
-    return NULL;
-}
-
-void reference_release(val_t *ref)
-{
-    if (ref) {
-        int pos = ref - reference_vals;
-
-        if (pos >= 0 && pos < VARIABLE_REF_MAX) {
-            val_set_undefined(ref);
-        }
-    }
-}
 
 static void shell_memory_location(int *heap_mem_sz, int *stack_mem_sz)
 {
@@ -230,7 +192,7 @@ static int shell_console_handle(int type, int ch)
     return CON_EXECUTE_DEF;
 }
 
-static void shell_console_setup(void)
+static void shell_console_init(void)
 {
     cupkee_device_t *tty;
 
@@ -255,7 +217,7 @@ static void shell_console_setup(void)
     shell_logo_show = 0;
 }
 
-static void shell_interp_setup(int heap_mem_sz, int stack_mem_sz, int n, const native_t *entrys)
+static void shell_interp_init(int heap_mem_sz, int stack_mem_sz, int n, const native_t *entrys)
 {
 
     if(0 != interp_env_init_interactive(&shell_env, core_mem_ptr, core_mem_sz,
@@ -263,11 +225,20 @@ static void shell_interp_setup(int heap_mem_sz, int stack_mem_sz, int n, const n
         hw_halt();
     }
 
-    reference_init(&shell_env);
+    shell_reference_init(&shell_env);
 
     env_native_set(&shell_env, entrys, n);
 
     shell_mode = 0;
+}
+
+static int shell_event_handle(event_info_t *e)
+{
+    switch(e->type) {
+    case EVENT_SYSTICK: shell_systick_handle(&shell_env, cupkee_systicks()); break;
+    default: break;
+    }
+    return 0;
 }
 
 int cupkee_shell_init(int n, const native_t *natives)
@@ -276,9 +247,13 @@ int cupkee_shell_init(int n, const native_t *natives)
 
     shell_memory_location(&heap_mem_sz, &stack_mem_sz);
 
-    shell_console_setup();
+    shell_console_init();
 
-    shell_interp_setup(heap_mem_sz, stack_mem_sz, n, natives);
+    shell_interp_init(heap_mem_sz, stack_mem_sz, n, natives);
+
+    shell_systick_init();
+
+    cupkee_event_handle_register(shell_event_handle);
 
     return 0;
 }

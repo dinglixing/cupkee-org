@@ -24,6 +24,7 @@
 #include "cupkee_auto_complete.h"
 #include "cupkee_history.h"
 #include "cupkee_shell.h"
+#include "cupkee_native.h"
 
 void cupkee_init(void);
 void cupkee_loop(void);

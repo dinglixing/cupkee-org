@@ -31,17 +31,16 @@ static const native_t native_entry[] = {
     {"Buffer",          buffer_native_create},
 
     /* cupkee natives */
-#if 0
     {"sysinfos",        native_sysinfos},
     {"systicks",        native_systicks},
-    {"scripts",         native_scripts},
-    {"show",            native_show},
+    {"print",           native_print},
 
     {"setTimeout",      native_set_timeout},
     {"setInterval",     native_set_interval},
     {"clearTimeout",    native_clear_timeout},
     {"clearInterval",   native_clear_interval},
 
+#if 0
     {"Device",          device_native_create},
     {"pinMap",          cupkee_native_pin_map},
     {"ledMap",          cupkee_native_led_map},

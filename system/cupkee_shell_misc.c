@@ -28,6 +28,9 @@ SOFTWARE.
 
 #include "cupkee_shell_misc.h"
 
+#define VARIABLE_REF_MAX    (16)
+static val_t reference_vals[VARIABLE_REF_MAX];
+
 static inline void print_number(val_t *v) {
     char buf[32];
 
@@ -161,6 +164,43 @@ void shell_print_value(val_t *v)
     }
 }
 
+void shell_reference_init(env_t *env)
+{
+    int i;
+
+    for (i = 0; i < VARIABLE_REF_MAX; i++) {
+        val_set_undefined(&reference_vals[i]);
+    }
+
+    env_reference_set(env, reference_vals, VARIABLE_REF_MAX);
+}
+
+val_t *shell_reference_create(val_t *v)
+{
+    int i;
+
+    for (i = 0; i < VARIABLE_REF_MAX; i++) {
+        val_t *r = reference_vals + i;
+
+        if (val_is_undefined(r)) {
+            *r = *v;
+            return r;
+        }
+    }
+    return NULL;
+}
+
+void shell_reference_release(val_t *ref)
+{
+    if (ref) {
+        int pos = ref - reference_vals;
+
+        if (pos >= 0 && pos < VARIABLE_REF_MAX) {
+            val_set_undefined(ref);
+        }
+    }
+}
+
 void shell_print_error(int error)
 {
     switch (error) {
@@ -185,6 +225,66 @@ void shell_print_error(int error)
     }
 }
 
+void shell_do_callback(env_t *env, val_t *cb, uint8_t ac, val_t *av)
+{
+    if (!cb) return;
+
+    if (val_is_native(cb)) {
+        function_native_t fn = (function_native_t) val_2_intptr(cb);
+        fn(env, ac, av);
+    } else
+    if (val_is_script(cb)){
+        if (ac) {
+            int i;
+            for (i = ac - 1; i >= 0; i--)
+                env_push_call_argument(env, av + i);
+        }
+        env_push_call_function(env, cb);
+        interp_execute_call(env, ac);
+    }
+}
+
+val_t shell_error(env_t *env, int code)
+{
+    (void) env;
+
+    return val_mk_number(code);
+}
+
+void shell_do_callback_error(env_t *env, val_t *cb, int code)
+{
+    val_t err = shell_error(env, code);
+
+    shell_do_callback(env, cb, 1, &err);
+}
+
+void shell_do_callback_buffer(env_t *env, val_t *cb, type_buffer_t *buffer)
+{
+    val_t args[2];
+
+    val_set_undefined(args);
+    val_set_buffer(args + 1, buffer);
+
+    shell_do_callback(env, cb, 2, args);
+}
+
+int shell_string_id(val_t *in, int max, const char **names)
+{
+    if (val_is_number(in)) {
+        return val_2_integer(in);
+    } else {
+        const char *str = val_2_cstring(in);
+        if (str) {
+            int id;
+            for (id = 0; id < max && names[id]; id++) {
+                if (!strcmp(str, names[id])) {
+                    return id;
+                }
+            }
+        }
+    }
+    return max;
+}
 
 val_t native_sysinfos(env_t *env, int ac, val_t *av)
 {
@@ -225,7 +325,7 @@ val_t native_systicks(env_t *env, int ac, val_t *av)
     return val_mk_number(cupkee_systicks());
 }
 
-val_t native_show(env_t *env, int ac, val_t *av)
+val_t native_print(env_t *env, int ac, val_t *av)
 {
     int i;
 
