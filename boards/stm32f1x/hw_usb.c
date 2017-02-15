@@ -315,7 +315,6 @@ static int cdc_send(int instance, int len, void *data)
     while (i < len && cdc_send_byte(p[i])) {
         i++;
     }
-    hw_led_toggle();
 
     return i;
 }

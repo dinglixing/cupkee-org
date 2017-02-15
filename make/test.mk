@@ -34,7 +34,7 @@ test_SRCS +=	CUnit_Basic.c \
 				CUnit_Util.c \
 
 test_CPPFLAGS = -I${BSP_DIR}/include -I${SYS_DIR}/include -I${LANG_DIR}/include
-test_CPPFLAGS += -I${TEST_DIR}/cunit -I${BSP_DIR}/test
+test_CPPFLAGS += -I${TST_DIR}/cunit -I${BSP_DIR}/test
 
 test_CFLAGS   =
 test_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -L${LANG_BUILD_DIR} -lsys -lbsp -llang

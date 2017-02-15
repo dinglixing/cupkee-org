@@ -207,19 +207,6 @@ void hw_info_get(hw_info_t *);
 
 int  hw_memory_alloc(void **p, int size, int align);
 
-/* console */
-int hw_console_putc(int ch);
-int hw_console_puts(const char *s);
-int hw_console_sync_putc(int ch);
-int hw_console_sync_puts(const char *s);
-int hw_console_set_callback(void (*input)(void *, int), void (*drain)(void));
-
-/* misc */
-int hw_scripts_erase(void);
-int hw_scripts_remove(int id);
-int hw_scripts_save(const char *s);
-const char *hw_scripts_load(const char *prev);
-
 /* DEBUG LED */
 int  hw_led_map(int port, int pin);
 void hw_led_set(void);

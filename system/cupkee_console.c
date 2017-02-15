@@ -232,13 +232,13 @@ static void console_input_handle(int n, void *data)
     }
 }
 
-static char recv_buf[16];
+static char recv_buf[8];
 
 static void console_do_recv(cupkee_device_t *dev)
 {
     int n;
 
-    while (0 < (n = cupkee_device_recv(dev, 16, recv_buf))) {
+    while (0 < (n = cupkee_device_recv(dev, 8, recv_buf))) {
         console_total_recv += n;
         console_input_handle(n, recv_buf);
     }

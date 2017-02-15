@@ -28,7 +28,7 @@ elf_NAMES = cupkee
 
 cupkee_SRCS = ${notdir ${wildcard ${APP_DIR}/ogin/*.c}}
 
-cupkee_CPPFLAGS = -I${INC_DIR}
+cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
 cupkee_CFLAGS   =
 cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -lsys -lbsp
 

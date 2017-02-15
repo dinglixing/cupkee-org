@@ -27,42 +27,6 @@ SOFTWARE.
 
 #include "test.h"
 
-static const native_t native_entry[] = {
-    /* cupkee native */
-    {"Buffer",          buffer_native_create},
-    {"sysinfos",        native_sysinfos},
-    {"systicks",        native_systicks},
-
-    {"show",            native_show},
-
-    {"setTimeout",      native_set_timeout},
-    {"setInterval",     native_set_interval},
-    {"clearTimeout",    native_clear_timeout},
-    {"clearInterval",   native_clear_interval},
-
-    {"scripts",         native_scripts},
-
-    {"Device",          device_native_create},
-    /* user native */
-};
-
-int test_cupkee_reset(void)
-{
-    hw_dbg_reset();
-
-    cupkee_init();
-    cupkee_set_native(native_entry, sizeof(native_entry)/sizeof(native_t));
-
-    return 0;
-}
-
-int test_cupkee_start(const char *init)
-{
-    cupkee_start(init);
-
-    return test_cupkee_run_with_reply("\r", NULL, 1);
-}
-
 int main(int argc, const char *argv[])
 {
     (void) argc;
@@ -77,18 +41,6 @@ int main(int argc, const char *argv[])
      ***********************************************/
     test_hello();
 
-    test_util_buffer();
-
-    test_system_misc();
-    test_device_pin();
-    test_device_adc();
-    test_device_pwm();
-    test_device_pulse();
-    test_device_timer();
-    test_device_counter();
-    test_device_uart();
-
-    // add test suite
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();
