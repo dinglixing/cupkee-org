@@ -26,7 +26,7 @@
 
 ifeq (${BOARD},)
 $(info "Target board not specified...")
-$(info "test will be build.")
+$(info "test will be use")
 endif
 
 # Define default target board
@@ -52,6 +52,11 @@ export LANG_BUILD_DIR = ${BUILD_DIR}/lang
 
 all: ogin
 	@printf "ok\n"
+
+setup:
+	git submodule init
+	git submodule update
+	make -C module/libopencm3
 
 build:
 	@mkdir -p ${LANG_BUILD_DIR} ${BSP_BUILD_DIR} ${SYS_BUILD_DIR}
