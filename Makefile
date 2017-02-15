@@ -90,9 +90,5 @@ test: build bsp sys lang
 clean:
 	@rm -rf ${BUILD_DIR}
 
-load:
-	openocd -fopenocd/interface/jlink.cfg -fopenocd/target/stm32f1x.cfg \
-		-c "program ${BUILD_DIR}/cupkee.elf verify reset exit"
-
-.PHONY: clean load build main bsp lang sys ogin tiny atom
+.PHONY: clean build main bsp lang sys ogin tiny atom
 
