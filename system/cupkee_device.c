@@ -26,18 +26,9 @@ SOFTWARE.
 
 #include "cupkee.h"
 
-extern cupkee_device_desc_t *device_entrys[];
-
 static cupkee_device_t devices[APP_DEV_MAX];
 static cupkee_device_t *device_free = NULL;
 static cupkee_device_t *device_work = NULL;
-
-static int device_id(cupkee_device_t *device)
-{
-    int id = device - devices;
-
-    return id < APP_DEV_MAX ? id : -1;
-}
 
 static cupkee_device_t *device_block_alloc(void)
 {
@@ -136,6 +127,13 @@ static cupkee_device_t *device_request(const cupkee_device_desc_t *desc, int ins
     dev->next   = NULL;
 
     return dev;
+}
+
+int cupkee_device_id(cupkee_device_t *device)
+{
+    int id = device - devices;
+
+    return id < APP_DEV_MAX ? id : -1;
 }
 
 void cupkee_device_event_handle(uint8_t which, uint16_t code)
@@ -237,7 +235,7 @@ int cupkee_device_enable(cupkee_device_t *dev)
         return CUPKEE_OK;
     }
 
-    id = device_id(dev);
+    id = cupkee_device_id(dev);
     if (id < 0) {
         return -CUPKEE_EINVAL;
     }

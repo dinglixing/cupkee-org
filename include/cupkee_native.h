@@ -31,12 +31,18 @@ SOFTWARE.
 val_t native_sysinfos(env_t *env, int ac, val_t *av);
 val_t native_systicks(env_t *env, int ac, val_t *av);
 val_t native_print(env_t *env, int ac, val_t *av);
+val_t native_led_map(env_t *env, int ac, val_t *av);
+val_t native_pin_map(env_t *env, int ac, val_t *av);
+val_t native_led(env_t *env, int ac, val_t *av);
 
 /* cupkee_shell_systice.c */
 val_t native_set_timeout(env_t *env, int ac, val_t *av);
 val_t native_set_interval(env_t *env, int ac, val_t *av);
 val_t native_clear_timeout(env_t *env, int ac, val_t *av);
 val_t native_clear_interval(env_t *env, int ac, val_t *av);
+
+/* cupkee_shell_device.c */
+val_t native_device_create(env_t *env, int ac, val_t *av);
 
 #endif /* __CUPKEE_NATIVE_INC__ */
 

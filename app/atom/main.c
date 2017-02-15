@@ -34,17 +34,17 @@ static const native_t native_entry[] = {
     {"sysinfos",        native_sysinfos},
     {"systicks",        native_systicks},
     {"print",           native_print},
+    {"pinMap",          native_pin_map},
+    {"ledMap",          native_led_map},
+    {"led",             native_led},
 
     {"setTimeout",      native_set_timeout},
     {"setInterval",     native_set_interval},
     {"clearTimeout",    native_clear_timeout},
     {"clearInterval",   native_clear_interval},
 
+    {"Device",          native_device_create},
 #if 0
-    {"Device",          device_native_create},
-    {"pinMap",          cupkee_native_pin_map},
-    {"ledMap",          cupkee_native_led_map},
-    {"led",             cupkee_native_led},
 #endif
 
     /* user native */

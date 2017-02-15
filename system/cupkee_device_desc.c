@@ -26,10 +26,6 @@ SOFTWARE.
 
 #include <cupkee.h>
 
-const char *device_categorys[] = {
-    "map", "stream", "block"
-};
-
 const char *device_opt_dir[] = {
     "in", "out", "dual"
 };

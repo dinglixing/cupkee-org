@@ -58,6 +58,7 @@ SOFTWARE.
 #define DEVICE_CATEGORY_MAP                 0
 #define DEVICE_CATEGORY_STREAM              1
 #define DEVICE_CATEGORY_BLOCK               2
+#define DEVICE_CATEGORY_MAX                 3
 
 enum DEVICE_TYPE {
     DEVICE_TYPE_PIN = 0,
