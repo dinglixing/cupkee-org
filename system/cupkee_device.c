@@ -29,6 +29,7 @@ SOFTWARE.
 static cupkee_device_t devices[APP_DEV_MAX];
 static cupkee_device_t *device_free = NULL;
 static cupkee_device_t *device_work = NULL;
+static uint8_t device_magic;
 
 static cupkee_device_t *device_block_alloc(void)
 {
@@ -36,6 +37,7 @@ static cupkee_device_t *device_block_alloc(void)
 
     if (dev) {
         device_free = dev->next;
+        dev->magic = device_magic++;
     }
     return dev;
 }
@@ -136,6 +138,19 @@ int cupkee_device_id(cupkee_device_t *device)
     return id < APP_DEV_MAX ? id : -1;
 }
 
+cupkee_device_t *cupkee_device_block(int id)
+{
+    if (id >= 0 && id < APP_DEV_MAX) {
+        cupkee_device_t *dev = &devices[id];
+
+        if (dev->desc) {
+            return dev;
+        }
+    }
+
+    return NULL;
+}
+
 void cupkee_device_event_handle(uint8_t which, uint16_t code)
 {
     cupkee_device_t *dev = &devices[which];
@@ -181,11 +196,11 @@ int cupkee_device_init(void)
     memset(devices, 0, sizeof(devices));
     device_free = NULL;
     device_work = NULL;
+    device_magic = cupkee_systicks();
 
     for (i = 0; i < APP_DEV_MAX; i++) {
         cupkee_device_t *d = &devices[i];
 
-        d->id = i;
         d->next = device_free;
         device_free = d;
     }
@@ -246,7 +261,7 @@ int cupkee_device_enable(cupkee_device_t *dev)
         return CUPKEE_OK;
     }
 
-    return -dev->error;
+    return -CUPKEE_ERROR;
 }
 
 int cupkee_device_disable(cupkee_device_t *dev)
@@ -254,6 +269,7 @@ int cupkee_device_disable(cupkee_device_t *dev)
     if (cupkee_device_is_enabled(dev)) {
         dev->driver->reset(dev->instance);
         device_drop_work_list(dev);
+        dev->flags &= ~DEVICE_FL_ENABLE;
     }
 
     return CUPKEE_OK;
@@ -262,7 +278,11 @@ int cupkee_device_disable(cupkee_device_t *dev)
 int cupkee_device_send(cupkee_device_t *dev, int n, const void *data)
 {
     if (cupkee_device_is_enabled(dev)) {
-        return dev->driver->io.stream.send(dev->instance, n, (void *)data);
+        if (dev->driver->io.stream.send) {
+            return dev->driver->io.stream.send(dev->instance, n, (void *)data);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
     } else {
         return -CUPKEE_EENABLED;
     }
@@ -271,7 +291,11 @@ int cupkee_device_send(cupkee_device_t *dev, int n, const void *data)
 int cupkee_device_recv(cupkee_device_t *dev, int n, void *buf)
 {
     if (cupkee_device_is_enabled(dev)) {
-        return dev->driver->io.stream.recv(dev->instance, n, buf);
+        if (dev->driver->io.stream.recv) {
+            return dev->driver->io.stream.recv(dev->instance, n, buf);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
     } else {
         return -CUPKEE_EENABLED;
     }
@@ -303,10 +327,24 @@ int cupkee_device_recv_sync(cupkee_device_t *dev, int n, void *buf)
     }
 }
 
+int cupkee_device_received(cupkee_device_t *dev)
+{
+    if (dev->desc->category == DEVICE_CATEGORY_STREAM) {
+        if (dev->driver->io.stream.received) {
+            return dev->driver->io.stream.received(dev->instance);
+        }
+    }
+    return 0;
+}
+
 int cupkee_device_set(cupkee_device_t *dev, int n, uint32_t data)
 {
     if (cupkee_device_is_enabled(dev)) {
-        return dev->driver->io.map.set(dev->instance, n, data);
+        if (dev->driver->set) {
+            return dev->driver->set(dev->instance, n, data);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
     } else {
         return -CUPKEE_EENABLED;
     }
@@ -315,7 +353,11 @@ int cupkee_device_set(cupkee_device_t *dev, int n, uint32_t data)
 int cupkee_device_get(cupkee_device_t *dev, int n, uint32_t *data)
 {
     if (cupkee_device_is_enabled(dev)) {
-        return dev->driver->io.map.get(dev->instance, n, data);
+        if (dev->driver->get) {
+            return dev->driver->get(dev->instance, n, data);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
     } else {
         return -CUPKEE_EENABLED;
     }

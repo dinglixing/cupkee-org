@@ -241,6 +241,11 @@ static int shell_event_handle(event_info_t *e)
     return 0;
 }
 
+env_t *cupkee_shell_env(void)
+{
+    return &shell_env;
+}
+
 int cupkee_shell_init(int n, const native_t *natives)
 {
     int heap_mem_sz, stack_mem_sz;

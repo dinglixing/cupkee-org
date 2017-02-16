@@ -29,6 +29,10 @@ SOFTWARE.
 #include "cupkee_shell_misc.h"
 
 #define VARIABLE_REF_MAX    (16)
+#if VARIABLE_REF_MAX > 255
+#error "VARIABLE_REF_MAX should not big than 255"
+#endif
+
 static val_t reference_vals[VARIABLE_REF_MAX];
 
 static inline void print_number(val_t *v) {
@@ -201,6 +205,27 @@ void shell_reference_release(val_t *ref)
     }
 }
 
+uint8_t shell_reference_id(val_t *ref)
+{
+    if (ref) {
+        int pos = ref - reference_vals;
+
+        if (pos >= 0 && pos < VARIABLE_REF_MAX) {
+            return pos + 1;
+        }
+    }
+
+    return 0;
+}
+
+val_t  *shell_reference_ptr(uint8_t id)
+{
+    if (id > 0 && id <= VARIABLE_REF_MAX) {
+        return &reference_vals[id - 1];
+    }
+    return NULL;
+}
+
 void shell_print_error(int error)
 {
     switch (error) {
@@ -268,22 +293,26 @@ void shell_do_callback_buffer(env_t *env, val_t *cb, type_buffer_t *buffer)
     shell_do_callback(env, cb, 2, args);
 }
 
-int shell_string_id(val_t *in, int max, const char **names)
+int shell_str_id(const char *s, int max, const char **names)
 {
-    if (val_is_number(in)) {
-        return val_2_integer(in);
-    } else {
-        const char *str = val_2_cstring(in);
-        if (str) {
-            int id;
-            for (id = 0; id < max && names[id]; id++) {
-                if (!strcmp(str, names[id])) {
-                    return id;
-                }
+    if (s) {
+        int id;
+        for (id = 0; id < max && names[id]; id++) {
+            if (!strcmp(s, names[id])) {
+                return id;
             }
         }
     }
-    return max;
+    return -1;
+}
+
+int shell_val_id(val_t *v, int max, const char **names)
+{
+    if (val_is_number(v)) {
+        return val_2_integer(v);
+    } else {
+        return shell_str_id(val_2_cstring(v), max, names);
+    }
 }
 
 val_t native_sysinfos(env_t *env, int ac, val_t *av)

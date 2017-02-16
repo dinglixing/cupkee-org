@@ -287,11 +287,10 @@ static const hw_driver_t adc_driver = {
     .setup   = adc_setup,
     .poll    = adc_poll,
     .sync    = adc_sync,
-    .io.map  = {
-        .get = adc_get,
-        .set = adc_set,
-        .size = adc_size
-    }
+
+    .get = adc_get,
+    .set = adc_set,
+    .size = adc_size
 };
 
 const hw_driver_t *hw_request_adc(int instance)

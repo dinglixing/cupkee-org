@@ -947,21 +947,19 @@ static const hw_driver_t pwm_driver = {
     .release = device_release,
     .reset   = pwm_reset,
     .setup   = pwm_setup,
-    .io.map  = {
-        .get  = pwm_get,
-        .set  = pwm_set,
-        .size = pwm_size
-    }
+
+    .get  = pwm_get,
+    .set  = pwm_set,
+    .size = pwm_size
 };
 
 static const hw_driver_t pulse_driver = {
     .release = device_release,
     .reset   = pulse_reset,
     .setup   = pulse_setup,
-    .io.map  = {
-        .set  = pulse_set,
-        .size = pulse_size
-    }
+
+    .set  = pulse_set,
+    .size = pulse_size
 };
 
 static const hw_driver_t timer_driver = {
@@ -969,10 +967,9 @@ static const hw_driver_t timer_driver = {
     .reset   = hw_timer_reset,
     .setup   = timer_setup,
     .poll    = timer_poll,
-    .io.map  = {
-        .get  = timer_get,
-        .size = timer_size
-    }
+
+    .get  = timer_get,
+    .size = timer_size
 };
 
 static const hw_driver_t counter_driver = {
@@ -980,10 +977,9 @@ static const hw_driver_t counter_driver = {
     .reset   = counter_reset,
     .setup   = counter_setup,
     .poll    = counter_poll,
-    .io.map  = {
-        .get  = counter_get,
-        .size = counter_size
-    }
+
+    .get  = counter_get,
+    .size = counter_size
 };
 
 const hw_driver_t *hw_request_pwm(int instance)

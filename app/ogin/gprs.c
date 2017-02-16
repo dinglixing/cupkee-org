@@ -127,7 +127,7 @@ static void gprs_do_recv(void)
     }
 }
 
-static void gprs_device_handle(cupkee_device_t *dev, uint8_t code, void *param)
+static void gprs_device_handle(cupkee_device_t *dev, uint8_t code, intptr_t param)
 {
     (void) dev;
     (void) param;
@@ -397,7 +397,7 @@ void gprs_init(cupkee_device_t *gprs_dev, int host_num, const gprs_host_t *hosts
 
     gprs_tty = gprs_dev;
     gprs_tty->handle = gprs_device_handle;
-    gprs_tty->handle_param = NULL;
+    gprs_tty->handle_param = 0;
 
     gprs_host_num = host_num;
     gprs_hosts    = hosts;

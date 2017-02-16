@@ -289,11 +289,10 @@ static const hw_driver_t pin_driver = {
     .reset   = pin_reset,
     .setup   = pin_setup,
     .sync    = pin_sync,
-    .io.map  = {
-        .get = pin_get,
-        .set = pin_set,
-        .size = pin_size
-    }
+
+    .get = pin_get,
+    .set = pin_set,
+    .size = pin_size
 };
 
 int hw_setup_gpio(void)

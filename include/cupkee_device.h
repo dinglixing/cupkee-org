@@ -30,7 +30,7 @@ SOFTWARE.
 #define DEVICE_FL_ENABLE    1
 
 typedef struct cupkee_device_t cupkee_device_t;
-typedef void (*cupkee_handle_t)(cupkee_device_t *, uint8_t event, void *);
+typedef void (*cupkee_handle_t)(cupkee_device_t *, uint8_t event, intptr_t param);
 
 typedef struct cupkee_device_desc_t {
     const char *name;
@@ -42,7 +42,7 @@ typedef struct cupkee_device_desc_t {
 } cupkee_device_desc_t;
 
 struct cupkee_device_t {
-    uint8_t id;
+    uint8_t magic;
     uint8_t flags;
     uint8_t error;
     uint8_t instance;
@@ -50,7 +50,7 @@ struct cupkee_device_t {
     hw_config_t config;
 
     cupkee_handle_t handle;
-    void     *handle_param;
+    intptr_t        handle_param;
 
     const cupkee_device_desc_t *desc;
     const hw_driver_t *driver;
@@ -67,6 +67,8 @@ void cupkee_device_event_handle(uint8_t which, uint16_t code);
 
 cupkee_device_t *cupkee_device_request(const char *name, int instance);
 cupkee_device_t *cupkee_device_request2(int type, int instance);
+
+cupkee_device_t *cupkee_device_block(int id);
 
 int cupkee_device_id(cupkee_device_t *device);
 int cupkee_device_release(cupkee_device_t *dev);
@@ -85,6 +87,7 @@ int cupkee_device_send(cupkee_device_t *dev, int n, const void *data);
 int cupkee_device_recv(cupkee_device_t *dev, int n, void *buf);
 int cupkee_device_send_sync(cupkee_device_t *dev, int n, const void *data);
 int cupkee_device_recv_sync(cupkee_device_t *dev, int n, void *buf);
+int cupkee_device_received(cupkee_device_t *dev);
 
 #endif /* __CUPKEE_DEVICE_INC__ */
 

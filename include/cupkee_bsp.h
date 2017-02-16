@@ -169,12 +169,11 @@ typedef struct hw_driver_t {
     int  (*setup) (int inst, uint8_t devid, const hw_config_t *conf);
     void (*sync)  (int inst, uint32_t systicks);
     void (*poll)  (int inst);
+
+    int  (*get) (int inst, int offset, uint32_t*data);
+    int  (*set) (int inst, int offset, uint32_t data);
+    int  (*size)(int inst);
     union {
-        struct {
-            int (*get) (int inst, int offset, uint32_t*data);
-            int (*set) (int inst, int offset, uint32_t data);
-            int (*size)(int inst);
-        } map;
         struct {
             int (*recv) (int inst, int max, void *buf);
             int (*send) (int inst, int n,   void *data);

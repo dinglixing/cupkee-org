@@ -43,6 +43,17 @@ val_t native_clear_interval(env_t *env, int ac, val_t *av);
 
 /* cupkee_shell_device.c */
 val_t native_device_create(env_t *env, int ac, val_t *av);
+val_t native_device_destroy(env_t *env, int ac, val_t *av);
+val_t native_device_config(env_t *env, int ac, val_t *av);
+val_t native_device_is_enabled(env_t *env, int ac, val_t *av);
+val_t native_device_enable (env_t *env, int ac, val_t *av);
+val_t native_device_disable(env_t *env, int ac, val_t *av);
+val_t native_device_get(env_t *env, int ac, val_t *av);
+val_t native_device_set(env_t *env, int ac, val_t *av);
+val_t native_device_write(env_t *env, int ac, val_t *av);
+val_t native_device_read (env_t *env, int ac, val_t *av);
+val_t native_device_listen(env_t *env, int ac, val_t *av);
+val_t native_device_ignore(env_t *env, int ac, val_t *av);
 
 #endif /* __CUPKEE_NATIVE_INC__ */
 

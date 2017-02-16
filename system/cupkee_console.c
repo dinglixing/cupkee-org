@@ -258,7 +258,7 @@ static void console_do_send(cupkee_device_t *dev)
     }
 }
 
-static void console_device_handle(cupkee_device_t *dev, uint8_t code, void *param)
+static void console_device_handle(cupkee_device_t *dev, uint8_t code, intptr_t param)
 {
     (void) param;
 
@@ -283,7 +283,7 @@ int cupkee_console_init(cupkee_device_t *con_dev, console_handle_t handle)
     }
 
     con_dev->handle = console_device_handle;
-    con_dev->handle_param = NULL;
+    con_dev->handle_param = 0;
 
     user_handle = handle;
     console_dev = con_dev;

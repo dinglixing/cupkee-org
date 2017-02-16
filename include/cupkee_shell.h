@@ -32,6 +32,7 @@ SOFTWARE.
 
 int cupkee_shell_init(int n, const native_t *natives);
 int cupkee_shell_loop(const char *initial);
+env_t *cupkee_shell_env(void);
 
 #endif /* __CUPKEE_SHELL_INC__ */
 
