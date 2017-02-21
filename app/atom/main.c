@@ -27,10 +27,10 @@ SOFTWARE.
 #include <cupkee.h>
 
 static const native_t native_entry[] = {
-    /* panda natives */
+    /* Panda natives */
     {"Buffer",          buffer_native_create},
 
-    /* cupkee natives */
+    /* Cupkee natives */
     {"sysinfos",        native_sysinfos},
     {"systicks",        native_systicks},
     {"print",           native_print},
@@ -44,11 +44,8 @@ static const native_t native_entry[] = {
     {"clearInterval",   native_clear_interval},
 
     {"Device",          native_device_create},
-#if 0
-#endif
 
-    /* user native */
-
+    /* User native */
 };
 
 // system initial scripts

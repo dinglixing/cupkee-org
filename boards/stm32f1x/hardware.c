@@ -28,8 +28,10 @@ SOFTWARE.
 
 #define MAIN_STACK_SIZE 8192
 
+extern char _etext;  // devined in ld scripts
+extern char end;     // defined in ld scripts
+
 extern vector_table_t vector_table;
-extern char end;
 static int memory_alloced = 0;
 static int memory_size = 0;
 
@@ -92,8 +94,9 @@ void hw_info_get(hw_info_t *info)
     if (info) {
         info->sys_freq = 72000000;
         info->sys_ticks_pre_sec = SYSTEM_TICKS_PRE_SEC;
-        info->ram_sz = 64 * 1024;
-        info->rom_sz = desig_get_flash_size() * 1024;
+        info->ram_sz = (char *)(vector_table.initial_sp_value) - (char *)0x20000000;
+        //info->rom_sz = desig_get_flash_size() * 1024;
+        info->rom_sz = &_etext - (char *)0x8000000;
         info->ram_base = (void *)0x20000000;
         info->rom_base = (void *)0x08000000;
     }
@@ -110,11 +113,11 @@ void hw_setup(void)
     hw_setup_usart();
     hw_setup_adc();
     hw_setup_timer();
+    hw_setup_usb();
 
     /* initial resource system depend on */
     hw_setup_storage();
     hw_setup_systick();
-    hw_setup_usb();
 }
 
 void hw_poll(void)

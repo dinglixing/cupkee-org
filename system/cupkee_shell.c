@@ -28,6 +28,7 @@ SOFTWARE.
 
 #include "cupkee_shell_misc.h"
 #include "cupkee_shell_systick.h"
+#include "cupkee_sysdisk.h"
 
 static const char *logo = "\r\n\
     ______               __                  \r\n\
@@ -263,9 +264,22 @@ int cupkee_shell_init(int n, const native_t *natives)
     return 0;
 }
 
+static int shell_start(const char *initial)
+{
+    const char *app = cupkee_sysdisk_app_script();
+    val_t *res;
+    int   err;
+
+    (void) initial;
+
+    err = interp_execute_string(&shell_env, app, &res);
+
+    return err;
+}
+
 int cupkee_shell_loop(const char *initial)
 {
-    (void) initial;
+    shell_start(initial);
 
     cupkee_loop();
 

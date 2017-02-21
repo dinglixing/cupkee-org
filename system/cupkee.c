@@ -3,7 +3,7 @@ MIT License
 
 This file is part of cupkee project.
 
-Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+Copyright (c) 2016-2017 Lixing Ding <ding.lixing@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,8 @@ SOFTWARE.
 */
 
 #include "cupkee.h"
+
+#include "cupkee_sysdisk.h"
 
 static uint32_t systicks = 0;
 
@@ -56,6 +58,9 @@ void cupkee_init(void)
 {
     /* Devices initial */
     cupkee_device_init();
+
+    /* Sysdisk initial */
+    cupkee_sysdisk_init();
 
     /* Buffer initial */
     cupkee_buffer_init();

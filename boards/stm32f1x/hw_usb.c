@@ -383,25 +383,31 @@ const hw_driver_t *hw_request_cdc(int instance)
     return &cdc_driver;
 }
 
-#include "ramdisk.h"
-
 void hw_setup_usb(void)
 {
 	usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
-
-    ramdisk_init();
-    usb_msc_init(usbd_dev, 0x85, 64, 0x04, 64, "VendorID", "ProductID", "0.00",
-            ramdisk_blocks(), ramdisk_read, ramdisk_write);
 
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
 
     cdc_state = 0;
     cdc_devid = 0;
     cdc_ready = 0;
+
+    //_usbd_reset(usbd_dev);
 }
 
 void hw_poll_usb(void)
 {
     usbd_poll(usbd_dev);
+}
+
+void hw_usb_msc_init(const char *vendor, const char *product, const char *version, uint32_t blocks,
+                     int (*read_cb)(uint32_t lba, uint8_t *),
+                     int (*write_cb)(uint32_t lba, const uint8_t *))
+{
+    usb_msc_init(usbd_dev, 0x85, 64, 0x04, 64, vendor, product, version,
+            blocks, read_cb, write_cb);
+
+    //_usbd_reset(usbd_dev);
 }
 

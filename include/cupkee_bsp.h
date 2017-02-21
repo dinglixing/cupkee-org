@@ -35,6 +35,11 @@ SOFTWARE.
 #define SYSTEM_TICKS_PRE_SEC                1000
 #define SYSTEM_STACK_SIZE                   (8 * 1024)
 
+#define HW_STORAGE_BANK_BIN                 0
+#define HW_STORAGE_BANK_BIN2                1
+#define HW_STORAGE_BANK_APP                 2
+#define HW_STORAGE_BANK_CFG                 3
+
 #define HW_PIN_MAX                          16
 #define HW_CHN_MAX_ADC                      4
 #define HW_CHN_MAX_PWM                      4
@@ -207,6 +212,17 @@ void hw_info_get(hw_info_t *);
 
 int  hw_memory_alloc(void **p, int size, int align);
 
+void hw_usb_msc_init(const char *vendor, const char *product, const char *version, uint32_t blocks,
+                     int (*read_cb)(uint32_t lba, uint8_t *),
+                     int (*write_cb)(uint32_t lba, const uint8_t *));
+
+uint32_t hw_storage_size(int bank);
+int hw_storage_erase (int bank);
+int hw_storage_update(int bank, uint32_t offset, const uint8_t *data, int len);
+int hw_storage_finish(int bank, uint32_t end);
+uint32_t hw_storage_data_length(int bank);
+const char *hw_storage_data_map(int bank);
+
 /* DEBUG LED */
 int  hw_led_map(int port, int pin);
 void hw_led_set(void);
@@ -214,7 +230,7 @@ void hw_led_clear(void);
 void hw_led_toggle(void);
 
 /* GPIO */
-int hw_pin_map(int id, int port, int pin);
+int   hw_pin_map(int id, int port, int pin);
 
 /* DEVICE */
 const hw_driver_t *hw_device_request(int type, int inst);
