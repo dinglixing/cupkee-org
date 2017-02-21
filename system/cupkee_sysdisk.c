@@ -244,14 +244,17 @@ static void sysdisk_write_init(const uint8_t *data)
 
 static void sysdisk_write_finish(const uint8_t *entry)
 {
+    char *target = NULL;
     uint16_t cluster;
     uint32_t size, old_size, max_size;
     uint8_t  bank;
 
     if (0 == memcmp(entry, "APP     JS ", 11)) {
+        target = "app.js";
         bank = HW_STORAGE_BANK_APP;
     } else
     if (0 == memcmp(entry, "CONFIG  JS ", 11)){
+        target = "config.js";
         bank = HW_STORAGE_BANK_CFG;
     } else {
         return;
@@ -279,6 +282,7 @@ static void sysdisk_write_finish(const uint8_t *entry)
 
     if (old_size != size) {
         hw_storage_finish(bank, size);
+        console_log_sync("update %s: %dbytes\r\n", target, size);
     }
 }
 
