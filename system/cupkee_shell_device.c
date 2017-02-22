@@ -208,13 +208,20 @@ static void device_op_prop(void *env, intptr_t id, val_t *name, val_t *prop)
     val_set_undefined(prop);
 }
 
-static void device_op_elem(void *env, intptr_t ptr, val_t *which, val_t *elem)
+static void device_op_elem(void *env, intptr_t id, val_t *which, val_t *elem)
 {
-    (void) env;
-    (void) ptr;
-    (void) which;
+    if (val_is_number(which)) {
+        cupkee_device_t *dev = device_id_block(id);
+        uint32_t val;
 
-    val_set_undefined(elem);
+        if (dev && 0 < cupkee_device_get(dev, val_2_integer(which), &val)) {
+            val_set_number(elem, val);
+        } else {
+            val_set_undefined(elem);
+        }
+    } else {
+        device_op_prop(env, id, which, elem);
+    }
 }
 
 static void device_get_option(val_t *opt, int i, int max, const char **opt_list)
