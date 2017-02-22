@@ -202,8 +202,8 @@ static const struct usb_config_descriptor config = {
 
 static const char *usb_strings[] = {
 	"Cupkee",
-	"Cup Iface",
-	"Iface001",
+	"CUPKEExUSB",
+	"Iface",
 };
 
 /* Buffer to be used for control requests. */
