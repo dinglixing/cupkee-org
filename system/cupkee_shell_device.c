@@ -35,8 +35,10 @@ typedef union device_handle_set_t {
 } device_handle_set_t;
 
 static int device_is_true(intptr_t ptr);
-static void device_op_prop(void *env, intptr_t ptr, val_t *name, val_t *prop);
-static void device_op_elem(void *env, intptr_t devid, val_t *which, val_t *elem);
+static void device_op_prop(void *env, intptr_t id, val_t *name, val_t *prop);
+static void device_op_elem(void *env, intptr_t id, val_t *which, val_t *elem);
+static val_t *device_op_elem_ref(void *env, intptr_t id, val_t *key);
+static void device_elem_op_set(void *env, intptr_t id, val_t *val, val_t *res);
 
 static const char *category_names[3] = {
     "MAP", "STREAM", "BLOCK"
@@ -65,6 +67,11 @@ static const val_foreign_op_t device_op = {
     .is_true = device_is_true,
     .prop = device_op_prop,
     .elem = device_op_elem,
+    .elem_ref = device_op_elem_ref,
+};
+
+static const val_foreign_op_t device_elem_op = {
+    .set = device_elem_op_set
 };
 
 static const char *device_category_name(uint8_t category)
@@ -74,6 +81,23 @@ static const char *device_category_name(uint8_t category)
     } else {
         return "?";
     }
+}
+
+static intptr_t device_elem_id_gen(cupkee_device_t *dev, int index)
+{
+    int id = cupkee_device_id(dev);
+
+    return id + (index << 8);
+}
+
+static cupkee_device_t *device_elem_id_block(intptr_t id, int *index)
+{
+    if (index) {
+        *index = id >> 8;
+    }
+    id = (uint8_t) id;
+
+    return cupkee_device_block(id);
 }
 
 static intptr_t device_id_gen(cupkee_device_t *dev)
@@ -130,6 +154,22 @@ static int device_is_true(intptr_t ptr)
     (void) ptr;
 
     return 0;
+}
+
+static void device_elem_op_set(void *env, intptr_t id, val_t *val, val_t *res)
+{
+    int index;
+    cupkee_device_t *dev = device_elem_id_block(id, &index);
+
+    (void) env;
+
+    if (dev && val_is_number(val)) {
+        if (0 < cupkee_device_set(dev, index, val_2_integer(val))) {
+            *res = *val;
+            return;
+        }
+    }
+    *res = VAL_UNDEFINED;
 }
 
 static void device_op_prop(void *env, intptr_t id, val_t *name, val_t *prop)
@@ -222,6 +262,22 @@ static void device_op_elem(void *env, intptr_t id, val_t *which, val_t *elem)
     } else {
         device_op_prop(env, id, which, elem);
     }
+}
+
+static val_t *device_op_elem_ref(void *env, intptr_t id, val_t *key)
+{
+    cupkee_device_t *dev = device_id_block(id);
+    int index;
+
+    if (dev && val_is_number(key)) {
+        index = val_2_integer(key);
+    } else {
+        return NULL;
+    }
+
+    *key = val_create(env, &device_elem_op, device_elem_id_gen(dev, index));
+
+    return key;
 }
 
 static void device_get_option(val_t *opt, int i, int max, const char **opt_list)
