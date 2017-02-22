@@ -30,13 +30,17 @@ static uint8_t cdc_state = 0;
 static uint8_t cdc_devid = 0;
 static uint8_t cdc_ready = 0;
 
+#ifndef USB_CLASS_MISCELLANEOUS
+#define USB_CLASS_MISCELLANEOUS 0xEF
+#endif
+
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
 	.bDescriptorType = USB_DT_DEVICE,
 	.bcdUSB = 0x0200,
-	.bDeviceClass = USB_CLASS_CDC,
-	.bDeviceSubClass = 0,
-	.bDeviceProtocol = 0,
+	.bDeviceClass = USB_CLASS_MISCELLANEOUS,
+	.bDeviceSubClass = 2,
+	.bDeviceProtocol = 1,
 	.bMaxPacketSize0 = 64,
 	.idVendor = 0x0483,
 	.idProduct = 0x5740,

@@ -364,7 +364,7 @@ void cupkee_sysdisk_init(void)
     curr_offset = 0;
     sysdisk_scan();
 
-    hw_usb_msc_init("cupkee", "cupdisk", "0.00", SECTOR_COUNT, sysdisk_read, sysdisk_write);
+    hw_usb_msc_init("cupkee", "cupdisk", "0.01", SECTOR_COUNT, sysdisk_read, sysdisk_write);
 }
 
 const char *cupkee_sysdisk_app_script(void)
