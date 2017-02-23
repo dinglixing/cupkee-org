@@ -362,12 +362,6 @@ val_t native_print(env_t *env, int ac, val_t *av)
         for (i = 0; i < ac; i++) {
             shell_print_value(av+i);
         }
-    } else {
-        for (i = 0; i < env->native_num; i++) {
-            console_puts(" * ");
-            console_puts(env->native_ent[i].name);
-            console_puts("\r\n");
-        }
     }
 
     return VAL_UNDEFINED;
