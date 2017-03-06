@@ -358,6 +358,8 @@ val_t native_print(env_t *env, int ac, val_t *av)
 {
     int i;
 
+    (void) env;
+
     if (ac) {
         for (i = 0; i < ac; i++) {
             shell_print_value(av+i);
