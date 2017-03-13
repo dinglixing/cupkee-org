@@ -213,14 +213,12 @@ static void gprs_setup_msg_proc(void)
 static void gprs_setup(void) {
     gprs_state = GPRS_SETUP;
     gprs_setup_step = 0;
+    gprs_do_setup();
 
     console_log("GPRS: setup\r\n");
-    gprs_do_setup();
 }
 
 static void gprs_do_connect(const gprs_host_t *host) {
-    console_log("GPRS: connect to %s:%s\r\n", host->domain, host->port);
-
     gprs_wait = GPRS_CONNECT_TIMEOUT;
 
     // Send command
@@ -231,6 +229,8 @@ static void gprs_do_connect(const gprs_host_t *host) {
     gprs_give(2, "\",");
     gprs_give(strlen(host->port), host->port);
     gprs_give(2, "\r\n");
+
+    console_log("GPRS: connect to %s:%s\r\n", host->domain, host->port);
 }
 
 static void gprs_connect_next(void) {

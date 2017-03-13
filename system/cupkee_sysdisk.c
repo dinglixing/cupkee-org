@@ -27,6 +27,9 @@ SOFTWARE.
 #include "cupkee.h"
 #include "cupkee_sysdisk.h"
 
+#define APP_HEAD    "/* CUPKEE APP */"
+#define CFG_HEAD    "/* CUPKEE CONFIG  */"
+
 #define WBVAL(x) ((x) & 0xFF), (((x) >> 8) & 0xFF)
 #define QBVAL(x) ((x) & 0xFF), (((x) >> 8) & 0xFF),\
 		 (((x) >> 16) & 0xFF), (((x) >> 24) & 0xFF)
@@ -340,7 +343,7 @@ static void sysdisk_scan(void)
 {
     app_size = hw_storage_data_length(HW_STORAGE_BANK_APP);
     if (app_size == 0) {
-        app_data = "// User app script\r\n";
+        app_data = APP_HEAD;
         app_size = strlen(app_data);
     } else {
         app_data = hw_storage_data_map(HW_STORAGE_BANK_APP);
@@ -349,7 +352,7 @@ static void sysdisk_scan(void)
 
     cfg_size = hw_storage_data_length(HW_STORAGE_BANK_CFG);
     if (cfg_size == 0) {
-        cfg_data = "// User config script\r\n";
+        cfg_data = CFG_HEAD;
         cfg_size = strlen(cfg_data);
     } else {
         cfg_data = hw_storage_data_map(HW_STORAGE_BANK_CFG);
