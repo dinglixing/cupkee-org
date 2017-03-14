@@ -60,6 +60,7 @@ all: ogin
 	@printf "ok\n"
 
 setup:
+	git pull
 	git submodule init
 	git submodule update
 	make -C module/libopencm3
