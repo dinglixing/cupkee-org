@@ -32,6 +32,7 @@ endif
 # Define default target board
 export BOARD ?= test
 
+
 export BASE_DIR = ${PWD}
 export MAKE_DIR = ${BASE_DIR}/make
 
@@ -45,7 +46,12 @@ export APP_DIR = ${BASE_DIR}/app
 
 export LANG_DIR  = ${MOD_DIR}/panda
 
+ifeq (${MAIN_DIR},)
 BUILD_DIR = ${BASE_DIR}/build/${BOARD}
+else
+BUILD_DIR = ${MAIN_DIR}/build/${BOARD}
+endif
+
 export BSP_BUILD_DIR = ${BUILD_DIR}/bsp
 export SYS_BUILD_DIR = ${BUILD_DIR}/sys
 export LANG_BUILD_DIR = ${BUILD_DIR}/lang

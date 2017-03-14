@@ -24,9 +24,11 @@
 ## SOFTWARE.
 ##
 
+MAIN_DIR ?= ${APP_DIR}/ogin
+
 elf_NAMES = cupkee
 
-cupkee_SRCS = ${notdir ${wildcard ${APP_DIR}/ogin/*.c}}
+cupkee_SRCS = ${notdir ${wildcard ${MAIN_DIR}/*.c}}
 
 cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
 cupkee_CFLAGS   =
@@ -34,4 +36,4 @@ cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -lsys -lbsp
 
 include ${MAKE_DIR}/cupkee.ruls.mk
 
-VPATH = ${APP_DIR}/ogin
+VPATH = ${MAIN_DIR}

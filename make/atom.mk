@@ -24,9 +24,10 @@
 ## SOFTWARE.
 ##
 
+MAIN_DIR ?=${APP_DIR}/atom
 elf_NAMES = cupkee
 
-cupkee_SRCS = ${notdir ${wildcard ${APP_DIR}/atom/*.c}}
+cupkee_SRCS = ${notdir ${wildcard ${MAIN_DIR}/*.c}}
 
 cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
 cupkee_CFLAGS   =
@@ -34,4 +35,4 @@ cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -L${LANG_BUILD_DIR} -lsy
 
 include ${MAKE_DIR}/cupkee.ruls.mk
 
-VPATH = ${APP_DIR}/atom
+VPATH = ${MAIN_DIR}
