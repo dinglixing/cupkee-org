@@ -80,6 +80,7 @@ static int shell_do_complete(const char *sym, void *param)
 
 static int shell_auto_complete(void)
 {
+    // To used the free space of input buffer as auto_complete buffer
     void *buf = input_mem_ptr + input_cached;
     int   len = input_mem_sz - input_cached;
     void *ac;
