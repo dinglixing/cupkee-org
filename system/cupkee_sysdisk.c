@@ -187,7 +187,7 @@ static void sysdisk_file_read(uint32_t lba, uint8_t *buf)
             memcpy(buf, app_data + offset, length);
         }
     } else
-    if (lba >= cfg_start_sector && (lba < cfg_start_sector) < 16) {
+    if (lba >= cfg_start_sector && (lba - cfg_start_sector) < 16) {
         int offset = (lba - cfg_start_sector) * SECTOR_SIZE;
 
         if (offset < cfg_size) {
