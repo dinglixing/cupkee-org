@@ -39,7 +39,13 @@ void cupkee_event_init(void)
 
 int cupkee_event_post(uint8_t type, uint8_t which, uint16_t code)
 {
-    int pos = rbuff_push(&eventq);
+    uint32_t state;
+    int pos;
+
+    hw_enter_critical(&state);
+    pos = rbuff_push(&eventq);
+    hw_exit_critical(state);
+
     if (pos < 0) {
         return 0;
     }
@@ -53,7 +59,13 @@ int cupkee_event_post(uint8_t type, uint8_t which, uint16_t code)
 
 int cupkee_event_take(event_info_t *e)
 {
-    int pos = rbuff_shift(&eventq);
+    uint32_t state;
+    int pos;
+
+    hw_enter_critical(&state);
+    pos = rbuff_shift(&eventq);
+    hw_exit_critical(state);
+
     if (pos < 0) {
         return 0;
     }
