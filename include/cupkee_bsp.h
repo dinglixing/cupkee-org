@@ -208,6 +208,9 @@ void _hw_reset(void);
 void hw_poll(void);
 void hw_halt(void);
 
+void hw_enter_critical(uint32_t *state);
+void hw_exit_critical(uint32_t state);
+
 void hw_info_get(hw_info_t *);
 
 int  hw_memory_alloc(void **p, int size, int align);

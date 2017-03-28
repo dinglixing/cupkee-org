@@ -89,6 +89,16 @@ int hw_memory_alloc(void **p, int size, int align)
     return size;
 }
 
+void hw_enter_critical(uint32_t *state)
+{
+    *state = cm_mask_interrupts(1);
+}
+
+void hw_exit_critical(uint32_t state)
+{
+    cm_mask_interrupts(state);
+}
+
 void hw_info_get(hw_info_t *info)
 {
     if (info) {
