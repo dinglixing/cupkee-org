@@ -3,7 +3,7 @@
 
 void cupkee_buffer_init(void);
 
-void *cupkee_buf_alloc(void);
+void *cupkee_buf_alloc(size_t size);
 void cupkee_buf_release(void *b);
 void cupkee_buf_reset(void *b);
 int cupkee_buf_capacity(void *b);

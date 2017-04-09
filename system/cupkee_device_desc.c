@@ -42,6 +42,10 @@ static const char *device_uart_conf_names[] = {
     "baudrate", "dataBits", "stopBits", "parity"
 };
 
+static const char *device_i2c_conf_names[] = {
+    "freq", "address", "mode"
+};
+
 static const cupkee_device_desc_t device_pin = {
     .name = "pin",
     .type = DEVICE_TYPE_PIN,
@@ -98,6 +102,14 @@ static const cupkee_device_desc_t device_uart = {
     .conf_names = device_uart_conf_names,
 };
 
+static const cupkee_device_desc_t device_i2c = {
+    .name = "i2c",
+    .type = DEVICE_TYPE_I2C,
+    .category = DEVICE_CATEGORY_BLOCK,
+    .conf_num = 3,
+    .conf_names = device_i2c_conf_names,
+};
+
 static const cupkee_device_desc_t device_usb_cdc = {
     .name = "usb-cdc",
     .type = DEVICE_TYPE_USB_CDC,
@@ -113,6 +125,7 @@ const cupkee_device_desc_t *device_entrys[] = {
     &device_timer,
     &device_counter,
     &device_uart,
+    &device_i2c,
     &device_usb_cdc,
     NULL
 };

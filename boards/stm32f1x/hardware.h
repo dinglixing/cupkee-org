@@ -42,11 +42,16 @@ SOFTWARE.
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/adc.h>
+#include <libopencm3/stm32/i2c.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/usb/msc.h>
 
 #include <cupkee.h>
+
+#define SYS_PCLK   ((uint32_t)36000000)
+
+int hw_use_instance(int instance, uint8_t *use_map);
 
 #include "hw_usb.h"
 #include "hw_misc.h"
@@ -54,7 +59,9 @@ SOFTWARE.
 #include "hw_gpio.h"
 #include "hw_usart.h"
 #include "hw_adc.h"
+#include "hw_i2c.h"
 #include "hw_timer.h"
+
 
 #if 0
 #define _TRACE(fmt, ...)    printf(fmt, ##__VA_ARGS__)

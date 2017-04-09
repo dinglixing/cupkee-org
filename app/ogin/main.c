@@ -161,7 +161,6 @@ static int app_event_handle(event_info_t *e)
     return 0;
 }
 
-static cupkee_device_t *usb_cdc;
 static cupkee_device_t *uart1;
 static cupkee_device_t *uart2;
 static cupkee_device_t *io_gprs;
@@ -222,6 +221,7 @@ int main(void)
     cupkee_console_init(uart1, app_console_handle);
 
 #else
+    cupkee_device_t *usb_cdc;
     usb_cdc = cupkee_device_request("usb-cdc", 0);
     cupkee_device_enable(usb_cdc);
 

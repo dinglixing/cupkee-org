@@ -24,27 +24,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __CUPKEE_ERRNO_INC__
-#define __CUPKEE_ERRNO_INC__
+#ifndef __HW_I2C_INC__
+#define __HW_I2C_INC__
 
-/************************************************************************
- * Cupkee error code
- ***********************************************************************/
-#define CUPKEE_OK               0       // no error
-#define CUPKEE_ERROR            1       // error
-#define CUPKEE_EIMPLEMENT       2       // not implemented
-#define CUPKEE_EINVAL           3       // invalid argument
-#define CUPKEE_EFULL            4       // buffer is full
-#define CUPKEE_EEMPTY           5       // buffer is empty
-#define CUPKEE_EOVERFLOW        6       // buffer is overflow
-#define CUPKEE_ERESOURCE        7       // not enought resource
-#define CUPKEE_ETIMEOUT         9       // time out
-#define CUPKEE_EHARDWARE        10      // hardware error
+#define HW_INSTANCES_I2C    (2)
 
-#define CUPKEE_ENAME            16      // invalid device name
-#define CUPKEE_EENABLED         17      // config set for device that already enabled
-#define CUPKEE_ENOTENABLED      18      // write & read device that not enabled
-#define CUPKEE_ESETTINGS        20      // invalid settings
+void  hw_setup_i2c(void);
+const hw_driver_t *hw_request_i2c(int instance);
 
-#endif /* __CUPKEE_ERRNO_INC__ */
+#endif /* __HW_I2C_INC__ */
 

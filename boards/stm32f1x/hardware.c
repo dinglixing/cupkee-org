@@ -103,7 +103,6 @@ void hw_info_get(hw_info_t *info)
 {
     if (info) {
         info->sys_freq = 72000000;
-        info->sys_ticks_pre_sec = SYSTEM_TICKS_PRE_SEC;
         info->ram_sz = (char *)(vector_table.initial_sp_value) - (char *)0x20000000;
         //info->rom_sz = desig_get_flash_size() * 1024;
         info->rom_sz = &_etext - (char *)0x8000000;
@@ -122,11 +121,13 @@ void hw_setup(void)
     hw_setup_gpio();
     hw_setup_usart();
     hw_setup_adc();
+    hw_setup_i2c();
     hw_setup_timer();
     hw_setup_usb();
 
     /* initial resource system depend on */
     hw_setup_storage();
+
     hw_setup_systick();
 }
 
@@ -157,8 +158,9 @@ const hw_driver_t *hw_device_request(int type, int instance)
     case DEVICE_TYPE_TIMER:     return hw_request_timer(instance);
     case DEVICE_TYPE_COUNTER:   return hw_request_counter(instance);
     case DEVICE_TYPE_UART:      return hw_request_uart(instance);
-    case DEVICE_TYPE_USART:
-    case DEVICE_TYPE_SPI:       return NULL;
+    case DEVICE_TYPE_I2C:       return hw_request_i2c(instance);
+    case DEVICE_TYPE_SPI:
+    case DEVICE_TYPE_USART:     return NULL;
     case DEVICE_TYPE_USB_CDC:   return hw_request_cdc(instance);
     default:                    return NULL;
     }
@@ -175,10 +177,23 @@ int hw_device_instances(int type)
     case DEVICE_TYPE_TIMER:     return HW_INSTANCES_TIMER;
     case DEVICE_TYPE_COUNTER:   return HW_INSTANCES_COUNTER;
     case DEVICE_TYPE_UART:      return HW_INSTANCES_UART;
-    case DEVICE_TYPE_USART:
+    case DEVICE_TYPE_I2C:       return HW_INSTANCES_I2C;
     case DEVICE_TYPE_SPI:       return 0;
+    case DEVICE_TYPE_USART:     return 0;
     case DEVICE_TYPE_USB_CDC:   return 1;
     default:                    return 0;
+    }
+}
+
+int hw_use_instance(int instance, uint8_t *use_map)
+{
+    uint8_t bit = 1 << instance;
+
+    if (*use_map & bit) {
+        return 0;
+    } else {
+        *use_map |= bit;
+        return 1;
     }
 }
 

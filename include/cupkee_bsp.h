@@ -74,9 +74,9 @@ enum DEVICE_TYPE {
     DEVICE_TYPE_TIMER,
     DEVICE_TYPE_COUNTER,
     DEVICE_TYPE_UART,
-    DEVICE_TYPE_USART,
-    DEVICE_TYPE_SPI,
     DEVICE_TYPE_I2C,
+    DEVICE_TYPE_SPI,
+    DEVICE_TYPE_USART,
     DEVICE_TYPE_USB_CDC,
     DEVICE_TYPE_DUMMY
 };
@@ -107,8 +107,7 @@ typedef struct hw_info_t {
     int rom_sz;
     void *ram_base;
     void *rom_base;
-    unsigned sys_freq;
-    unsigned sys_ticks_pre_sec;
+    uint32_t sys_freq;
 } hw_info_t;
 
 typedef struct hw_config_pin_t {
@@ -126,18 +125,18 @@ typedef struct hw_config_adc_t {
 typedef struct hw_config_pwm_t {
     uint16_t period;     // ms
     uint8_t  polarity;   // DEVICE_OPT_POLARITY
-    uint8_t chn_num;
-    uint8_t chn_seq[HW_CHN_MAX_PWM];
+    uint8_t  chn_num;
+    uint8_t  chn_seq[HW_CHN_MAX_PWM];
 } hw_config_pwm_t;
 
 typedef struct hw_config_pulse_t {
-    uint8_t  polarity;   // DEVICE_OPT_POLARITY
+    uint8_t polarity;   // DEVICE_OPT_POLARITY
     uint8_t chn_num;
     uint8_t chn_seq[HW_CHN_MAX_PULSE];
 } hw_config_pulse_t;
 
 typedef struct hw_config_timer_t {
-    uint8_t  polarity;   // DEVICE_OPT_POLARITY
+    uint8_t polarity;   // DEVICE_OPT_POLARITY
     uint8_t chn_num;
     uint8_t chn_seq[HW_CHN_MAX_TIMER];
 } hw_config_timer_t;
@@ -145,8 +144,8 @@ typedef struct hw_config_timer_t {
 typedef struct hw_config_counter_t {
     uint16_t period;     // us
     uint8_t  polarity;   // DEVICE_OPT_POLARITY
-    uint8_t chn_num;
-    uint8_t chn_seq[HW_CHN_MAX_COUNTER];
+    uint8_t  chn_num;
+    uint8_t  chn_seq[HW_CHN_MAX_COUNTER];
 } hw_config_counter_t;
 
 typedef struct hw_config_uart_t {
@@ -155,6 +154,12 @@ typedef struct hw_config_uart_t {
     uint8_t  stop_bits;  // DEVICE_OPT_STOPBITS
     uint8_t  parity;     // DEVICE_OPT_PARITY
 } hw_config_uart_t;
+
+typedef struct hw_config_i2c_t {
+    uint32_t freq;
+    uint8_t  addr;       //
+    uint8_t  mode;       // DEVICE_OPT_MODE
+} hw_config_i2c_t;
 
 typedef struct hw_config_t {
     union {
@@ -165,6 +170,7 @@ typedef struct hw_config_t {
         hw_config_timer_t   timer;
         hw_config_counter_t counter;
         hw_config_uart_t    uart;
+        hw_config_i2c_t     i2c;
     } data;
 } hw_config_t;
 
@@ -186,11 +192,10 @@ typedef struct hw_driver_t {
             int (*send_sync) (int inst, int n, const uint8_t *data);
             int (*received) (int inst);
         } stream;
-        struct {
-            int (*read)  (int inst, int offset, int size, void *buf);
-            int (*write) (int inst, int offset, int size, void *buf);
-        } block;
     } io;
+    int (*read_req)  (int inst, int size, int offset);
+    int (*read)  (int inst, int size, int *offset, void *buf);
+    int (*write) (int inst, int size, int offset, void *buf);
 } hw_driver_t;
 
 /****************************************************************/

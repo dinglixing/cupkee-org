@@ -32,15 +32,21 @@ void cupkee_buf_reset(void *p)
     _cupkee_buf_reset(b);
 }
 
-void *cupkee_buf_alloc(void)
+void *cupkee_buf_alloc(size_t size)
 {
     int i;
+
+    if (size > CK_BUF_SIZE) {
+        return NULL;
+    }
 
     for (i = 0; i < CK_BUF_NUM; i++) {
         if (!(cupkee_buffer_inused & (1 << i))) {
             cupkee_buf_t *b = cupkee_buffers + i;
 
-            _cupkee_buf_reset(b);
+            b->cap = size;
+            b->len = 0;
+            b->bgn = 0;
 
             cupkee_buffer_inused |= (1 << i);
 

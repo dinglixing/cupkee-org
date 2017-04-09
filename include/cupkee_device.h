@@ -69,6 +69,8 @@ cupkee_device_t *cupkee_device_request(const char *name, int instance);
 cupkee_device_t *cupkee_device_request2(int type, int instance);
 
 cupkee_device_t *cupkee_device_block(int id);
+hw_config_t     *cupkee_device_config(int id);
+void cupkee_device_set_error(int id, uint8_t code);
 
 int cupkee_device_id(cupkee_device_t *device);
 int cupkee_device_release(cupkee_device_t *dev);
@@ -80,14 +82,19 @@ static inline int cupkee_device_is_enabled(cupkee_device_t *dev) {
 int cupkee_device_enable(cupkee_device_t *dev);
 int cupkee_device_disable(cupkee_device_t *dev);
 
-int cupkee_device_set(cupkee_device_t *dev, int n, uint32_t data);
-int cupkee_device_get(cupkee_device_t *dev, int n, uint32_t *data);
+int cupkee_device_set(cupkee_device_t *dev, int prop, uint32_t data);
+int cupkee_device_get(cupkee_device_t *dev, int prop, uint32_t *data);
 
-int cupkee_device_send(cupkee_device_t *dev, int n, const void *data);
-int cupkee_device_recv(cupkee_device_t *dev, int n, void *buf);
-int cupkee_device_send_sync(cupkee_device_t *dev, int n, const void *data);
-int cupkee_device_recv_sync(cupkee_device_t *dev, int n, void *buf);
 int cupkee_device_received(cupkee_device_t *dev);
+int cupkee_device_recv(cupkee_device_t *dev, int n, void *buf);
+int cupkee_device_recv_sync(cupkee_device_t *dev, int n, void *buf);
+int cupkee_device_send(cupkee_device_t *dev, int n, const void *data);
+int cupkee_device_send_sync(cupkee_device_t *dev, int n, const void *data);
+
+int cupkee_device_read(cupkee_device_t *dev, int offset, int n, void *buf);
+int cupkee_device_read_sync(cupkee_device_t *dev, int offset, int n, void *buf);
+int cupkee_device_write(cupkee_device_t *dev, int offset, int n, const void *data);
+int cupkee_device_write_sync(cupkee_device_t *dev, int offset, int n, const void *data);
 
 #endif /* __CUPKEE_DEVICE_INC__ */
 

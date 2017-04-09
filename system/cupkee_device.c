@@ -151,6 +151,31 @@ cupkee_device_t *cupkee_device_block(int id)
     return NULL;
 }
 
+hw_config_t *cupkee_device_config(int id)
+{
+    if (id >= 0 && id < APP_DEV_MAX) {
+        cupkee_device_t *dev = &devices[id];
+
+        if (dev->desc) {
+            return &dev->config;
+        }
+    }
+
+    return NULL;
+}
+
+void cupkee_device_set_error(int id, uint8_t code)
+{
+    if (id >= 0 && id < APP_DEV_MAX) {
+        cupkee_device_t *dev = &devices[id];
+
+        if (dev->desc) {
+            dev->error = code;
+            cupkee_event_post_device_error(id);
+        }
+    }
+}
+
 void cupkee_device_event_handle(uint8_t which, uint16_t code)
 {
     cupkee_device_t *dev = &devices[which];
@@ -192,7 +217,7 @@ int cupkee_device_init(void)
     /* Hardware device startup */
     hw_setup();
 
-    /* Device block initial */
+    /* Device blocks initial */
     memset(devices, 0, sizeof(devices));
     device_free = NULL;
     device_work = NULL;

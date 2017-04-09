@@ -318,29 +318,22 @@ int shell_val_id(val_t *v, int max, const char **names)
 val_t native_sysinfos(env_t *env, int ac, val_t *av)
 {
     hw_info_t hw;
-    char buf[80];
 
     (void) ac;
     (void) av;
 
     hw_info_get(&hw);
 
-    snprintf(buf, 80, "FREQ: %uM\r\n", hw.sys_freq / 1000000);
-    console_puts(buf);
-    snprintf(buf, 80, "RAM: %dK\r\n", hw.ram_sz / 1024);
-    console_puts(buf);
-    snprintf(buf, 80, "ROM: %dK\r\n\r\n", hw.rom_sz / 1024);
-    console_puts(buf);
-    snprintf(buf, 80, "symbal: %d/%d, ", env->symbal_tbl_hold, env->symbal_tbl_size);
-    console_puts(buf);
-    snprintf(buf, 80, "string: %d/%d, ", env->exe.string_num, env->exe.string_max);
-    console_puts(buf);
-    snprintf(buf, 80, "number: %d/%d, ", env->exe.number_num, env->exe.number_max);
-    console_puts(buf);
-    snprintf(buf, 80, "function: %d/%d, ", env->exe.func_num, env->exe.func_max);
-    console_puts(buf);
-    snprintf(buf, 80, "variable: %d\r\n", env->main_var_num);
-    console_puts(buf);
+    console_log_sync("FREQ: %dM\r\n", hw.sys_freq / 1000000);
+    console_log_sync("RAM: %dK\r\n", hw.ram_sz / 1024);
+    console_log_sync("ROM: %dK\r\n\r\n", hw.rom_sz / 1024);
+
+    console_log_sync("=============================\r\n");
+    console_log_sync("Symbal: %d/%d, ", env->symbal_tbl_hold, env->symbal_tbl_size);
+    console_log_sync("String: %d/%d, ", env->exe.string_num, env->exe.string_max);
+    console_log_sync("Number: %d/%d, ", env->exe.number_num, env->exe.number_max);
+    console_log_sync("Function: %d/%d, ", env->exe.func_num, env->exe.func_max);
+    console_log_sync("Variable: %d\r\n", env->main_var_num);
 
     return val_mk_undefined();
 }
