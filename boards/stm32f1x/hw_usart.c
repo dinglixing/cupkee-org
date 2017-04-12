@@ -301,12 +301,12 @@ const hw_driver_t *hw_request_uart(int instance)
         return NULL;
     }
 
-    rx_buff = cupkee_buf_alloc();
+    rx_buff = cupkee_buf_alloc(128);
     if (!rx_buff) {
         return NULL;
     }
 
-    tx_buff = cupkee_buf_alloc();
+    tx_buff = cupkee_buf_alloc(128);
     if (!tx_buff) {
         cupkee_buf_release(rx_buff);
         return NULL;

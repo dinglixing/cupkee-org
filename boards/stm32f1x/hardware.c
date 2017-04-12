@@ -185,15 +185,3 @@ int hw_device_instances(int type)
     }
 }
 
-int hw_use_instance(int instance, uint8_t *use_map)
-{
-    uint8_t bit = 1 << instance;
-
-    if (*use_map & bit) {
-        return 0;
-    } else {
-        *use_map |= bit;
-        return 1;
-    }
-}
-

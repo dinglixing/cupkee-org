@@ -3,7 +3,7 @@ MIT License
 
 This file is part of cupkee project.
 
-Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+Copyright (c) 2016,2017 Lixing Ding <ding.lixing@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -156,9 +156,8 @@ typedef struct hw_config_uart_t {
 } hw_config_uart_t;
 
 typedef struct hw_config_i2c_t {
-    uint32_t freq;
-    uint8_t  addr;       //
-    uint8_t  mode;       // DEVICE_OPT_MODE
+    uint32_t speed;
+    uint8_t  addr;       // self-address
 } hw_config_i2c_t;
 
 typedef struct hw_config_t {
@@ -184,6 +183,7 @@ typedef struct hw_driver_t {
     int  (*get) (int inst, int offset, uint32_t*data);
     int  (*set) (int inst, int offset, uint32_t data);
     int  (*size)(int inst);
+
     union {
         struct {
             int (*recv) (int inst, int max, void *buf);
@@ -193,9 +193,11 @@ typedef struct hw_driver_t {
             int (*received) (int inst);
         } stream;
     } io;
-    int (*read_req)  (int inst, int size, int offset);
-    int (*read)  (int inst, int size, int *offset, void *buf);
-    int (*write) (int inst, int size, int offset, void *buf);
+    int (*read_req)     (int inst, size_t n);
+    int (*read)         (int inst, size_t n, void *buf);
+    int (*write)        (int inst, size_t n, void *buf);
+    int (*write_sync)   (int inst, size_t n, void *buf);
+    int (*read_sync)    (int inst, size_t n, void *buf);
 } hw_driver_t;
 
 /****************************************************************/

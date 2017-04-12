@@ -51,7 +51,21 @@ SOFTWARE.
 
 #define SYS_PCLK   ((uint32_t)36000000)
 
-int hw_use_instance(int instance, uint8_t *use_map);
+static inline int hw_use_instance(int instance, uint8_t *use_map) {
+    uint8_t bit = 1 << instance;
+
+    if (*use_map & bit) {
+        return 0;
+    } else {
+        *use_map |= bit;
+        return 1;
+    }
+}
+
+static inline void hw_release_instance(int instance, uint8_t *use_map) {
+    uint8_t bit = 1 << instance;
+    *use_map &= ~bit;
+}
 
 #include "hw_usb.h"
 #include "hw_misc.h"
