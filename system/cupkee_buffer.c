@@ -157,7 +157,7 @@ int cupkee_buf_shift(void *p, uint8_t *d)
     return 0;
 }
 
-int cupkee_buf_take(void *p, int n, void *buf)
+int cupkee_buf_take(void *p, size_t n, void *buf)
 {
     cupkee_buf_t *b = (cupkee_buf_t *)p;
 
@@ -186,7 +186,7 @@ int cupkee_buf_take(void *p, int n, void *buf)
     return n;
 }
 
-int cupkee_buf_give(void *p, int n, void *buf)
+int cupkee_buf_give(void *p, size_t n, const void *buf)
 {
     cupkee_buf_t *b = (cupkee_buf_t *)p;
 

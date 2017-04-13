@@ -79,7 +79,7 @@ static void device_drop_work_list(cupkee_device_t *device)
     device->next = NULL;
 }
 
-static const cupkee_device_desc_t *device_query(const char *name)
+static const cupkee_device_desc_t *device_query_by_name(const char *name)
 {
     unsigned i;
 
@@ -169,7 +169,7 @@ void cupkee_device_set_error(int id, uint8_t code)
     if (id >= 0 && id < APP_DEV_MAX) {
         cupkee_device_t *dev = &devices[id];
 
-        if (dev->desc) {
+        if (cupkee_device_is_enabled(dev)) {
             dev->error = code;
             cupkee_event_post_device_error(id);
         }
@@ -237,7 +237,7 @@ cupkee_device_t *cupkee_device_request(const char *name, int instance)
 {
     const cupkee_device_desc_t *desc;
 
-    desc = device_query(name);
+    desc = device_query_by_name(name);
     if (!desc) {
         return NULL;
     }
@@ -380,6 +380,71 @@ int cupkee_device_get(cupkee_device_t *dev, int n, uint32_t *data)
     if (cupkee_device_is_enabled(dev)) {
         if (dev->driver->get) {
             return dev->driver->get(dev->instance, n, data);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
+    } else {
+        return -CUPKEE_EENABLED;
+    }
+}
+
+int cupkee_device_read_req(cupkee_device_t *dev, size_t n)
+{
+    if (cupkee_device_is_enabled(dev)) {
+        if (dev->driver->read_req) {
+            return dev->driver->read_req(dev->instance, n);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
+    } else {
+        return -CUPKEE_EENABLED;
+    }
+}
+
+int cupkee_device_read(cupkee_device_t *dev, size_t n, void *buf)
+{
+    if (cupkee_device_is_enabled(dev)) {
+        if (dev->driver->read) {
+            return dev->driver->read(dev->instance, n, buf);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
+    } else {
+        return -CUPKEE_EENABLED;
+    }
+}
+
+int cupkee_device_write(cupkee_device_t *dev, size_t n, const void *data)
+{
+    if (cupkee_device_is_enabled(dev)) {
+        if (dev->driver->write) {
+            return dev->driver->write(dev->instance, n, data);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
+    } else {
+        return -CUPKEE_EENABLED;
+    }
+}
+
+int cupkee_device_read_sync(cupkee_device_t *dev, size_t n, void *buf)
+{
+    if (cupkee_device_is_enabled(dev)) {
+        if (dev->driver->read_sync) {
+            return dev->driver->read_sync(dev->instance, n, buf);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
+    } else {
+        return -CUPKEE_EENABLED;
+    }
+}
+
+int cupkee_device_write_sync(cupkee_device_t *dev, size_t n, const void *data)
+{
+    if (cupkee_device_is_enabled(dev)) {
+        if (dev->driver->write_sync) {
+            return dev->driver->write_sync(dev->instance, n, data);
         } else {
             return -CUPKEE_EIMPLEMENT;
         }

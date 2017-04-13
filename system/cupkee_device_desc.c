@@ -43,7 +43,7 @@ static const char *device_uart_conf_names[] = {
 };
 
 static const char *device_i2c_conf_names[] = {
-    "freq", "address", "mode"
+    "speed", "address"
 };
 
 static const cupkee_device_desc_t device_pin = {
@@ -106,7 +106,7 @@ static const cupkee_device_desc_t device_i2c = {
     .name = "i2c",
     .type = DEVICE_TYPE_I2C,
     .category = DEVICE_CATEGORY_BLOCK,
-    .conf_num = 3,
+    .conf_num = 2,
     .conf_names = device_i2c_conf_names,
 };
 

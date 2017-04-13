@@ -159,7 +159,7 @@ static int request_read(hw_i2c_t *control, size_t n)
     return control->req_num;
 }
 
-static int request_write(hw_i2c_t *control, size_t n, void *data)
+static int request_write(hw_i2c_t *control, size_t n, const void *data)
 {
     if (control->req_num >= I2C_REQ_MAX ||
         cupkee_buf_space(control->send_buf) < n) {
@@ -560,7 +560,7 @@ static int hw_i2c_read(int instance, size_t n, void *buf)
     return cupkee_buf_take(control->recv_buf, n, buf);
 }
 
-static int hw_i2c_write(int instance, size_t n, void *data)
+static int hw_i2c_write(int instance, size_t n, const void *data)
 {
     hw_i2c_t *control = hw_i2c_control(instance);
 
@@ -576,11 +576,12 @@ static int hw_i2c_write(int instance, size_t n, void *data)
     return n;
 }
 
-static int hw_i2c_write_sync(int instance, size_t n, void *data)
+static int hw_i2c_write_sync(int instance, size_t n, const void *data)
 {
     hw_i2c_t *control;
     uint32_t i2c;
-    uint8_t addr, *byte;
+    uint8_t addr;
+    const uint8_t *byte = data;
     unsigned i;
 
     if (n < 1) {
@@ -590,7 +591,6 @@ static int hw_i2c_write_sync(int instance, size_t n, void *data)
     control = hw_i2c_control(instance);
     i2c  = I2C_REG_BASE(instance);
     addr = control->slave_addr & (~1);
-    byte = data;
 
     if (!control) {
         return -CUPKEE_EINVAL;
