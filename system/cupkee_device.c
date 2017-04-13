@@ -269,7 +269,7 @@ int cupkee_device_release(cupkee_device_t *dev)
 
 int cupkee_device_enable(cupkee_device_t *dev)
 {
-    int id;
+    int id, err;
 
     if (cupkee_device_is_enabled(dev)) {
         return CUPKEE_OK;
@@ -280,13 +280,14 @@ int cupkee_device_enable(cupkee_device_t *dev)
         return -CUPKEE_EINVAL;
     }
 
-    if (0 == dev->driver->setup(dev->instance, id, &dev->config)) {
+    err = dev->driver->setup(dev->instance, id, &dev->config);
+    if (0 == err) {
         dev->flags |= DEVICE_FL_ENABLE;
         device_join_work_list(dev);
         return CUPKEE_OK;
     }
 
-    return -CUPKEE_ERROR;
+    return err;
 }
 
 int cupkee_device_disable(cupkee_device_t *dev)

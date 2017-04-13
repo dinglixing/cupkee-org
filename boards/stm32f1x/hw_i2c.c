@@ -58,7 +58,7 @@ enum {
     I2C_STATE_WAIT_DATA_1,
     I2C_STATE_WAIT_DATA_2,
     I2C_STATE_WAIT_DATA_N,
-    I2C_STATE_WAIT_STOP,
+    I2C_STATE_STOP,
 };
 
 enum {
@@ -120,12 +120,11 @@ static inline int hw_i2c_setup_pin(int instance)
         pins = GPIO10 | GPIO11;
     }
 
-    if (hw_gpio_use(1, pins)) {
+    if (hw_gpio_use_setup(1, pins, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN)) {
+        return 0;
+    } else {
         return -1;
     }
-
-    gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, pins);
-    return 0;
 }
 
 static inline void hw_i2c_reset_pin(int instance)
@@ -226,7 +225,9 @@ static void do_try_start(uint32_t i2c, hw_i2c_t *control)
                 control->state = I2C_STATE_WAIT_START;
             }
 
-            cupkee_event_post_device_drain(control->dev_id);
+            if (control->req_num == I2C_REQ_MAX - 1) {
+                cupkee_event_post_device_drain(control->dev_id);
+            }
         }
     }
 }
@@ -291,7 +292,7 @@ static void do_wait_data_1(uint32_t i2c, hw_i2c_t *control)
     if(hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVED)) {
         control->trans_pos++;
         cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
-        control->state = I2C_STATE_WAIT_STOP;
+        control->state = I2C_STATE_STOP;
     }
 }
 
@@ -308,7 +309,7 @@ static void do_wait_data_2(uint32_t i2c, hw_i2c_t *control)
         hw_exit_critical(irq_state);
         cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
 
-        control->state = I2C_STATE_WAIT_STOP;
+        control->state = I2C_STATE_STOP;
     }
 }
 
@@ -334,7 +335,7 @@ static void do_wait_data_n(uint32_t i2c, hw_i2c_t *control)
             cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
 
             control->trans_pos += 2;
-            control->state = I2C_STATE_WAIT_STOP;
+            control->state = I2C_STATE_STOP;
         }
     }
 }
@@ -362,23 +363,22 @@ static void do_send_data(uint32_t i2c, hw_i2c_t *control)
             I2C_DR(i2c) = data;
             control->trans_pos++;
         } else {
-            control->state = I2C_STATE_WAIT_STOP;
+            I2C_CR1(i2c) |= I2C_CR1_STOP;
+            control->state = I2C_STATE_STOP;
         }
     }
 }
 
-static void do_wait_stop(uint32_t i2c, hw_i2c_t *control)
+static void do_stop(uint32_t i2c, hw_i2c_t *control)
 {
-    if (hw_i2c_match_event(i2c, I2C_EVENT_STOP)) {
-        if (control->slave_addr & 1) {
-            cupkee_event_post_device_data(control->dev_id);
-        }
-        I2C_CR1(i2c) |= I2C_CR1_ACK;
-
-        control->state = I2C_STATE_IDLE;
-
-        do_try_start(i2c, control);
+    if (control->slave_addr & 1) {
+        cupkee_event_post_device_data(control->dev_id);
     }
+    I2C_CR1(i2c) |= I2C_CR1_ACK;
+
+    control->state = I2C_STATE_IDLE;
+
+    do_try_start(i2c, control);
 }
 
 static void hw_i2c_reset(int instance)
@@ -513,7 +513,7 @@ static void hw_i2c_poll(int instance)
     case I2C_STATE_WAIT_DATA_1:  do_wait_data_1(i2c, control); break;
     case I2C_STATE_WAIT_DATA_2:  do_wait_data_2(i2c, control); break;
     case I2C_STATE_WAIT_DATA_N:  do_wait_data_n(i2c, control); break;
-    case I2C_STATE_WAIT_STOP:  do_wait_stop(i2c, control); break;
+    case I2C_STATE_STOP:  do_stop(i2c, control); break;
     }
 }
 
@@ -613,7 +613,7 @@ static int hw_i2c_write_sync(int instance, size_t n, const void *data)
 
     // Stop
     I2C_CR1(i2c) |= I2C_CR1_STOP;
-    while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
+    //while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
 
     return i;
 }
@@ -641,7 +641,7 @@ static int hw_i2c_read_1byte(uint32_t i2c, uint8_t addr, uint8_t *buf)
     *buf = I2C_DR(i2c);
 
     // wait stop
-    while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
+    //while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
     I2C_CR1(i2c) |= I2C_CR1_ACK;
 
     return 1;
@@ -674,7 +674,7 @@ static int hw_i2c_read_2byte(uint32_t i2c, uint8_t addr, uint8_t *buf)
 
     buf[1] = I2C_DR(i2c);
 
-    while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
+    //while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
     I2C_CR1(i2c) |= I2C_CR1_ACK;
 
     return 2;
@@ -715,7 +715,7 @@ static int hw_i2c_read_Nbyte(uint32_t i2c, uint8_t addr, uint8_t n, uint8_t *buf
     hw_exit_critical(irq_state);
     buf[i++] = I2C_DR(i2c);
 
-    while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
+    //while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
     I2C_CR1(i2c) |= I2C_CR1_ACK;
 
     return i;
