@@ -386,18 +386,18 @@ static int device_set_sequence(val_t *val, int max, uint8_t *n, uint8_t *seq)
     }
 }
 
-static int device_convert_data(val_t *data, void **addr)
+static int device_convert_data(val_t *data, void **ptr)
 {
     int size;
 
     if (val_is_buffer(data)) {
         size = _val_buffer_size(data);
-        *addr = _val_buffer_addr(data);
+        *ptr = _val_buffer_addr(data);
     } else
     if ((size = string_len(data)) > 0) {
-        *addr = (void *) val_2_cstring(data);
+        *ptr = (void *) val_2_cstring(data);
     } else {
-        *addr = NULL;
+        *ptr = NULL;
     }
     return size;
 }
@@ -747,6 +747,25 @@ static void device_get_elem(cupkee_device_t *dev, env_t *env, int offset, val_t 
     }
 }
 
+static int device_read_2_buffer(cupkee_device_t *dev, env_t *env, int n, val_t *buf)
+{
+    type_buffer_t *b;
+    int err;
+
+    b = buffer_create(env, n);
+    if (!b) {
+        err = -CUPKEE_ERESOURCE;
+    } else {
+        err = cupkee_device_read(dev, n, b->buf);
+    }
+
+    if (err >= 0) {
+        val_set_buffer(buf, b);
+    }
+
+    return err;
+}
+
 static int device_read_stream_n(cupkee_device_t *dev, env_t *env, int n, val_t *res)
 {
     type_buffer_t *buffer;
@@ -800,13 +819,13 @@ static val_t device_read_stream(cupkee_device_t *dev, env_t *env, int ac, val_t 
 
 static val_t device_write_stream(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
-    void *addr;
+    void *ptr;
     int   size, offset = 0, send = 0, err = 0;
     val_t *data;
 
     (void) env;
 
-    if (ac < 1 || (size = device_convert_data(av, &addr)) < 0) {
+    if (ac < 1 || (size = device_convert_data(av, &ptr)) < 0) {
         err = -CUPKEE_EINVAL;
     } else {
         data = av; ac--; av++;
@@ -840,7 +859,7 @@ static val_t device_write_stream(cupkee_device_t *dev, env_t *env, int ac, val_t
         if (offset + send > size) {
             send = size - offset;
         }
-        send = cupkee_device_send(dev, send, addr + offset);
+        send = cupkee_device_send(dev, send, ptr + offset);
     } else {
         send = 0;
     }
@@ -860,21 +879,106 @@ static val_t device_write_stream(cupkee_device_t *dev, env_t *env, int ac, val_t
 
 static val_t device_read_block(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
-    (void) dev;
-    (void) env;
-    (void) ac;
-    (void) av;
-    return VAL_FALSE;
+    size_t in;
+    int want, err = 0;
+    val_t args[2];
+
+    if (0 != cupkee_device_io_cached(dev, &in, NULL)) {
+        in = 0;
+    }
+
+    if (ac && val_is_number(av)) {
+        want = val_2_integer(av);
+        if (want < 0) {
+            want = 0;
+        }
+        ac--; av++;
+    } else {
+        want = in;
+    }
+
+    if (want > 0) {
+        size_t n = (size_t) want;
+
+        if (n > in) {
+            cupkee_device_read_req(dev, n - in);
+            n -= in;
+        }
+        if (n) {
+            err = device_read_2_buffer(dev, env, n, args);
+            if (err < 0) {
+                shell_do_callback_error(env, av, err);
+            } else
+            if (err > 0) {
+                val_set_undefined(&args[0]);
+                shell_do_callback(env, av, 2, args);
+            }
+        }
+    }
+
+    return VAL_TRUE;
 }
 
 static val_t device_write_block(cupkee_device_t *dev, env_t *env, int ac, val_t *av)
 {
-    (void) dev;
+    int   size, offset = 0, n = 0, err = 0;
+    void  *ptr;
+    val_t *data;
+
     (void) env;
-    (void) ac;
-    (void) av;
-    return VAL_FALSE;
+
+    if (ac < 1 || (size = device_convert_data(av, &ptr)) < 0) {
+        err = -CUPKEE_EINVAL;
+    } else {
+        data = av; ac--; av++;
+
+        if (ac && val_is_number(av)) {
+            if (ac > 1 && val_is_number(av + 1)) {
+                offset = val_2_integer(av);
+                n = val_2_integer(av + 1);
+                ac--; av++;
+            } else {
+                n = val_2_integer(av);
+            }
+            ac--; av++;
+        } else {
+            n = size;
+        }
+
+        if (offset < 0 || n < 0) {
+            err = -CUPKEE_EINVAL;
+        }
+    }
+
+    if (err) {
+        if (ac) {
+            shell_do_callback_error(env, av, err);
+        }
+        return VAL_FALSE;
+    }
+
+    if (n > 0 && offset < size) {
+        if (offset + n > size) {
+            n = size - offset;
+        }
+        n = cupkee_device_write(dev, n, ptr + offset);
+    } else {
+        n = 0;
+    }
+
+    if (ac) {
+        val_t args[3];
+
+        val_set_undefined(args);
+        args[1] = *data;
+        val_set_number(args + 2, n);
+
+        shell_do_callback(env, av, 3, args);
+    }
+
+    return VAL_TRUE;
 }
+
 
 static int device_event_handle_set(cupkee_device_t *dev, int event, val_t *cb)
 {
@@ -944,25 +1048,6 @@ static void device_stream_data_proc(cupkee_device_t *dev, env_t *env, val_t *han
             shell_do_callback(env, handle, 1, &data);
         }
     }
-}
-
-static int device_read_2_buffer(cupkee_device_t *dev, env_t *env, int n, val_t *buf)
-{
-    type_buffer_t *b;
-    int err;
-
-    b = buffer_create(env, n);
-    if (!b) {
-        err = -CUPKEE_ERESOURCE;
-    } else {
-        err = cupkee_device_read(dev, n, b->buf);
-    }
-
-    if (err >= 0) {
-        val_set_buffer(buf, b);
-    }
-
-    return err;
 }
 
 static void device_block_data_proc(cupkee_device_t *dev, env_t *env, val_t *handle)
