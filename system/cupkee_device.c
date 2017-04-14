@@ -454,3 +454,16 @@ int cupkee_device_write_sync(cupkee_device_t *dev, size_t n, const void *data)
     }
 }
 
+int cupkee_device_io_cached(cupkee_device_t *dev, size_t *in, size_t *out)
+{
+    if (cupkee_device_is_enabled(dev)) {
+        if (dev->driver->io_cached) {
+            return dev->driver->io_cached(dev->instance, in, out);
+        } else {
+            return -CUPKEE_EIMPLEMENT;
+        }
+    } else {
+        return -CUPKEE_EENABLED;
+    }
+}
+

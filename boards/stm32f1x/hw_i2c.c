@@ -783,6 +783,31 @@ static int hw_i2c_prop_set(int instance, int which, uint32_t value)
     return 0;
 }
 
+static int hw_i2c_io_cached(int instance, size_t *in, size_t *out)
+{
+    hw_i2c_t *control = hw_i2c_control(instance);
+
+    if (!control) {
+        return -CUPKEE_EINVAL;
+    }
+
+    if (in) {
+        if (control->recv_buf) {
+            *in = cupkee_buf_length(control->recv_buf);
+        } else {
+            *in = 0;
+        }
+    }
+    if (out) {
+        if (control->send_buf) {
+            *in = cupkee_buf_length(control->send_buf);
+        } else {
+            *in = 0;
+        }
+    }
+    return 0;
+}
+
 static int hw_i2c_prop_num(int instance)
 {
     (void) instance;
@@ -799,6 +824,8 @@ static hw_driver_t i2c_driver = {
     .get     = hw_i2c_prop_get,
     .set     = hw_i2c_prop_set,
     .size    = hw_i2c_prop_num,
+
+    .io_cached = hw_i2c_io_cached,
 
     .read_req  = hw_i2c_read_req,
     .read      = hw_i2c_read,

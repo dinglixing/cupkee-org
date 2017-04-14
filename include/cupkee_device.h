@@ -99,5 +99,7 @@ int cupkee_device_write(cupkee_device_t *dev, size_t n, const void *data);
 int cupkee_device_read_sync(cupkee_device_t *dev, size_t n, void *buf);
 int cupkee_device_write_sync(cupkee_device_t *dev, size_t n, const void *data);
 
+int cupkee_device_io_cached(cupkee_device_t *dev, size_t *in, size_t *out);
+
 #endif /* __CUPKEE_DEVICE_INC__ */
 

@@ -184,6 +184,16 @@ typedef struct hw_driver_t {
     int  (*set) (int inst, int offset, uint32_t data);
     int  (*size)(int inst);
 
+    int (*read_req)     (int inst, size_t n);
+    int (*read)         (int inst, size_t n, void *buf);
+    int (*write)        (int inst, size_t n, const void *buf);
+    int (*read_sync)    (int inst, size_t n, void *buf);
+    int (*write_sync)   (int inst, size_t n, const void *buf);
+
+    // Todo: need a suitable name
+    int (*io_cached) (int inst, size_t *in, size_t *out);
+
+    // Todo:
     union {
         struct {
             int (*recv) (int inst, int max, void *buf);
@@ -193,11 +203,7 @@ typedef struct hw_driver_t {
             int (*received) (int inst);
         } stream;
     } io;
-    int (*read_req)     (int inst, size_t n);
-    int (*read)         (int inst, size_t n, void *buf);
-    int (*write)        (int inst, size_t n, const void *buf);
-    int (*read_sync)    (int inst, size_t n, void *buf);
-    int (*write_sync)   (int inst, size_t n, const void *buf);
+
 } hw_driver_t;
 
 /****************************************************************/

@@ -946,11 +946,40 @@ static void device_stream_data_proc(cupkee_device_t *dev, env_t *env, val_t *han
     }
 }
 
+static int device_read_2_buffer(cupkee_device_t *dev, env_t *env, int n, val_t *buf)
+{
+    type_buffer_t *b;
+    int err;
+
+    b = buffer_create(env, n);
+    if (!b) {
+        err = -CUPKEE_ERESOURCE;
+    } else {
+        err = cupkee_device_read(dev, n, b->buf);
+    }
+
+    if (err >= 0) {
+        val_set_buffer(buf, b);
+    }
+
+    return err;
+}
+
 static void device_block_data_proc(cupkee_device_t *dev, env_t *env, val_t *handle)
 {
-    (void) dev;
-    (void) env;
-    (void) handle;
+    size_t n;
+
+    if (0 == cupkee_device_io_cached(dev, &n, NULL) && n > 0) {
+        int err;
+        val_t data;
+
+        err = device_read_2_buffer(dev, env, n, &data);
+        if (err) {
+            shell_do_callback_error(env, handle, err);
+        } else {
+            shell_do_callback(env, handle, 1, &data);
+        }
+    }
 }
 
 static void device_event_handle_wrap(cupkee_device_t *dev, uint8_t code, intptr_t param)
