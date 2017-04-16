@@ -5,10 +5,20 @@ static char app_cmd_buf[APP_CMD_BUF_SIZE];
 static cupkee_device_t *tty;
 static cupkee_device_t *i2c;
 
-static void i2c_read_sync(uint8_t offset, uint8_t n, uint8_t *data)
+static void i2c_read_sync(uint8_t offset, uint8_t *data)
 {
     cupkee_device_write_sync(i2c, 1, &offset);
-    cupkee_device_read_sync(i2c, n, data);
+    cupkee_device_read_sync(i2c, 1, data);
+}
+
+static void i2c_write_sync(uint8_t offset, uint8_t data)
+{
+    uint8_t buf[2];
+
+    buf[0] = offset;
+    buf[1] = data;
+
+    cupkee_device_write_sync(i2c, 2, buf);
 }
 
 static void i2c_read(uint8_t offset, uint8_t n)
@@ -28,16 +38,23 @@ static void i2c_write(uint8_t offset, uint8_t n, uint8_t *data)
 
 static void i2c_data_cb(cupkee_device_t *dev)
 {
-    uint8_t buf[10];
+    uint8_t buf[20];
     int n;
 
-    n = cupkee_device_read(dev, 10, buf);
+    n = cupkee_device_read(dev, 20, buf);
     if (n > 0) {
         int i;
-        console_log("i2c data:\r\n");
 
-        for (i = 0; i < n; i++) {
-            console_log("%.2x ", buf[i]);
+        console_log("i2c data:\r\n");
+        for (i = 0; i < 7; i++) {
+            int16_t v = buf[i * 2];
+
+            v = (v << 8) | buf[i * 2 + 1];
+            if (i == 3) {
+                console_log("%f ", v / 340.0 + 36.53);
+            } else {
+                console_log("%d ", v);
+            }
         }
         console_log("\r\n");
     }
@@ -61,8 +78,8 @@ static void app_systick_proc(void)
     static int c = 0;
 
     /* add user code here */
-    if (++c > 50) {
-        i2c_read(10, 10);
+    if (++c > 500) {
+        i2c_read(59, 14);
         c = 0;
     }
 }
@@ -95,7 +112,7 @@ static int app_cmd_i2c_read_sync(int ac, char **av)
         off = atoi(av[1]);
     }
 
-    i2c_read_sync(off, 1, &data);
+    i2c_read_sync(off, &data);
     console_log("i2c %u: %u\r\n", off, data);
 
     return 0;
@@ -149,7 +166,7 @@ static void app_setup(void)
     /**********************************************************
      * Map pin of debug LED
      *********************************************************/
-    hw_led_map(1, 5);
+    hw_led_map(0, 8);
 
     /**********************************************************
      * Map pin of GPIOs
@@ -174,9 +191,16 @@ static void app_setup(void)
         }
 
         // set slave address
-        if (1 != cupkee_device_set(i2c, 0, 0xa0)) {
+        if (1 != cupkee_device_set(i2c, 0, 0xD0)) {
             console_log_sync("set i2c slave fail!\r\n");
         }
+
+        i2c_write_sync(0x6b, 0);
+        i2c_write_sync(0x19, 0x07);
+        i2c_write_sync(0x1A, 0x06);
+        i2c_write_sync(0x1B, 0x18);
+        i2c_write_sync(0x1C, 0x01);
+
     } else {
         console_log_sync("request i2c fail!\r\n");
     }
@@ -187,7 +211,7 @@ static void console_init(void)
 #ifdef USE_USB_CONSOLE
     tty = cupkee_device_request("usb-cdc", 0);
 #else
-    tty = cupkee_device_request("uart", 2);
+    tty = cupkee_device_request("uart", 0);
     tty->config.data.uart.baudrate = 115200;
     tty->config.data.uart.stop_bits = DEVICE_OPT_STOPBITS_1;
     tty->config.data.uart.data_bits = 8;
