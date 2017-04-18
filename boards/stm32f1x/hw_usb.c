@@ -42,8 +42,8 @@ static const struct usb_device_descriptor dev = {
 	.bDeviceSubClass = 2,
 	.bDeviceProtocol = 1,
 	.bMaxPacketSize0 = 64,
-	.idVendor = 0x0483,
-	.idProduct = 0x5740,
+	.idVendor = 0x1029,
+	.idProduct = 0x2016,
 	.bcdDevice = 0x0200,
 	.iManufacturer = 1,
 	.iProduct = 2,
@@ -202,8 +202,8 @@ static const struct usb_config_descriptor config = {
 
 static const char *usb_strings[] = {
 	"Cupkee",
-	"CUPKEExUSB",
-	"Iface",
+	"Cupkee-Iface",
+	"SN:",
 };
 
 /* Buffer to be used for control requests. */
