@@ -194,19 +194,8 @@ static int shell_console_handle(int type, int ch)
     return CON_EXECUTE_DEF;
 }
 
-static void shell_console_init(void)
+static void shell_console_init(cupkee_device_t *tty)
 {
-    cupkee_device_t *tty;
-
-    tty = cupkee_device_request("uart", 0);
-    if (tty) {
-        tty->config.data.uart.baudrate = 115200;
-        tty->config.data.uart.stop_bits = DEVICE_OPT_STOPBITS_1;
-        tty->config.data.uart.data_bits = 8;
-    } else {
-        tty = cupkee_device_request("usb-cdc", 0);
-    }
-
     if (!tty) {
         hw_halt();
     }
@@ -248,13 +237,13 @@ env_t *cupkee_shell_env(void)
     return &shell_env;
 }
 
-int cupkee_shell_init(int n, const native_t *natives)
+int cupkee_shell_init(cupkee_device_t *tty, int n, const native_t *natives)
 {
     int heap_mem_sz, stack_mem_sz;
 
     shell_memory_location(&heap_mem_sz, &stack_mem_sz);
 
-    shell_console_init();
+    shell_console_init(tty);
 
     shell_interp_init(heap_mem_sz, stack_mem_sz, n, natives);
 

@@ -2,7 +2,6 @@
 
 static char app_cmd_buf[APP_CMD_BUF_SIZE];
 
-static cupkee_device_t *tty;
 static cupkee_device_t *i2c;
 
 static void i2c_read_sync(uint8_t offset, uint8_t *data)
@@ -206,8 +205,12 @@ static void app_setup(void)
     }
 }
 
-static void console_init(void)
+int main(void)
 {
+    cupkee_device_t *tty;
+
+    cupkee_init();
+
 #ifdef USE_USB_CONSOLE
     tty = cupkee_device_request("usb-cdc", 0);
 #else
@@ -221,12 +224,6 @@ static void console_init(void)
     cupkee_command_init(4, app_cmd_entrys, APP_CMD_BUF_SIZE, app_cmd_buf);
     cupkee_history_init();
     cupkee_console_init(tty, cupkee_command_handle);
-}
-
-int main(void)
-{
-    cupkee_init();
-    console_init();
 
     /**********************************************************
      * app device create & setup

@@ -53,21 +53,28 @@ static char *initial = NULL;
 
 int main(void)
 {
+    cupkee_device_t *tty;
 
     /**********************************************************
      * Cupkee system initial
      *********************************************************/
     cupkee_init();
 
+#ifdef USE_USB_CONSOLE
+    tty = cupkee_device_request("usb-cdc", 0);
+#else
+    tty = cupkee_device_request("uart", 0);
+    tty->config.data.uart.baudrate = 115200;
+    tty->config.data.uart.stop_bits = DEVICE_OPT_STOPBITS_1;
+    tty->config.data.uart.data_bits = 8;
+#endif
+    cupkee_device_enable(tty);
+
+    cupkee_shell_init(tty, sizeof(native_entry)/sizeof(native_t), native_entry);
+
     /**********************************************************
      * user setup code
      *********************************************************/
-
-
-    /**********************************************************
-     * Cupkee shell initial
-     *********************************************************/
-    cupkee_shell_init(sizeof(native_entry)/sizeof(native_t), native_entry);
 
     /**********************************************************
      * Let's Go!

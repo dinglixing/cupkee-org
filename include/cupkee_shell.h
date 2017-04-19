@@ -30,7 +30,7 @@ SOFTWARE.
 
 #include <panda.h>
 
-int cupkee_shell_init(int n, const native_t *natives);
+int cupkee_shell_init(cupkee_device_t *tty, int n, const native_t *natives);
 int cupkee_shell_loop(const char *initial);
 env_t *cupkee_shell_env(void);
 
