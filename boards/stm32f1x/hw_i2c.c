@@ -800,9 +800,9 @@ static int hw_i2c_io_cached(int instance, size_t *in, size_t *out)
     }
     if (out) {
         if (control->send_buf) {
-            *in = cupkee_buf_length(control->send_buf);
+            *out = cupkee_buf_length(control->send_buf);
         } else {
-            *in = 0;
+            *out = 0;
         }
     }
     return 0;
