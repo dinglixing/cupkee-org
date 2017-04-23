@@ -41,7 +41,7 @@ int main(int argc, const char *argv[])
      ***********************************************/
     test_hello();
     test_sys_event();
-
+    test_sys_memory();
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();
