@@ -131,6 +131,30 @@ static void test_emitter(void)
     cupkee_event_reset();
 }
 
+static void test_emitter_emit(void)
+{
+    cupkee_event_emitter_t emitter1, emitter2;
+
+    emitter1_storage = 0;
+    emitter2_storage = 0;
+    cupkee_event_setup();
+
+    CU_ASSERT(cupkee_event_emitter_init(&emitter1, emitter1_event_handle) >= 0);
+    CU_ASSERT(cupkee_event_emitter_init(&emitter2, emitter2_event_handle) >= 0);
+
+    cupkee_event_emitter_emit(&emitter1, 3);
+    cupkee_event_emitter_emit(&emitter2, 7);
+    dispatch();
+    dispatch();
+    CU_ASSERT(emitter1_storage == 3);
+    CU_ASSERT(emitter2_storage == 7);
+
+    CU_ASSERT(cupkee_event_emitter_deinit(&emitter1) == CUPKEE_OK);
+    CU_ASSERT(cupkee_event_emitter_deinit(&emitter2) == CUPKEE_OK);
+
+    cupkee_event_reset();
+}
+
 CU_pSuite test_sys_event(void)
 {
     CU_pSuite suite = CU_add_suite("system event", test_setup, test_clean);
@@ -138,6 +162,7 @@ CU_pSuite test_sys_event(void)
     if (suite) {
         CU_add_test(suite, "post & take",   test_post_take);
         CU_add_test(suite, "emitter",       test_emitter);
+        CU_add_test(suite, "emitter emit",  test_emitter_emit);
     }
 
     return suite;

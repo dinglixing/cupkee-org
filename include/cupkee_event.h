@@ -67,33 +67,31 @@ int cupkee_event_take(cupkee_event_t *event);
 
 void cupkee_event_emitter_dispatch(uint8_t which, uint16_t code);
 
-static inline
-int cupkee_event_post_systick(void) {
+static inline int cupkee_event_emitter_emit(cupkee_event_emitter_t *emitter, uint8_t which) {
+    return cupkee_event_post(EVENT_EMITTER, which, emitter->code);
+}
+
+static inline int cupkee_event_post_systick(void) {
     return cupkee_event_post(EVENT_SYSTICK, 0, 0);
 }
 
-static inline
-int cupkee_event_post_device(uint8_t which, uint16_t code) {
+static inline int cupkee_event_post_device(uint8_t which, uint16_t code) {
     return cupkee_event_post(EVENT_DEVICE, which, code);
 }
 
-static inline
-int cupkee_event_post_device_error(uint8_t which) {
+static inline int cupkee_event_post_device_error(uint8_t which) {
     return cupkee_event_post(EVENT_DEVICE, which, EVENT_DEVICE_ERR);
 }
 
-static inline
-int cupkee_event_post_device_data(uint8_t which) {
+static inline int cupkee_event_post_device_data(uint8_t which) {
     return cupkee_event_post(EVENT_DEVICE, which, EVENT_DEVICE_DATA);
 }
 
-static inline
-int cupkee_event_post_device_drain(uint8_t which) {
+static inline int cupkee_event_post_device_drain(uint8_t which) {
     return cupkee_event_post(EVENT_DEVICE, which, EVENT_DEVICE_DRAIN);
 }
 
-static inline
-int cupkee_event_post_device_ready(uint8_t which) {
+static inline int cupkee_event_post_device_ready(uint8_t which) {
     return cupkee_event_post(EVENT_DEVICE, which, EVENT_DEVICE_READY);
 }
 
