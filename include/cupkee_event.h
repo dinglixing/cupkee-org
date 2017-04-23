@@ -30,7 +30,7 @@ SOFTWARE.
 enum {
     EVENT_SYSTICK = 0,
     EVENT_DEVICE  = 1,
-    EVENT_USER    = 32,
+    EVENT_EMITTER = 2,
 };
 
 enum {
@@ -48,14 +48,24 @@ typedef struct cupkee_event_t {
 } cupkee_event_t;
 
 typedef int (*cupkee_event_handle_t)(cupkee_event_t *);
+typedef void (*cupkee_event_emitter_handle_t)(uint8_t w);
+
+typedef struct cupkee_event_emitter_t {
+    struct cupkee_event_emitter_t *next;
+    cupkee_event_emitter_handle_t handle;
+    uint16_t code;
+} cupkee_event_emitter_t;
 
 void cupkee_event_setup(void);
 void cupkee_event_reset(void);
 
-void cupkee_event_init(void);
+int cupkee_event_emitter_init(cupkee_event_emitter_t *emitter, cupkee_event_emitter_handle_t handle);
+int cupkee_event_emitter_deinit(cupkee_event_emitter_t *emitter);
 
-int  cupkee_event_take(cupkee_event_t *event);
-int  cupkee_event_post(uint8_t type, uint8_t which, uint16_t code);
+int cupkee_event_post(uint8_t type, uint8_t which, uint16_t code);
+int cupkee_event_take(cupkee_event_t *event);
+
+void cupkee_event_emitter_dispatch(uint8_t which, uint16_t code);
 
 static inline
 int cupkee_event_post_systick(void) {

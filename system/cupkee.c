@@ -41,10 +41,14 @@ static void cupkee_event_process(void)
         if (e.type == EVENT_SYSTICK) {
             systicks++;
             cupkee_device_sync(systicks);
+            //cupkee_timer_emit(systicks);
         } else
         if (e.type == EVENT_DEVICE) {
             cupkee_device_event_handle(e.which, e.code);
             continue;
+        } else
+        if (e.type == EVENT_EMITTER) {
+            cupkee_event_emitter_dispatch(e.which, e.code);
         }
 
         /* User process */

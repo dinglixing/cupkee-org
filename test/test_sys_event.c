@@ -84,12 +84,60 @@ static void test_post_take(void)
     cupkee_event_reset();
 }
 
+static uint8_t emitter1_storage;
+static uint8_t emitter2_storage;
+static void emitter1_event_handle(uint8_t e)
+{
+    emitter1_storage = e;
+}
+static void emitter2_event_handle(uint8_t e)
+{
+    emitter2_storage = e;
+}
+static void dispatch(void)
+{
+    cupkee_event_t e;
+    if (cupkee_event_take(&e) && e.type == EVENT_EMITTER) {
+        cupkee_event_emitter_dispatch(e.which, e.code);
+    }
+}
+
+static void test_emitter(void)
+{
+    cupkee_event_emitter_t emitter1, emitter2;
+
+    emitter1_storage = 0;
+    emitter2_storage = 0;
+    cupkee_event_setup();
+
+    CU_ASSERT(cupkee_event_emitter_init(&emitter1, emitter1_event_handle) >= 0);
+    CU_ASSERT(cupkee_event_emitter_init(&emitter2, emitter2_event_handle) >= 0);
+
+    cupkee_event_post(EVENT_EMITTER, 3, emitter1.code);
+    dispatch();
+    CU_ASSERT(emitter1_storage == 3);
+
+    cupkee_event_post(EVENT_EMITTER, 2, emitter1.code);
+    dispatch();
+    CU_ASSERT(emitter1_storage == 2);
+
+    cupkee_event_post(EVENT_EMITTER, 3, emitter2.code);
+    dispatch();
+    CU_ASSERT(emitter2_storage == 3);
+
+    CU_ASSERT(cupkee_event_emitter_deinit(&emitter1) == CUPKEE_OK);
+    CU_ASSERT(cupkee_event_emitter_deinit(&emitter2) == CUPKEE_OK);
+
+    cupkee_event_reset();
+}
+
 CU_pSuite test_sys_event(void)
 {
     CU_pSuite suite = CU_add_suite("system event", test_setup, test_clean);
 
     if (suite) {
-        CU_add_test(suite, "post & take", test_post_take);
+        CU_add_test(suite, "post & take",   test_post_take);
+        CU_add_test(suite, "emitter",       test_emitter);
     }
 
     return suite;
