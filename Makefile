@@ -26,7 +26,6 @@
 
 ifeq (${BOARD},)
 $(info "Target board not specified...")
-$(info "test will be use")
 endif
 
 # Define default target board
@@ -89,7 +88,7 @@ atom:  build bsp sys lang
 	@mkdir -p ${BUILD_DIR}/atom
 	@make -C ${BUILD_DIR}/atom -f ${MAKE_DIR}/atom.mk extend
 
-test: build bsp sys lang
+test: build sys
 	@rm -rf ${BUILD_DIR}/test.elf
 	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/test.mk
 	${BUILD_DIR}/test.elf

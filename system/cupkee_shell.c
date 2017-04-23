@@ -223,7 +223,7 @@ static void shell_interp_init(int heap_mem_sz, int stack_mem_sz, int n, const na
     shell_mode = 0;
 }
 
-static int shell_event_handle(event_info_t *e)
+static int shell_event_handle(cupkee_event_t *e)
 {
     switch(e->type) {
     case EVENT_SYSTICK: shell_systick_handle(&shell_env, cupkee_systicks()); break;

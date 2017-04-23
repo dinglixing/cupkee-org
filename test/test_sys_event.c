@@ -3,7 +3,7 @@ MIT License
 
 This file is part of cupkee project
 
-Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+Copyright (c) 2017 Lixing Ding <ding.lixing@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,21 @@ SOFTWARE.
 #include <string.h>
 
 #include "test.h"
+#include <cupkee.h>
+
+/* */
+
+void hw_enter_critical(uint32_t *state)
+{
+    (void) state;
+}
+
+void hw_exit_critical(uint32_t state)
+{
+    (void) state;
+}
+
+/* */
 
 static int test_setup(void)
 {
@@ -39,20 +54,45 @@ static int test_clean(void)
     return 0;
 }
 
-static void test_template(void)
+static void test_post_take(void)
 {
-    // add test code here
-    //CU_ASSERT(1);
+    int i;
+    cupkee_event_t e;
+
+    cupkee_event_setup();
+
+    CU_ASSERT_EQUAL(cupkee_event_post(0, 0, 0), 1);
+    CU_ASSERT_EQUAL(cupkee_event_take(&e), 1);
+    CU_ASSERT_EQUAL(e.type , 0);
+    CU_ASSERT_EQUAL(e.which, 0);
+    CU_ASSERT_EQUAL(e.code, 0);
+
+    CU_ASSERT_EQUAL(cupkee_event_post(1, 1, 1), 1);
+    CU_ASSERT_EQUAL(cupkee_event_take(&e), 1);
+    CU_ASSERT_EQUAL(e.type , 1);
+    CU_ASSERT_EQUAL(e.which, 1);
+    CU_ASSERT_EQUAL(e.code, 1);
+
+    for (i = 0; i < 256; i++) {
+        cupkee_event_post(i, i, i);
+        cupkee_event_take(&e);
+    }
+    CU_ASSERT_EQUAL(e.type , 255);
+    CU_ASSERT_EQUAL(e.which, 255);
+    CU_ASSERT_EQUAL(e.code, 255);
+
+    cupkee_event_reset();
 }
 
-CU_pSuite test_hello(void)
+CU_pSuite test_sys_event(void)
 {
-    CU_pSuite suite = CU_add_suite("hello", test_setup, test_clean);
+    CU_pSuite suite = CU_add_suite("system event", test_setup, test_clean);
 
     if (suite) {
-        CU_add_test(suite, "template", test_template);
+        CU_add_test(suite, "post & take", test_post_take);
     }
 
     return suite;
 }
+
 

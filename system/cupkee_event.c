@@ -30,11 +30,16 @@ SOFTWARE.
 #define EVENTQ_SIZE     16
 
 static rbuff_t eventq;
-static event_info_t eventq_mem[EVENTQ_SIZE];
+static cupkee_event_t eventq_mem[EVENTQ_SIZE];
 
-void cupkee_event_init(void)
+void cupkee_event_setup(void)
 {
     rbuff_init(&eventq, EVENTQ_SIZE);
+}
+
+void cupkee_event_reset(void)
+{
+    rbuff_reset(&eventq);
 }
 
 int cupkee_event_post(uint8_t type, uint8_t which, uint16_t code)
@@ -57,7 +62,7 @@ int cupkee_event_post(uint8_t type, uint8_t which, uint16_t code)
     return 1;
 }
 
-int cupkee_event_take(event_info_t *e)
+int cupkee_event_take(cupkee_event_t *e)
 {
     uint32_t state;
     int pos;

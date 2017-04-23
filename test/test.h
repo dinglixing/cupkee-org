@@ -34,6 +34,7 @@ SOFTWARE.
 #include <cupkee.h>
 
 CU_pSuite test_hello(void);
+CU_pSuite test_sys_event(void);
 
 #endif /* __TEST_INC__ */
 

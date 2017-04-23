@@ -40,6 +40,7 @@ int main(int argc, const char *argv[])
      * Test suites here:
      ***********************************************/
     test_hello();
+    test_sys_event();
 
 
     CU_basic_set_mode(CU_BRM_VERBOSE);

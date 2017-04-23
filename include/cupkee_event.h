@@ -41,16 +41,20 @@ enum {
     EVENT_DEVICE_MAX
 };
 
-typedef struct event_info_t {
+typedef struct cupkee_event_t {
     uint8_t type;
     uint8_t which;
     uint16_t code;
-} event_info_t;
+} cupkee_event_t;
 
-typedef int (*cupkee_event_handle_t)(event_info_t *);
+typedef int (*cupkee_event_handle_t)(cupkee_event_t *);
+
+void cupkee_event_setup(void);
+void cupkee_event_reset(void);
 
 void cupkee_event_init(void);
-int  cupkee_event_take(event_info_t *event);
+
+int  cupkee_event_take(cupkee_event_t *event);
 int  cupkee_event_post(uint8_t type, uint8_t which, uint16_t code);
 
 static inline

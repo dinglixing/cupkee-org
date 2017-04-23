@@ -34,7 +34,7 @@ static cupkee_event_handle_t user_event_handle;
 
 static void cupkee_event_process(void)
 {
-    event_info_t e;
+    cupkee_event_t e;
 
     while (cupkee_event_take(&e)) {
         /* Cupkee process */
@@ -65,8 +65,8 @@ void cupkee_init(void)
     /* Buffer initial */
     cupkee_buffer_init();
 
-    /* event initial */
-    cupkee_event_init();
+    /* Event initial */
+    cupkee_event_setup();
 
     /* event_handle initial */
     user_event_handle = NULL;
