@@ -122,7 +122,7 @@ static void shell_execute_input(env_t *env, int len, char *script)
         }
     } else
     if (err > 0) {
-        shell_print_value(res);
+        if (res) shell_print_value(res);
 
         shell_mode = 0;
         input_cached = 0;
