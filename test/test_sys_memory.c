@@ -50,42 +50,46 @@ static inline int is_contained(void *addr, int n, void *p)
 
 static void test_alloc(void)
 {
-    void *p;
+    int i;
 
-    char pool[1024];
+    char pool[4][1024];
 
-    cupkee_memory_setup(1024, pool);
+    cupkee_memory_setup();
+    cupkee_memory_pool_setup(32, 1024, pool[0]);
+    cupkee_memory_pool_setup(64, 1024, pool[1]);
+    cupkee_memory_pool_setup(128, 1024, pool[2]);
+    cupkee_memory_pool_setup(256, 1024, pool[3]);
 
     // alloc from pool
-    CU_ASSERT((p = cupkee_alloc(31)) != NULL);
-    CU_ASSERT(is_contained(pool, 1024, p));
-    cupkee_free(p);
 
-    CU_ASSERT((p = cupkee_alloc(63)) != NULL);
-    CU_ASSERT(is_contained(pool, 1024, p));
-    cupkee_free(p);
+    for (i = 0; i < 256; i++) {
+        void *p = cupkee_alloc(32);
 
-    CU_ASSERT((p = cupkee_alloc(127)) != NULL);
-    CU_ASSERT(is_contained(pool, 1024, p));
-    cupkee_free(p);
+        if (!p) CU_ASSERT_FATAL(0);
 
-    CU_ASSERT((p = cupkee_alloc(255)) != NULL);
-    CU_ASSERT(is_contained(pool, 1024, p));
-    cupkee_free(p);
+        cupkee_free(p);
+    }
+    for (i = 0; i < 256; i++) {
+        void *p = cupkee_alloc(64);
 
-    CU_ASSERT((p = cupkee_alloc(400)) != NULL);
-    CU_ASSERT(is_contained(pool, 1024, p));
-    cupkee_free(p);
+        if (!p) CU_ASSERT_FATAL(0);
 
-    // alloc from free list
-    CU_ASSERT((p = cupkee_alloc(1)) != NULL);
-    CU_ASSERT((p = cupkee_alloc(1)) != NULL);
-    CU_ASSERT((p = cupkee_alloc(1)) != NULL);
-    CU_ASSERT((p = cupkee_alloc(1)) != NULL);
-    CU_ASSERT((p = cupkee_alloc(1)) != NULL);
+        cupkee_free(p);
+    }
+    for (i = 0; i < 256; i++) {
+        void *p = cupkee_alloc(128);
 
-    // alloc nothing!
-    CU_ASSERT((p = cupkee_alloc(1)) == NULL);
+        if (!p) CU_ASSERT_FATAL(0);
+
+        cupkee_free(p);
+    }
+    for (i = 0; i < 256; i++) {
+        void *p = cupkee_alloc(256);
+
+        if (!p) CU_ASSERT_FATAL(0);
+
+        cupkee_free(p);
+    }
 }
 
 static void test_ref(void)
@@ -94,10 +98,10 @@ static void test_ref(void)
 
     char pool[256];
 
-    cupkee_memory_setup(256, pool);
+    cupkee_memory_setup();
+    cupkee_memory_pool_setup(32, 256, pool);
 
     CU_ASSERT((o = cupkee_alloc(31)) != NULL);
-    CU_ASSERT(is_contained(pool, 1024, o));
 
     // ran out of memory
     while (cupkee_alloc(3))

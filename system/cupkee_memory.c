@@ -34,7 +34,16 @@ SOFTWARE.
 #define MEM_BLK_SZ_SMALL    32
 #define MEM_BLK_SZ_NORMAL   64
 
-#define BLK_SIZE_ALIGN(s)   (((s) + 31) & ~31)
+#ifdef SIZE_ALIGN
+#undef SIZE_ALIGN
+#endif
+
+#define SIZE_ALIGN(s)   (((s) + 15) & ~15)
+
+#ifdef ADDR_ALIGN
+#undef ADDR_ALIGN
+#endif
+#define ADDR_ALIGN(a)   (void *)((((intptr_t)(a)) + 15) & ~15)
 
 #define member_offset(T, m) (intptr_t)(&(((T *)0)->m))
 #define container_of(p, T, m) ((T*)((intptr_t)(p) - member_offset(T, m)))
@@ -42,125 +51,119 @@ SOFTWARE.
 #define BLK_REF_INC(b)      ((b)->ref += 2)
 #define BLK_REF_DEC(b)      do {if ((b)->ref > 1) (b)->ref -= 2;} while (0)
 
+typedef struct mem_block_t {
+    struct mem_block_t*next;
+} mem_block_t;
+
 typedef struct memory_pool_t {
     struct memory_pool_t *next;
-    size_t size;
-    size_t free;
-    void  *base;
+    uint16_t block_size;
+    uint16_t block_num;
+
+    uint32_t pool_size;
+    void    *pool_base;
+
+    uint16_t *block_ref;
+
+    mem_block_t *block_head;
 } memory_pool_t;
 
-typedef struct memory_block_t {
-    uint16_t tag;
-    uint16_t ref;
-    struct memory_block_t *next;
-} memory_block_t;
 
 static memory_pool_t *pool_head = NULL;
-static memory_block_t *block_head[MEM_BLK_N];
 
-static void memory_pool_add(size_t bytes, void *ptr)
+void cupkee_memory_setup(void)
 {
-    memory_pool_t *pool = ptr;
+    pool_head = NULL;
+}
 
-    if (bytes < sizeof(memory_pool_t)) {
-        return;
+void cupkee_memory_pool_setup(size_t block_size, size_t pool_size, void *ptr)
+{
+    memory_pool_t *pool = (memory_pool_t *)ptr;
+    uint32_t i;
+
+    block_size = SIZE_ALIGN(block_size);
+
+    pool->pool_base = ADDR_ALIGN(pool + 1);
+    pool->pool_size = (pool_size - ((pool->pool_base) - ptr)) & ~15; // 16Byte align
+
+    pool->block_size = block_size;
+    pool->block_num  = pool->pool_size / (block_size + sizeof(uint16_t));
+
+    // update pool_size
+    pool->pool_size = block_size * pool->block_num;
+    pool->block_ref = (uint16_t *)(pool->pool_base + pool->pool_size);
+
+    pool->block_head = NULL;
+
+    for (i = 0; i < pool->block_num; i++) {
+        mem_block_t *block = (mem_block_t *)(pool->pool_base + block_size * i);
+
+        block->next = pool->block_head;
+        pool->block_head = block;
+        pool->block_ref[i] = 0;
     }
-
-    pool->base = ptr + sizeof(memory_pool_t);
-    pool->size = bytes - sizeof(memory_pool_t);
-    pool->free = 0;
 
     pool->next = pool_head;
-    pool_head  = pool;
-}
-
-static void *memory_pool_alloc(size_t tag)
-{
-    memory_pool_t *p = pool_head;
-    size_t size = MEM_BLK_SZ_SMALL * (tag + 1) + sizeof(memory_block_t);
-
-    while (p) {
-        if (p->size - p->free > size) {
-            memory_block_t *b = (memory_block_t *)(p->base + p->free);
-            p->free += size;
-            b->tag = tag;
-            b->ref = 2;
-            return &b->next;
-        }
-        p = p->next;
-    }
-    return NULL;
-}
-
-void cupkee_memory_setup(size_t bytes, void *ptr)
-{
-    block_head[MEM_BLK_SMALL]  = NULL;
-    block_head[MEM_BLK_NORMAL] = NULL;
-    block_head[MEM_BLK_HUGE]   = NULL;
-
-    memory_pool_add(bytes, ptr);
+    pool_head = pool;
 }
 
 void *cupkee_alloc(size_t n)
 {
-    size_t tag = (BLK_SIZE_ALIGN(n) >> 5) - 1;
-    memory_block_t *b, *p;
+    memory_pool_t *pool = pool_head;
+    while (pool) {
+        if (pool->block_size >= n && pool->block_head) {
+            mem_block_t *block = pool->block_head;
+            uint32_t id = ((intptr_t)block - (intptr_t)pool->pool_base) / pool->block_size;
 
-    if (tag == MEM_BLK_SMALL && block_head[MEM_BLK_SMALL]) {
-        b = block_head[MEM_BLK_SMALL];
-        block_head[MEM_BLK_SMALL] = b->next;
-        BLK_REF_INC(b);
-        return &b->next;
-    }
-    if (tag <= MEM_BLK_NORMAL && block_head[MEM_BLK_NORMAL]) {
-        b = block_head[MEM_BLK_NORMAL];
-        block_head[MEM_BLK_NORMAL] = b->next;
-        BLK_REF_INC(b);
-        return &b->next;
-    }
+            pool->block_head = block->next;
+            pool->block_ref[id] = 2;
 
-    p = NULL;
-    b = block_head[MEM_BLK_HUGE];
-    while (b) {
-        if (b->tag >= tag) {
-            if (p) {
-                p->next = b->next;
-            } else {
-                block_head[MEM_BLK_HUGE] = b->next;
-            }
-            BLK_REF_INC(b);
-            return &(b->next);
+            return block;
         }
-        p = b;
-        b = b->next;
+        pool = pool->next;
     }
 
-    return memory_pool_alloc(tag);
+    return NULL;
 }
 
 void cupkee_free(void *p)
 {
-    memory_block_t *b = container_of(p, memory_block_t, next);
+    memory_pool_t *pool = pool_head;
 
-    BLK_REF_DEC(b);
+    while (pool) {
+        intptr_t dis = (intptr_t) p - (intptr_t) pool->pool_base;
+        if (dis >= 0 && dis < pool->pool_size) {
+            int id = dis / pool->block_size;
 
-    if (b->ref == 0) {
-        if (b->tag > MEM_BLK_NORMAL) {
-            b->next = block_head[MEM_BLK_HUGE];
-            block_head[MEM_BLK_HUGE] = b;
-        } else {
-            b->next = block_head[b->tag];
-            block_head[b->tag] = b;
+            if (pool->block_ref[id] > 1) {
+                pool->block_ref[id] -= 2;
+            }
+            if (pool->block_ref[id] == 0) {
+                mem_block_t *block = p;
+
+                block->next = pool->block_head;
+                pool->block_head = block;
+            }
+            return;
         }
+        pool = pool->next;
     }
 }
 
 void *cupkee_mem_ref(void *p)
 {
-    memory_block_t *b = container_of(p, memory_block_t, next);
+    memory_pool_t *pool = pool_head;
 
-    BLK_REF_INC(b);
+    while (pool) {
+        intptr_t dis = (intptr_t) p - (intptr_t) pool->pool_base;
+        if (dis >= 0 && dis < pool->pool_size) {
+            int id = dis / pool->block_size;
 
-    return p;
+            pool->block_ref[id] += 2;
+            return p;
+        }
+        pool = pool->next;
+    }
+    return NULL;
 }
 
