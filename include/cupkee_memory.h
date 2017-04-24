@@ -27,6 +27,7 @@ SOFTWARE.
 #ifndef __CUPKEE_MEMORY_INC__
 #define __CUPKEE_MEMORY_INC__
 
+void cupkee_memory_setup(void);
 void cupkee_memory_pool_setup(size_t block_size, size_t pool_size, void *ptr);
 
 void *cupkee_alloc(size_t n);

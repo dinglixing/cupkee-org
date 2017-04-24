@@ -37,6 +37,9 @@ SOFTWARE.
 #define CUPKEE_TRUE                 1
 #define CUPKEE_FALSE                0
 
+#define CUPKEE_MEMBER_OFFSET(T, m) (intptr_t)(&(((T *)0)->m))
+#define CUPKEE_CONTAINER_OF(p, T, m) ((T*)((intptr_t)(p) - MEMBER_OFFSET(T, m)))
+
 /* User configure ? */
 #define APP_DEV_MAX                 8
 

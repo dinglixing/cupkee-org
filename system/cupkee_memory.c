@@ -38,15 +38,12 @@ SOFTWARE.
 #undef SIZE_ALIGN
 #endif
 
-#define SIZE_ALIGN(s)   (((s) + 15) & ~15)
-
 #ifdef ADDR_ALIGN
 #undef ADDR_ALIGN
 #endif
-#define ADDR_ALIGN(a)   (void *)((((intptr_t)(a)) + 15) & ~15)
 
-#define member_offset(T, m) (intptr_t)(&(((T *)0)->m))
-#define container_of(p, T, m) ((T*)((intptr_t)(p) - member_offset(T, m)))
+#define SIZE_ALIGN(s)   (((s) + 15) & ~15)
+#define ADDR_ALIGN(a)   (void *)((((intptr_t)(a)) + 15) & ~15)
 
 #define BLK_REF_INC(b)      ((b)->ref += 2)
 #define BLK_REF_DEC(b)      do {if ((b)->ref > 1) (b)->ref -= 2;} while (0)
@@ -68,8 +65,17 @@ typedef struct memory_pool_t {
     mem_block_t *block_head;
 } memory_pool_t;
 
-
 static memory_pool_t *pool_head = NULL;
+
+static inline int block_id(memory_pool_t *p, void *b) {
+    intptr_t dis = (intptr_t) b - (intptr_t) p->pool_base;
+
+    if (dis >= 0 && dis < (intptr_t)p->pool_size) {
+        return dis / p->block_size;
+    } else {
+        return -1;
+    }
+}
 
 void cupkee_memory_setup(void)
 {
@@ -131,10 +137,8 @@ void cupkee_free(void *p)
     memory_pool_t *pool = pool_head;
 
     while (pool) {
-        intptr_t dis = (intptr_t) p - (intptr_t) pool->pool_base;
-        if (dis >= 0 && dis < pool->pool_size) {
-            int id = dis / pool->block_size;
-
+        int id = block_id(pool, p);
+        if (id >= 0) {
             if (pool->block_ref[id] > 1) {
                 pool->block_ref[id] -= 2;
             }
@@ -155,10 +159,8 @@ void *cupkee_mem_ref(void *p)
     memory_pool_t *pool = pool_head;
 
     while (pool) {
-        intptr_t dis = (intptr_t) p - (intptr_t) pool->pool_base;
-        if (dis >= 0 && dis < pool->pool_size) {
-            int id = dis / pool->block_size;
-
+        int id = block_id(pool, p);
+        if (id >= 0) {
             pool->block_ref[id] += 2;
             return p;
         }
