@@ -53,8 +53,11 @@ static void cupkee_event_process(void)
 
 void cupkee_init(void)
 {
-    /* memory initial */
-    cupkee_memory_setup();
+    /* Hardware startup */
+    hw_setup();
+
+    /* memory pool initial */
+    cupkee_memory_init(0, NULL);
 
     /* Devices initial */
     cupkee_device_init();

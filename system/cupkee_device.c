@@ -214,9 +214,6 @@ int cupkee_device_init(void)
 {
     int i;
 
-    /* Hardware device startup */
-    hw_setup();
-
     /* Device blocks initial */
     memset(devices, 0, sizeof(devices));
     device_free = NULL;

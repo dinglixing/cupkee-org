@@ -27,11 +27,16 @@ SOFTWARE.
 #ifndef __CUPKEE_MEMORY_INC__
 #define __CUPKEE_MEMORY_INC__
 
-void cupkee_memory_pool_setup(size_t block_size, size_t pool_size, void *ptr);
+typedef struct cupkee_memory_desc_t {
+    uint32_t block_size;
+    uint32_t block_cnt;
+} cupkee_memory_desc_t;
 
-void *cupkee_alloc(size_t n);
-void *cupkee_mem_ref(void *p);
+void cupkee_memory_init(int n, cupkee_memory_desc_t *descs);
+
+void *cupkee_malloc(size_t n);
 void cupkee_free(void *p);
+void *cupkee_mem_ref(void *p);
 
 #endif /* __CUPKEE_MEMORY_INC__ */
 

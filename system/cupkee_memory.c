@@ -26,144 +26,165 @@ SOFTWARE.
 
 #include "cupkee.h"
 
-#define MEM_BLK_SMALL       0
-#define MEM_BLK_NORMAL      1
-#define MEM_BLK_HUGE        2
-#define MEM_BLK_N           3
-
-#define MEM_BLK_SZ_SMALL    32
-#define MEM_BLK_SZ_NORMAL   64
+#define MEM_POOL_MAX    8
 
 #ifdef SIZE_ALIGN
 #undef SIZE_ALIGN
 #endif
 
-#define SIZE_ALIGN(s)   (((s) + 15) & ~15)
-
 #ifdef ADDR_ALIGN
 #undef ADDR_ALIGN
 #endif
-#define ADDR_ALIGN(a)   (void *)((((intptr_t)(a)) + 15) & ~15)
 
-#define member_offset(T, m) (intptr_t)(&(((T *)0)->m))
-#define container_of(p, T, m) ((T*)((intptr_t)(p) - member_offset(T, m)))
+#define SIZE_ALIGN(s)   (((s) + 3) & ~3)
+#define ADDR_ALIGN(a)   (void *)((((intptr_t)(a)) + 3) & ~3)
 
-#define BLK_REF_INC(b)      ((b)->ref += 2)
-#define BLK_REF_DEC(b)      do {if ((b)->ref > 1) (b)->ref -= 2;} while (0)
+typedef struct mem_head_t {
+    uint16_t tag;
+    uint16_t ref;
+} mem_head_t;
 
 typedef struct mem_block_t {
-    struct mem_block_t*next;
+    struct mem_head_t   head;
+    struct mem_block_t *next;
 } mem_block_t;
 
-typedef struct memory_pool_t {
-    struct memory_pool_t *next;
+typedef struct mem_pool_t {
+    struct mem_pool_t  *next;
+    mem_block_t *block_head;
     uint16_t block_size;
     uint16_t block_num;
+} mem_pool_t;
 
-    uint32_t pool_size;
-    void    *pool_base;
+static int         mem_pool_cnt = 0;
+static mem_pool_t *mem_pool[MEM_POOL_MAX];
+static const cupkee_memory_desc_t mem_pool_def[3] = {
+    {32,  64},
+    {64,  32},
+    {128, 16}
+};
 
-    uint16_t *block_ref;
+/*
+static inline int memory_ref_dec(void *p) {
+    mem_block_t *b = CUPKEE_CONTAINER_OF(p, mem_block_t, next);
 
-    mem_block_t *block_head;
-} memory_pool_t;
-
-
-static memory_pool_t *pool_head = NULL;
-
-void cupkee_memory_setup(void)
-{
-    pool_head = NULL;
+    if (b->head.ref > 1) {
+        b->head.ref -= 2;
+    }
+    return b->head.ref;
 }
 
-void cupkee_memory_pool_setup(size_t block_size, size_t pool_size, void *ptr)
+static inline void memory_ref_inc(void *p) {
+    mem_block_t *b = CUPKEE_CONTAINER_OF(p, mem_block_t, next);
+
+    b->head.ref += 2;
+}
+*/
+
+static int memory_pool_setup(size_t block_size, size_t block_cnt)
 {
-    memory_pool_t *pool = (memory_pool_t *)ptr;
-    uint32_t i;
+    mem_pool_t *pool;
+    void *base;
+    uint32_t i, pos, pool_tag;
+
+    if (mem_pool_cnt >= MEM_POOL_MAX) {
+        return -CUPKEE_ERESOURCE;
+    }
+    pool_tag = mem_pool_cnt++;
 
     block_size = SIZE_ALIGN(block_size);
 
-    pool->pool_base = ADDR_ALIGN(pool + 1);
-    pool->pool_size = (pool_size - ((pool->pool_base) - ptr)) & ~15; // 16Byte align
+    pool = (mem_pool_t *) hw_malloc(sizeof(mem_pool_t), 4);
+    base = hw_malloc(sizeof(mem_head_t) + block_size, 4);
+    if (!base || !pool) {
+        return -CUPKEE_ERESOURCE;
+    }
 
     pool->block_size = block_size;
-    pool->block_num  = pool->pool_size / (block_size + sizeof(uint16_t));
-
-    // update pool_size
-    pool->pool_size = block_size * pool->block_num;
-    pool->block_ref = (uint16_t *)(pool->pool_base + pool->pool_size);
-
+    pool->block_num  = block_cnt;
     pool->block_head = NULL;
 
-    for (i = 0; i < pool->block_num; i++) {
-        mem_block_t *block = (mem_block_t *)(pool->pool_base + block_size * i);
+    block_size += sizeof(mem_head_t);
+    for (i = 0, pos = 0; i < block_cnt; i++, pos += block_size) {
+        mem_block_t *block = (mem_block_t *)(base + pos);
+
+        block->head.tag = pool_tag;
+        block->head.ref = 0;
 
         block->next = pool->block_head;
         pool->block_head = block;
-        pool->block_ref[i] = 0;
     }
 
-    pool->next = pool_head;
-    pool_head = pool;
+    mem_pool[pool_tag] = pool;
+
+    return CUPKEE_OK;
 }
 
-void *cupkee_alloc(size_t n)
+void cupkee_memory_init(int pool_cnt, cupkee_memory_desc_t *descs)
 {
-    memory_pool_t *pool = pool_head;
-    while (pool) {
-        if (pool->block_size >= n && pool->block_head) {
-            mem_block_t *block = pool->block_head;
-            uint32_t id = ((intptr_t)block - (intptr_t)pool->pool_base) / pool->block_size;
+    int i;
 
-            pool->block_head = block->next;
-            pool->block_ref[id] = 2;
-
-            return block;
-        }
-        pool = pool->next;
+    mem_pool_cnt = 0;
+    if (pool_cnt == 0 || descs == NULL) {
+        pool_cnt = 3;
+        descs = (cupkee_memory_desc_t *) mem_pool_def;
     }
 
+    for (i = 0; i < pool_cnt && i < MEM_POOL_MAX; i++) {
+        if (0 != memory_pool_setup(descs[i].block_size, descs[i].block_cnt)) {
+            break;
+        }
+    }
+
+    mem_pool_cnt = i;
+}
+
+void *cupkee_malloc(size_t n)
+{
+    int i;
+
+    for (i = 0; i < mem_pool_cnt; i++) {
+        mem_pool_t *pool = mem_pool[i];
+
+        if (pool->block_size >= n && pool->block_head) {
+            mem_block_t *block = pool->block_head;
+            pool->block_head = block->next;
+
+            block->head.ref = 2;
+            return &(block->next);
+        }
+    }
     return NULL;
 }
 
 void cupkee_free(void *p)
 {
-    memory_pool_t *pool = pool_head;
+    mem_block_t *b = CUPKEE_CONTAINER_OF(p, mem_block_t, next);
+    mem_pool_t  *pool;
 
-    while (pool) {
-        intptr_t dis = (intptr_t) p - (intptr_t) pool->pool_base;
-        if (dis >= 0 && dis < pool->pool_size) {
-            int id = dis / pool->block_size;
+    // assert (b->head.tag < mem_pool_cnt);
 
-            if (pool->block_ref[id] > 1) {
-                pool->block_ref[id] -= 2;
-            }
-            if (pool->block_ref[id] == 0) {
-                mem_block_t *block = p;
-
-                block->next = pool->block_head;
-                pool->block_head = block;
-            }
-            return;
-        }
-        pool = pool->next;
+    if (b->head.ref > 1) {
+        b->head.ref -= 2;
     }
+
+    if (b->head.ref) {
+        return;
+    }
+
+    pool = mem_pool[b->head.tag];
+
+    b->next = pool->block_head;
+    pool->block_head = b;
 }
 
 void *cupkee_mem_ref(void *p)
 {
-    memory_pool_t *pool = pool_head;
-
-    while (pool) {
-        intptr_t dis = (intptr_t) p - (intptr_t) pool->pool_base;
-        if (dis >= 0 && dis < pool->pool_size) {
-            int id = dis / pool->block_size;
-
-            pool->block_ref[id] += 2;
-            return p;
-        }
-        pool = pool->next;
+    if (p) {
+        mem_block_t *b = CUPKEE_CONTAINER_OF(p, mem_block_t, next);
+        b->head.ref += 2;
     }
-    return NULL;
+
+    return p;
 }
 

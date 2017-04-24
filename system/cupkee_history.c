@@ -117,8 +117,7 @@ int cupkee_history_load(int dir)
     if (history_cursor < 0) {
         history_cursor = 0;
         return CON_EXECUTE_DEF;
-    }
-
+    } else
     if (history_cursor >= rbuff_end(&history_idx)){
         history_cursor = rbuff_end(&history_idx);
         return CON_EXECUTE_DEF;
