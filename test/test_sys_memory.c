@@ -50,11 +50,11 @@ static void test_alloc(void)
 {
     int i;
 
-    cupkee_memory_setup();
-    cupkee_memory_pool_setup(32,    8);
-    cupkee_memory_pool_setup(64,    8);
-    cupkee_memory_pool_setup(128,   8);
-    cupkee_memory_pool_setup(256,   8);
+    cupkee_memory_desc_t descs[4] = {
+        {32, 4}, {64, 4}, {128, 4}, {256, 4}
+    };
+
+    cupkee_memory_init(4, descs);
 
     // alloc from pool
 
@@ -91,9 +91,9 @@ static void test_alloc(void)
 static void test_ref(void)
 {
     void *o, *p;
+    cupkee_memory_desc_t desc = {32, 4};
 
-    cupkee_memory_setup();
-    cupkee_memory_pool_setup(32, 4);
+    cupkee_memory_init(1, &desc);
 
     CU_ASSERT((o = cupkee_malloc(31)) != NULL);
 
@@ -107,7 +107,6 @@ static void test_ref(void)
     // release 1 block
     cupkee_free(o);
     CU_ASSERT((p = cupkee_malloc(31)) != NULL);
-
 
     // create refence
     CU_ASSERT(cupkee_mem_ref(p) == p);

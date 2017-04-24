@@ -38,6 +38,7 @@ SOFTWARE.
 #define CUPKEE_EEMPTY           5       // buffer is empty
 #define CUPKEE_EOVERFLOW        6       // buffer is overflow
 #define CUPKEE_ERESOURCE        7       // not enought resource
+#define CUPKEE_ENOMEM           8       // out of memory
 #define CUPKEE_ETIMEOUT         9       // time out
 #define CUPKEE_EHARDWARE        10      // hardware error
 

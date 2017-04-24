@@ -58,7 +58,13 @@ typedef struct mem_pool_t {
 
 static int         mem_pool_cnt = 0;
 static mem_pool_t *mem_pool[MEM_POOL_MAX];
+static const cupkee_memory_desc_t mem_pool_def[3] = {
+    {32,  64},
+    {64,  32},
+    {128, 16}
+};
 
+/*
 static inline int memory_ref_dec(void *p) {
     mem_block_t *b = CUPKEE_CONTAINER_OF(p, mem_block_t, next);
 
@@ -73,13 +79,9 @@ static inline void memory_ref_inc(void *p) {
 
     b->head.ref += 2;
 }
+*/
 
-void cupkee_memory_setup(void)
-{
-    mem_pool_cnt = 0;
-}
-
-int cupkee_memory_pool_setup(size_t block_size, size_t block_cnt)
+static int memory_pool_setup(size_t block_size, size_t block_cnt)
 {
     mem_pool_t *pool;
     void *base;
@@ -118,14 +120,35 @@ int cupkee_memory_pool_setup(size_t block_size, size_t block_cnt)
     return CUPKEE_OK;
 }
 
+void cupkee_memory_init(int pool_cnt, cupkee_memory_desc_t *descs)
+{
+    int i;
+
+    mem_pool_cnt = 0;
+    if (pool_cnt == 0 || descs == NULL) {
+        pool_cnt = 3;
+        descs = (cupkee_memory_desc_t *) mem_pool_def;
+    }
+
+    for (i = 0; i < pool_cnt && i < MEM_POOL_MAX; i++) {
+        if (0 != memory_pool_setup(descs[i].block_size, descs[i].block_cnt)) {
+            break;
+        }
+    }
+
+    mem_pool_cnt = i;
+}
+
 void *cupkee_malloc(size_t n)
 {
     int i;
 
     for (i = 0; i < mem_pool_cnt; i++) {
-        if (mem_pool[i]->block_size >= n && mem_pool[i]->block_head) {
-            mem_block_t *block = mem_pool[i]->block_head;
-            mem_pool[i]->block_head = block->next;
+        mem_pool_t *pool = mem_pool[i];
+
+        if (pool->block_size >= n && pool->block_head) {
+            mem_block_t *block = pool->block_head;
+            pool->block_head = block->next;
 
             block->head.ref = 2;
             return &(block->next);

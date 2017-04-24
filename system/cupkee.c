@@ -63,6 +63,9 @@ void cupkee_init(void)
     /* Hardware startup */
     hw_setup();
 
+    /* memory pool initial */
+    cupkee_memory_init(0, NULL);
+
     /* Devices initial */
     cupkee_device_init();
 
