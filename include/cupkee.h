@@ -34,14 +34,14 @@ SOFTWARE.
 
 
 /* Todo: put to cupkee_type.h ? */
-#define CUPKEE_TRUE                 1
-#define CUPKEE_FALSE                0
+#define CUPKEE_TRUE                     1
+#define CUPKEE_FALSE                    0
 
-#define CUPKEE_SIZE_ALIGN(v, a)          (((size_t)(v) + ((a) - 1)) & ~((a) - 1))
-#define CUPKEE_ADDR_ALIGN(p, a)          (void *)(((intptr_t)(p) + ((a) - 1)) & ~((a) - 1))
+#define CUPKEE_SIZE_ALIGN(v, a)         (((size_t)(v) + ((a) - 1)) & ~((a) - 1))
+#define CUPKEE_ADDR_ALIGN(p, a)         (void *)(((intptr_t)(p) + ((a) - 1)) & ~((a) - 1))
 
-#define CUPKEE_MEMBER_OFFSET(T, m) (intptr_t)(&(((T *)0)->m))
-#define CUPKEE_CONTAINER_OF(p, T, m) ((T*)((intptr_t)(p) - MEMBER_OFFSET(T, m)))
+#define CUPKEE_MEMBER_OFFSET(T, m)      (intptr_t)(&(((T*)0)->m))
+#define CUPKEE_CONTAINER_OF(p, T, m)    ((T*)((intptr_t)(p) - CUPKEE_MEMBER_OFFSET(T, m)))
 
 /* User configure ? */
 #define APP_DEV_MAX                 8

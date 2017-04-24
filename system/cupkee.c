@@ -60,6 +60,9 @@ static void cupkee_event_process(void)
 
 void cupkee_init(void)
 {
+    /* Hardware startup */
+    hw_setup();
+
     /* Devices initial */
     cupkee_device_init();
 
