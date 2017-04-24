@@ -32,6 +32,7 @@ static int do_complete(const char *sym, void *param)
 
     /* show suggist */
     if (ac->same == 2) {
+        // show the first same symbal
         console_puts("\r\n");
         console_puts(ac->buf);
         ac->pos += strlen(ac->buf);
@@ -42,6 +43,7 @@ static int do_complete(const char *sym, void *param)
         console_putc(' ');
         ac->pos++;
     } while (ac->pos % 4);
+
     console_puts(sym);
     ac->pos += strlen(sym);
 
@@ -81,13 +83,12 @@ int cupkee_auto_complete(int symbal_num, const char **symbals)
     }
 
     if (ac.same) {
+        char *suffix = ac.buf + has;
         if (ac.same > 1) {
             console_puts("\r\n");
             console_input_refresh();
-        } else {
-            char *suffix = ac.buf + has;
-            console_input_insert(ac.supply, suffix);
         }
+        console_input_insert(ac.supply, suffix);
         return CON_PREVENT_DEF;
     }
 
@@ -127,13 +128,12 @@ int cupkee_auto_complete_finish(void *buf)
 {
     auto_complete_t *ac = (auto_complete_t *)buf;
     if (ac && ac->same) {
+        char *suffix = ac->buf + ac->prefix;
         if (ac->same > 1) {
             console_puts("\r\n");
             console_input_refresh();
-        } else {
-            char *suffix = ac->buf + ac->prefix;
-            console_input_insert(ac->supply, suffix);
         }
+        console_input_insert(ac->supply, suffix);
         return CON_PREVENT_DEF;
     }
 
