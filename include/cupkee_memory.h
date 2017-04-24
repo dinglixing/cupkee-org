@@ -3,7 +3,7 @@ MIT License
 
 This file is part of cupkee project.
 
-Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+Copyright (c) 2017 Lixing Ding <ding.lixing@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,18 +24,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __TEST_INC__
-#define __TEST_INC__
+#ifndef __CUPKEE_MEMORY_INC__
+#define __CUPKEE_MEMORY_INC__
 
-#include "CUnit.h"
-#include "CUnit_Basic.h"
+void cupkee_memory_pool_setup(size_t block_size, size_t pool_size, void *ptr);
 
-#include <hardware.h>
-#include <cupkee.h>
+void *cupkee_alloc(size_t n);
+void *cupkee_mem_ref(void *p);
+void cupkee_free(void *p);
 
-CU_pSuite test_hello(void);
-CU_pSuite test_sys_event(void);
-CU_pSuite test_sys_memory(void);
-
-#endif /* __TEST_INC__ */
+#endif /* __CUPKEE_MEMORY_INC__ */
 
