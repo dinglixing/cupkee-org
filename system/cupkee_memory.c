@@ -59,9 +59,9 @@ typedef struct mem_pool_t {
 static int         mem_pool_cnt = 0;
 static mem_pool_t *mem_pool[MEM_POOL_MAX];
 static const cupkee_memory_desc_t mem_pool_def[3] = {
-    {32,  64},
     {64,  32},
-    {128, 16}
+    {128, 16},
+    {512,  4},
 };
 
 /*

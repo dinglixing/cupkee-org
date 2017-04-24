@@ -213,8 +213,6 @@ typedef struct hw_driver_t {
 /****************************************************************/
 /* hardware implements                                          */
 /****************************************************************/
-extern uint32_t system_ticks_count;
-
 void hw_setup(void);
 void _hw_reset(void);
 

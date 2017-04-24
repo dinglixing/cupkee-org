@@ -28,8 +28,6 @@ SOFTWARE.
 
 #include "cupkee_sysdisk.h"
 
-static uint32_t systicks = 0;
-
 static void cupkee_event_process(void)
 {
     cupkee_event_t e;
@@ -37,9 +35,8 @@ static void cupkee_event_process(void)
     while (cupkee_event_take(&e)) {
         /* Cupkee process */
         if (e.type == EVENT_SYSTICK) {
-            systicks++;
-            cupkee_device_sync(systicks);
-            //cupkee_timer_emit(systicks);
+            cupkee_device_sync(_cupkee_systicks);
+            cupkee_timer_sync(_cupkee_systicks);
         } else
         if (e.type == EVENT_DEVICE) {
             cupkee_device_event_handle(e.which, e.code);
@@ -56,8 +53,11 @@ void cupkee_init(void)
     /* Hardware startup */
     hw_setup();
 
-    /* memory pool initial */
+    /* Memory pool initial */
     cupkee_memory_init(0, NULL);
+
+    /* Sys timer initial */
+    cupkee_timer_init();
 
     /* Devices initial */
     cupkee_device_init();
@@ -74,15 +74,13 @@ void cupkee_init(void)
 
 void cupkee_loop(void)
 {
+    // Reset systick at first
+    _cupkee_systicks = 0;
+
     while (1) {
         cupkee_device_poll();
 
         cupkee_event_process();
     }
-}
-
-uint32_t cupkee_systicks(void)
-{
-    return systicks;
 }
 

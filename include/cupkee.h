@@ -51,6 +51,7 @@ SOFTWARE.
 #include "cupkee_utils.h"
 #include "cupkee_memory.h"
 #include "cupkee_event.h"
+#include "cupkee_timer.h"
 #include "cupkee_buffer.h"
 #include "cupkee_device.h"
 #include "cupkee_console.h"
@@ -63,8 +64,13 @@ SOFTWARE.
 void cupkee_init(void);
 void cupkee_loop(void);
 
+extern uint32_t _cupkee_systicks;
+
 int  cupkee_event_handle_register(cupkee_event_handle_t handle);
-uint32_t cupkee_systicks(void);
+
+static inline uint32_t cupkee_systicks(void) {
+    return _cupkee_systicks;
+}
 
 #endif /* __CUPKEE_INC__ */
 

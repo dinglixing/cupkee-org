@@ -50,12 +50,10 @@ static void hw_setup_systick(void)
 }
 
 /* systick interrupt handle routing  */
-static int system_tick_update = 0;
-uint32_t system_ticks_count = 0;
 void sys_tick_handler(void)
 {
-    system_ticks_count++;
-    system_tick_update = 1;
+    _cupkee_systicks++;
+    cupkee_event_post_systick();
 }
 
 size_t hw_memory_left(void)
@@ -154,11 +152,6 @@ void hw_setup(void)
 void hw_poll(void)
 {
     hw_poll_usb();
-
-    if (system_tick_update) {
-        system_tick_update = 0;
-        cupkee_event_post_systick();
-    }
 }
 
 void hw_halt(void)

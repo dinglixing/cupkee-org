@@ -204,7 +204,7 @@ static void uart_poll(int instance)
                 cupkee_event_post_device_error(control->dev_id);
                 break;
             }
-            control->last_tick = system_ticks_count;
+            control->last_tick = _cupkee_systicks;
         } while (uart_has_data(instance));
 
         if (cupkee_buf_is_full(control->rx_buff)) {
@@ -212,7 +212,7 @@ static void uart_poll(int instance)
         }
     } else {
         if (!cupkee_buf_is_empty(control->rx_buff)) {
-            if (system_ticks_count - control->last_tick > 10) {
+            if (_cupkee_systicks - control->last_tick > 10) {
                 cupkee_event_post_device_data(control->dev_id);
             }
         }

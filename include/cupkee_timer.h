@@ -3,7 +3,7 @@ MIT License
 
 This file is part of cupkee project.
 
-Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+Copyright (C) 2017 Lixing Ding <ding.lixing@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,30 +24,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#ifndef __CUPKEE_TIMER_INC__
+#define __CUPKEE_TIMER_INC__
 
-#include "test.h"
+typedef void (*cupkee_timer_handle_t)(int drop, void *param);
+typedef struct cupkee_timer_t {
+    struct cupkee_timer_t *next;
+    cupkee_timer_handle_t handle;
+    uint32_t flags;
+    uint32_t wait;
+    uint32_t from;
+    void    *param;
+} cupkee_timer_t;
 
-int main(int argc, const char *argv[])
-{
-    (void) argc;
-    (void) argv;
+void cupkee_timer_init(void);
+void cupkee_timer_sync(uint32_t ticks);
 
-    if (CUE_SUCCESS != CU_initialize_registry()) {
-        return CU_get_error();
-    }
+cupkee_timer_t *cupkee_timer_register(uint32_t wait, int repeat, cupkee_timer_handle_t handle, void *param);
+void cupkee_timer_unregister(cupkee_timer_t *t);
 
-    /***********************************************
-     * Test suites here:
-     ***********************************************/
-    test_hello();
-    test_sys_event();
-    test_sys_memory();
-    test_sys_timer();
+void cupkee_timer_clear_all(void);
+void cupkee_timer_clear_with_flags(uint32_t flags);
 
-    CU_basic_set_mode(CU_BRM_VERBOSE);
-    CU_basic_run_tests();
-    CU_cleanup_registry();
-
-    return CU_get_error();
-}
+#endif /* __CUPKEE_TIMER_INC__ */
 
