@@ -30,8 +30,6 @@ SOFTWARE.
 
 static uint32_t systicks = 0;
 
-static cupkee_event_handle_t user_event_handle;
-
 static void cupkee_event_process(void)
 {
     cupkee_event_t e;
@@ -50,16 +48,14 @@ static void cupkee_event_process(void)
         if (e.type == EVENT_EMITTER) {
             cupkee_event_emitter_dispatch(e.which, e.code);
         }
-
-        /* User process */
-        if (user_event_handle) {
-            user_event_handle(&e);
-        }
     }
 }
 
 void cupkee_init(void)
 {
+    /* memory initial */
+    cupkee_memory_setup();
+
     /* Devices initial */
     cupkee_device_init();
 
@@ -71,17 +67,6 @@ void cupkee_init(void)
 
     /* Event initial */
     cupkee_event_setup();
-
-    /* event_handle initial */
-    user_event_handle = NULL;
-}
-
-int cupkee_event_handle_register(cupkee_event_handle_t handle)
-{
-    if (handle) {
-        user_event_handle = handle;
-    }
-    return 0;
 }
 
 void cupkee_loop(void)
