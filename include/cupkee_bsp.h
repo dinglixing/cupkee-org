@@ -226,7 +226,10 @@ void hw_exit_critical(uint32_t state);
 
 void hw_info_get(hw_info_t *);
 
-int  hw_memory_alloc(void **p, int size, int align);
+void *hw_malloc(size_t size, size_t align);
+
+size_t hw_memory_left(void);
+size_t hw_malloc_all(void **p, size_t align);
 
 void hw_usb_msc_init(const char *vendor, const char *product, const char *version, uint32_t blocks,
                      int (*read_cb)(uint32_t lba, uint8_t *),

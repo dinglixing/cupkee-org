@@ -26,19 +26,19 @@ SOFTWARE.
 
 #include "hardware.h"
 
-#define MAIN_STACK_SIZE 8192
+#define C_STACK_SIZE 8192
 
 extern char _etext;  // devined in ld scripts
 extern char end;     // defined in ld scripts
 
 extern vector_table_t vector_table;
-static int memory_alloced = 0;
-static int memory_size = 0;
+static void *memory_bgn = NULL;
+static void *memory_end = NULL;
 
 static void hw_memory_init(void)
 {
-    memory_alloced = 0;
-    memory_size = (char *)(vector_table.initial_sp_value) - (&end) - MAIN_STACK_SIZE;
+    memory_bgn = CUPKEE_ADDR_ALIGN(end, 16);
+    memory_end = (char *)(vector_table.initial_sp_value) - C_STACK_SIZE;
 }
 
 static void hw_setup_systick(void)
@@ -58,35 +58,55 @@ void sys_tick_handler(void)
     system_tick_update = 1;
 }
 
-int hw_memory_alloc(void **p, int size, int align)
+size_t hw_memory_left(void)
 {
-    int start = (intptr_t) (&end) + memory_alloced;
-    int shift = 0;
+    return memory_end - memory_bgn;
+}
 
-    if (size == 0) {
-        return 0;
-    }
+size_t hw_malloc_all(void **p, size_t align)
+{
+    void *memory_align_bgn;
+    int left;
 
-    if (start % align) {
-        shift = align - (start % align);
+    if (align) {
+        memory_align_bgn = CUPKEE_ADDR_ALIGN(memory_bgn, align);
     } else {
-        shift = 0;
+        memory_align_bgn = memory_bgn;
     }
-    memory_alloced += shift;
 
-    if (size < 0) {
-        size = memory_size - memory_alloced;
-    } else
-    if (memory_alloced + size > memory_size) {
-        return -1;
-    }
+    left = memory_end - memory_align_bgn;
+    memory_bgn = memory_align_bgn + left;
 
     if (p) {
-        *p = &end + memory_alloced;
-        memory_alloced += size;
+        *p = memory_align_bgn;
     }
 
-    return size;
+    return left;
+}
+
+void *hw_malloc(size_t size, size_t align)
+{
+    void *memory_align_bgn;
+    size_t left;
+
+    if (size == 0) {
+        return NULL;
+    }
+
+    if (align) {
+        memory_align_bgn = CUPKEE_ADDR_ALIGN(memory_bgn, align);
+    } else {
+        memory_align_bgn = memory_bgn;
+    }
+
+    left = memory_end - memory_align_bgn;
+    if (left < size) {
+        return NULL;
+    }
+
+    memory_bgn = memory_align_bgn + size;
+
+    return memory_align_bgn;
 }
 
 void hw_enter_critical(uint32_t *state)

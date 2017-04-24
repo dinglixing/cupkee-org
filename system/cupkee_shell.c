@@ -51,10 +51,10 @@ static env_t shell_env;
 static void shell_memory_location(int *heap_mem_sz, int *stack_mem_sz)
 {
     void *memory;
-    int size, block_size = 512;
+    size_t size, block_size = 512;
     int core_blocks;
 
-    size = hw_memory_alloc(&memory, -1, 16);
+    size = hw_malloc_all(&memory, 16);
     if (size < 1024 * 8) {
         // memory not enought !
         hw_halt();
