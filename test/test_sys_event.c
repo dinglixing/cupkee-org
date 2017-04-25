@@ -86,12 +86,14 @@ static void test_post_take(void)
 
 static uint8_t emitter1_storage;
 static uint8_t emitter2_storage;
-static void emitter1_event_handle(uint8_t e)
+static void emitter1_event_handle(cupkee_event_emitter_t *emitter, uint8_t e)
 {
+    (void) emitter;
     emitter1_storage = e;
 }
-static void emitter2_event_handle(uint8_t e)
+static void emitter2_event_handle(cupkee_event_emitter_t *emitter, uint8_t e)
 {
+    (void) emitter;
     emitter2_storage = e;
 }
 static void dispatch(void)

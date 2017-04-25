@@ -99,7 +99,7 @@ void cupkee_event_emitter_dispatch(uint8_t which, uint16_t code)
 
     while (emitter) {
         if (emitter->code == code) {
-            if (emitter->handle) emitter->handle(which);
+            if (emitter->handle) emitter->handle(emitter, which);
             return;
         }
         emitter = emitter->next;

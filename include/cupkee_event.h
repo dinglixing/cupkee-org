@@ -47,14 +47,15 @@ typedef struct cupkee_event_t {
     uint16_t code;
 } cupkee_event_t;
 
+typedef struct cupkee_event_emitter_t cupkee_event_emitter_t;
 typedef int (*cupkee_event_handle_t)(cupkee_event_t *);
-typedef void (*cupkee_event_emitter_handle_t)(uint8_t w);
+typedef void (*cupkee_event_emitter_handle_t)(cupkee_event_emitter_t *emitter, uint8_t code);
 
-typedef struct cupkee_event_emitter_t {
-    struct cupkee_event_emitter_t *next;
+struct cupkee_event_emitter_t {
+    cupkee_event_emitter_t *next;
     cupkee_event_emitter_handle_t handle;
     uint16_t code;
-} cupkee_event_emitter_t;
+};
 
 void cupkee_event_setup(void);
 void cupkee_event_reset(void);
