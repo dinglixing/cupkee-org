@@ -27,6 +27,8 @@ SOFTWARE.
 #ifndef __CUPKEE_TIMER_INC__
 #define __CUPKEE_TIMER_INC__
 
+extern uint32_t _cupkee_systicks;
+
 typedef void (*cupkee_timer_handle_t)(int drop, void *param);
 typedef struct cupkee_timer_t {
     struct cupkee_timer_t *next;
@@ -47,6 +49,11 @@ void cupkee_timer_unregister(cupkee_timer_t *t);
 int cupkee_timer_clear_all(void);
 int cupkee_timer_clear_with_flags(uint32_t flags);
 int cupkee_timer_clear_with_id(uint32_t id);
+
+static inline uint32_t cupkee_systicks(void) {
+    return _cupkee_systicks;
+}
+
 
 #endif /* __CUPKEE_TIMER_INC__ */
 

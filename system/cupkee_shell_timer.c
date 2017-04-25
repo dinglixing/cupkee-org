@@ -27,7 +27,6 @@ SOFTWARE.
 #include <cupkee.h>
 
 #include "cupkee_shell_misc.h"
-#include "cupkee_shell_systick.h"
 
 static void timer_handle(int drop, void *param)
 {

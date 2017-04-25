@@ -46,6 +46,9 @@ SOFTWARE.
 /* User configure ? */
 #define APP_DEV_MAX                 8
 
+void cupkee_init(void);
+void cupkee_loop(void);
+
 #include "cupkee_bsp.h"
 #include "cupkee_errno.h"
 #include "cupkee_utils.h"
@@ -60,17 +63,6 @@ SOFTWARE.
 #include "cupkee_command.h"
 #include "cupkee_shell.h"
 #include "cupkee_native.h"
-
-void cupkee_init(void);
-void cupkee_loop(void);
-
-extern uint32_t _cupkee_systicks;
-
-int  cupkee_event_handle_register(cupkee_event_handle_t handle);
-
-static inline uint32_t cupkee_systicks(void) {
-    return _cupkee_systicks;
-}
 
 #endif /* __CUPKEE_INC__ */
 
