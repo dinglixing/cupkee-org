@@ -192,18 +192,6 @@ typedef struct hw_driver_t {
 
     // Todo: need a suitable name
     int (*io_cached) (int inst, size_t *in, size_t *out);
-
-    // Todo:
-    union {
-        struct {
-            int (*recv) (int inst, int max, void *buf);
-            int (*send) (int inst, int n,   void *data);
-            int (*recv_sync) (int inst, int n, uint8_t *buf);
-            int (*send_sync) (int inst, int n, const uint8_t *data);
-            int (*received) (int inst);
-        } stream;
-    } io;
-
 } hw_driver_t;
 
 /****************************************************************/
