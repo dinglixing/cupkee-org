@@ -232,15 +232,14 @@ static void console_input_handle(int n, void *data)
     }
 }
 
-static char recv_buf[8];
-
 static void console_do_recv(cupkee_device_t *dev)
 {
     int n;
+    char buf[4];
 
-    while (0 < (n = cupkee_device_recv(dev, 8, recv_buf))) {
+    while (0 < (n = cupkee_device_read(dev, 4, buf))) {
         console_total_recv += n;
-        console_input_handle(n, recv_buf);
+        console_input_handle(n, buf);
     }
 }
 
@@ -249,7 +248,7 @@ static void console_do_send(cupkee_device_t *dev)
     char c;
 
     while (console_buf_read_byte(CONSOLE_OUT, &c)) {
-        if (!cupkee_device_send(dev, 1, &c)) {
+        if (!cupkee_device_write(dev, 1, &c)) {
             console_buf_unread_byte(CONSOLE_OUT, c);
             break;
         } else {
@@ -422,7 +421,7 @@ int console_putc(int c)
 {
     if (rbuff_is_empty(&console_buff[CONSOLE_OUT])) {
         char buf = c;
-        if (cupkee_device_send(console_dev, 1, &buf)) {
+        if (cupkee_device_write(console_dev, 1, &buf)) {
             console_total_send++;
             return 1;
         }
@@ -437,7 +436,7 @@ int console_puts(const char *s)
     int len = strlen(s);
 
     if (rbuff_is_empty(&console_buff[CONSOLE_OUT])) {
-        int n = cupkee_device_send(console_dev, len, s);
+        int n = cupkee_device_write(console_dev, len, s);
         if (n > 0) {
             console_total_send += n;
             p += n;
@@ -470,14 +469,14 @@ int console_putc_sync(int c)
 {
     char buf = c;
 
-    return cupkee_device_send_sync(console_dev, 1, &buf);
+    return cupkee_device_write_sync(console_dev, 1, &buf);
 }
 
 int console_puts_sync(const char *s)
 {
     int len = strlen(s);
 
-    return cupkee_device_send_sync(console_dev, len, s);
+    return cupkee_device_write_sync(console_dev, len, s);
 }
 
 int console_log_sync(const char *fmt, ...)

@@ -309,72 +309,80 @@ static int cdc_recv_byte(uint8_t *c)
     return usbd_ep_read_packet(usbd_dev, 0x01, c, 1);
 }
 
-static int cdc_send(int instance, int len, void *data)
+static int cdc_send(int instance, size_t n, const void *data)
 {
-    const uint8_t *p = data;
-    int i = 0;
+    const uint8_t *ptr = data;
+    size_t i = 0;
 
     (void) instance;
 
-    while (i < len && cdc_send_byte(p[i])) {
+    while (i < n && cdc_send_byte(ptr[i])) {
         i++;
     }
 
     return i;
 }
 
-static int cdc_recv(int instance, int size, void *data)
+static int cdc_recv(int instance, size_t n, void *data)
 {
     (void) instance;
-	return usbd_ep_read_packet(usbd_dev, 0x01, data, size);
+	return usbd_ep_read_packet(usbd_dev, 0x01, data, n);
 }
 
-static int cdc_send_sync(int instance, int len, const uint8_t *data)
+static int cdc_send_sync(int instance, size_t n, const void *data)
 {
-    int i;
+    const uint8_t *ptr = data;
+    size_t i;
 
     (void) instance;
 
-    for (i = 0; i < len; i++) {
-        while (!cdc_send_byte(data[i]))
+    for (i = 0; i < n; i++) {
+        while (!cdc_send_byte(ptr[i]))
             ;
     }
 
     return i;
 }
 
-static int cdc_recv_sync(int instance, int size, uint8_t *data)
+static int cdc_recv_sync(int instance, size_t n, void *data)
 {
-    int i;
+    uint8_t *ptr = data;
+    size_t i;
 
     (void) instance;
 
-    for (i = 0; i < size; i++) {
-        while (!cdc_recv_byte(data + i))
+    for (i = 0; i < n; i++) {
+        while (!cdc_recv_byte(ptr + i))
             ;
     }
 
     return i;
 }
 
-static int cdc_received(int instance)
+static int cdc_io_cached(int instance, size_t *in, size_t *out)
 {
+    (void) instance;
+
     //Todo: real counter
-    (void) instance;
-    return 1;
+    if (in) {
+        *in = 1;
+    }
+    if (out) {
+        *out = 0;
+    }
+    return 0;
 }
 
 static const hw_driver_t cdc_driver = {
     .release = cdc_release,
     .reset   = cdc_reset,
     .setup   = cdc_setup,
-    .io.stream = {
-        .recv = cdc_recv,
-        .send = cdc_send,
-        .recv_sync = cdc_recv_sync,
-        .send_sync = cdc_send_sync,
-        .received = cdc_received,
-    }
+
+    .read = cdc_recv,
+    .write = cdc_send,
+    .read_sync = cdc_recv_sync,
+    .write_sync = cdc_send_sync,
+    .io_cached = cdc_io_cached,
 };
 
 const hw_driver_t *hw_request_cdc(int instance)
