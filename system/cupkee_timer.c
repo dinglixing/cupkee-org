@@ -28,10 +28,49 @@ SOFTWARE.
 #define TIMER_FL_REPEAT 1
 
 static cupkee_timer_t *timer_head = NULL;
+static int timer_next = 0;
+
+static int timer_clear_by(int (*fn)(cupkee_timer_t *, int), int x)
+{
+    cupkee_timer_t *prev = NULL, *curr = timer_head;
+    int n = 0;
+
+    while (curr) {
+        cupkee_timer_t *next = curr->next;
+
+        if (fn(curr, x)) {
+            if (prev) {
+                prev->next = next;
+            } else {
+                timer_head = next;
+            }
+
+            curr->handle(1, curr->param); // drop timer
+            cupkee_free(curr);
+            n ++;
+        } else {
+            prev = curr;
+        }
+
+        curr = next;
+    }
+    return n;
+}
+
+static int timer_with_flag(cupkee_timer_t *t, int flags)
+{
+    return t->flags == flags;
+}
+
+static int timer_with_id(cupkee_timer_t *t, int id)
+{
+    return t->id == id;
+}
 
 void cupkee_timer_init(void)
 {
     timer_head = NULL;
+    timer_next = 0;
 }
 
 void cupkee_timer_sync(uint32_t curr_ticks)
@@ -76,6 +115,7 @@ cupkee_timer_t *cupkee_timer_register(uint32_t wait, int repeat, cupkee_timer_ha
     if (t) {
         t->handle = handle;
         t->param  = param;
+        t->id     = timer_next++;
         t->wait   = wait;
         t->from   = _cupkee_systicks;
         t->flags  = repeat ? TIMER_FL_REPEAT : 0;
@@ -110,10 +150,12 @@ void cupkee_timer_unregister(cupkee_timer_t *t)
     }
 }
 
-void cupkee_timer_clear_all(void)
+int cupkee_timer_clear_all(void)
 {
     cupkee_timer_t *curr = timer_head;
+    int n = 0;
 
+    timer_head = NULL;
     while (curr) {
         cupkee_timer_t *next = curr->next;
 
@@ -121,31 +163,20 @@ void cupkee_timer_clear_all(void)
         cupkee_free(curr);
 
         curr = next;
+        n ++;
     }
+
+    return n;
 }
 
-void cupkee_timer_clear_with_flags(uint32_t flags)
+int cupkee_timer_clear_with_flags(uint32_t flags)
 {
-    cupkee_timer_t *prev = NULL, *curr = timer_head;
+    return timer_clear_by(timer_with_flag, flags);
+}
 
-    while (curr) {
-        cupkee_timer_t *next = curr->next;
-
-        if (curr->flags == flags) {
-            if (prev) {
-                prev->next = curr->next;
-            } else {
-                timer_head = curr->next;
-            }
-
-            curr->handle(1, curr->param); // drop timer
-            cupkee_free(curr);
-        } else {
-            prev = curr;
-        }
-
-        curr = next;
-    }
+int cupkee_timer_clear_with_id(uint32_t id)
+{
+    return timer_clear_by(timer_with_id, id);
 }
 
 uint32_t _cupkee_systicks;

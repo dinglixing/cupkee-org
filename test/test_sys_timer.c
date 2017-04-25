@@ -147,6 +147,17 @@ static void test_self_clear(void)
     CU_ASSERT(v2[0] == 2 && v2[1] == 2);
     CU_ASSERT(v3[0] == 2 && v3[1] == 2);
     CU_ASSERT(v4[0] == 2 && v4[1] == 2);
+
+    // pass loop
+    while (_cupkee_systicks < 200) {
+        cupkee_timer_sync(++_cupkee_systicks);
+    }
+    CU_ASSERT(v1[0] == 2 && v1[1] == 2);
+    CU_ASSERT(v2[0] == 2 && v2[1] == 2);
+    CU_ASSERT(v3[0] == 2 && v3[1] == 2);
+    CU_ASSERT(v4[0] == 2 && v4[1] == 2);
+
+
 }
 
 static void test_timer_clear(void)
@@ -162,8 +173,8 @@ static void test_timer_clear(void)
     v4[0] = 0; v4[1] = 0;
 
     CU_ASSERT_FATAL((t1 = cupkee_timer_register(20, 1, test_handle, &v1)) != NULL);
-    CU_ASSERT_FATAL((t3 = cupkee_timer_register(80, 0, test_handle, &v3)) != NULL);
     CU_ASSERT_FATAL((t2 = cupkee_timer_register(30, 1, test_handle, &v2)) != NULL);
+    CU_ASSERT_FATAL((t3 = cupkee_timer_register(80, 0, test_handle, &v3)) != NULL);
     CU_ASSERT_FATAL((t4 = cupkee_timer_register(90, 0, test_handle, &v4)) != NULL);
 
     while (_cupkee_systicks < 35) {
@@ -174,7 +185,8 @@ static void test_timer_clear(void)
     CU_ASSERT(v3[0] == 0 && v3[1] == 0);
     CU_ASSERT(v4[0] == 0 && v4[1] == 0);
 
-    cupkee_timer_clear_with_flags(1); // clean repeat
+    // clean repeat
+    CU_ASSERT(2 == cupkee_timer_clear_with_flags(1));
     while (_cupkee_systicks < 60) {
         cupkee_timer_sync(++_cupkee_systicks);
     }
@@ -186,7 +198,8 @@ static void test_timer_clear(void)
     CU_ASSERT_FATAL((t1 = cupkee_timer_register(20, 1, test_handle, &v1)) != NULL);
     CU_ASSERT_FATAL((t2 = cupkee_timer_register(30, 1, test_handle, &v2)) != NULL);
 
-    cupkee_timer_clear_with_flags(0); // clean no repeat
+    // clean no repeat
+    CU_ASSERT(2 == cupkee_timer_clear_with_flags(0));
     while (_cupkee_systicks < 120) {
         cupkee_timer_sync(++_cupkee_systicks);
     }
@@ -199,7 +212,10 @@ static void test_timer_clear(void)
     CU_ASSERT_FATAL((t3 = cupkee_timer_register(40, 0, test_handle, &v3)) != NULL);
     CU_ASSERT_FATAL((t4 = cupkee_timer_register(50, 0, test_handle, &v4)) != NULL);
 
-    cupkee_timer_clear_all(); // clean all
+    CU_ASSERT(1 == cupkee_timer_clear_with_id(t3->id));
+
+    // clean all
+    CU_ASSERT(3 == cupkee_timer_clear_all());
 
     while (_cupkee_systicks < 160) {
         cupkee_timer_sync(++_cupkee_systicks);
@@ -218,9 +234,9 @@ CU_pSuite test_sys_timer(void)
     CU_pSuite suite = CU_add_suite("system timer", test_setup, test_clean);
 
     if (suite) {
-        CU_add_test(suite, "wakeup",        test_wakeup);
-        CU_add_test(suite, "self clear",    test_self_clear);
-        CU_add_test(suite, "clear",         test_timer_clear);
+        CU_add_test(suite, "timer wakeup",    test_wakeup);
+        CU_add_test(suite, "timer clear1",    test_self_clear);
+        CU_add_test(suite, "timer clear2",    test_timer_clear);
     }
 
     return suite;

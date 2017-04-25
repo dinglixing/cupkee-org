@@ -223,15 +223,6 @@ static void shell_interp_init(int heap_mem_sz, int stack_mem_sz, int n, const na
     shell_mode = 0;
 }
 
-static int shell_event_handle(cupkee_event_t *e)
-{
-    switch(e->type) {
-    case EVENT_SYSTICK: shell_systick_handle(&shell_env, cupkee_systicks()); break;
-    default: break;
-    }
-    return 0;
-}
-
 env_t *cupkee_shell_env(void)
 {
     return &shell_env;
@@ -246,10 +237,6 @@ int cupkee_shell_init(cupkee_device_t *tty, int n, const native_t *natives)
     shell_console_init(tty);
 
     shell_interp_init(heap_mem_sz, stack_mem_sz, n, natives);
-
-    shell_systick_init();
-
-    cupkee_event_handle_register(shell_event_handle);
 
     return 0;
 }

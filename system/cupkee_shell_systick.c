@@ -29,59 +29,27 @@ SOFTWARE.
 #include "cupkee_shell_misc.h"
 #include "cupkee_shell_systick.h"
 
-#define TIMEOUT_MAX   (16)
-
-typedef struct timeout_t {
-    int repeat;
-    uint32_t from;
-    uint32_t wait;
-    val_t   *handle_ref;
-    struct timeout_t *next;
-} timeout_t;
-
-static timeout_t timeout_queue[TIMEOUT_MAX];
-static timeout_t *timeout_free;
-static timeout_t *timeout_wait;
-
-static timeout_t *timeout_alloc(val_t *handle)
+static void timer_handle(int drop, void *param)
 {
-    timeout_t *to = timeout_free;
-
-    if (to) {
-        val_t *ref = shell_reference_create(handle);
-
-        if (ref) {
-            to->handle_ref = ref;
-            timeout_free = to->next;
-            return to;
-        }
-    }
-
-    return to;
-}
-
-static void timeout_release(timeout_t *to)
-{
-    if (to) {
-        if (to->handle_ref) {
-            shell_reference_release(to->handle_ref);
-            to->handle_ref = NULL;
-        }
-        to->next = timeout_free;
-        timeout_free = to;
+    if (drop) {
+        shell_reference_release(param);
+    } else {
+        shell_do_callback(cupkee_shell_env(), param, 0, NULL);
     }
 }
 
-static int timeout_register(int ac, val_t *av, int repeat)
+static int timer_register(int ac, val_t *av, int repeat)
 {
     val_t   *handle;
     uint32_t wait;
-    timeout_t *to;
+    cupkee_timer_t *timer;
+    val_t *ref;
 
     if (ac < 1 || !val_is_function(av)) {
         return -1;
     }
     handle = av++;
+
 
     if (ac > 1 && val_is_number(av)) {
         wait = val_2_double(av);
@@ -89,68 +57,42 @@ static int timeout_register(int ac, val_t *av, int repeat)
         wait = 0;
     }
 
-    to = timeout_alloc(handle);
-    if (to) {
-        to->from = cupkee_systicks();
-        to->wait = wait;
-        to->repeat = repeat;
-        to->next = timeout_wait;
-        timeout_wait = to;
-
-        return to - timeout_queue;
-    } else {
+    ref = shell_reference_create(handle);
+    if (!ref) {
         return -1;
     }
+
+    timer = cupkee_timer_register(wait, repeat, timer_handle, ref);
+    if (!timer) {
+        shell_reference_release(ref);
+        return -1;
+    }
+
+    return timer->id;
 }
 
-static int timeout_unregister(int ac, val_t *av, int repeat)
+static int timer_unregister(int ac, val_t *av, int repeat)
 {
-    timeout_t *to = timeout_wait;
-    timeout_t **prev = &timeout_wait;
-    int drop = 0;
-    int tid = -1; // all
+    int32_t tid = -1; // all
 
     if (ac > 0) {
         if (val_is_number(av)) {
-            tid = val_2_double(av);
+            tid = val_2_intptr(av);
         } else {
             return -1;
         }
     }
 
-    while(to) {
-        int should_release = 0;
-
-        if (tid < 0) {
-            if (!repeat == !to->repeat) {
-                should_release = 1;
-            }
-        } else {
-            if (to - timeout_queue == tid) {
-                should_release = 1;
-            }
-        }
-
-        if (should_release) {
-            timeout_t *next = to->next;
-
-            to    = next;
-            *prev = next;
-
-            timeout_release(to);
-            drop ++;
-        } else {
-            prev = &to->next;
-            to = to->next;
-        }
+    if (tid >= 0) {
+        return cupkee_timer_clear_with_id(tid);
+    } else {
+        return cupkee_timer_clear_with_flags(repeat ? 1: 0);
     }
-
-    return drop;
 }
 
 val_t native_set_timeout(env_t *env, int ac, val_t *av)
 {
-    int tid = timeout_register(ac, av, 0);
+    int tid = timer_register(ac, av, 0);
 
     (void) env;
 
@@ -159,7 +101,7 @@ val_t native_set_timeout(env_t *env, int ac, val_t *av)
 
 val_t native_set_interval(env_t *env, int ac, val_t *av)
 {
-    int tid = timeout_register(ac, av, 1);
+    int tid = timer_register(ac, av, 1);
 
     (void) env;
 
@@ -168,7 +110,7 @@ val_t native_set_interval(env_t *env, int ac, val_t *av)
 
 val_t native_clear_timeout(env_t *env, int ac, val_t *av)
 {
-    int n = timeout_unregister(ac, av, 0);
+    int n = timer_unregister(ac, av, 0);
 
     (void) env;
 
@@ -177,69 +119,10 @@ val_t native_clear_timeout(env_t *env, int ac, val_t *av)
 
 val_t native_clear_interval(env_t *env, int ac, val_t *av)
 {
-    int n = timeout_unregister(ac, av, 1);
+    int n = timer_unregister(ac, av, 1);
 
     (void) env;
 
     return n < 0 ? val_mk_boolean(0) : val_mk_number(n);
-}
-
-void shell_systick_init(void)
-{
-    int i;
-
-    timeout_wait = NULL;
-    timeout_free = NULL;
-    for (i = 0; i < TIMEOUT_MAX; i++) {
-        timeout_t *to = &timeout_queue[i];
-
-        to->handle_ref = NULL;
-        to->from= 0;
-        to->wait = 0;
-        to->repeat = 0;
-        to->next = timeout_free;
-        timeout_free = to;
-    }
-}
-
-void shell_systick_handle(env_t *env, uint32_t cur_ticks)
-{
-    timeout_t *to = timeout_wait;
-    timeout_t *tr = NULL;
-
-    timeout_wait = NULL;
-    while(to) {
-        timeout_t *next = to->next;
-        int repeat = 1;
-
-        if (cur_ticks - to->from >= to->wait) {
-            shell_do_callback(env, to->handle_ref, 0, NULL);
-
-            if (to->repeat) {
-                to->from = cur_ticks;
-            } else {
-                repeat = 0;
-            }
-        }
-
-        if (repeat) {
-            to->next = tr;
-            tr = to;
-        } else {
-            timeout_release(to);
-        }
-
-        to = next;
-    }
-
-    if (timeout_wait) {
-        to = timeout_wait;
-        while(to->next) {
-            to = to->next;
-        }
-        to->next = tr;
-    } else {
-        timeout_wait = tr;
-    }
 }
 

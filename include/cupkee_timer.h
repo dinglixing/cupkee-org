@@ -31,7 +31,8 @@ typedef void (*cupkee_timer_handle_t)(int drop, void *param);
 typedef struct cupkee_timer_t {
     struct cupkee_timer_t *next;
     cupkee_timer_handle_t handle;
-    uint32_t flags;
+    int      id;
+    int      flags;
     uint32_t wait;
     uint32_t from;
     void    *param;
@@ -43,8 +44,9 @@ void cupkee_timer_sync(uint32_t ticks);
 cupkee_timer_t *cupkee_timer_register(uint32_t wait, int repeat, cupkee_timer_handle_t handle, void *param);
 void cupkee_timer_unregister(cupkee_timer_t *t);
 
-void cupkee_timer_clear_all(void);
-void cupkee_timer_clear_with_flags(uint32_t flags);
+int cupkee_timer_clear_all(void);
+int cupkee_timer_clear_with_flags(uint32_t flags);
+int cupkee_timer_clear_with_id(uint32_t id);
 
 #endif /* __CUPKEE_TIMER_INC__ */
 
