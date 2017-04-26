@@ -37,7 +37,7 @@ typedef struct cupkee_device_desc_t {
     uint16_t type;
     uint8_t  category;
     uint8_t  conf_num;
-    const char **conf_names;
+    const char * const *conf_names;
     void (*conf_init)(hw_config_t *);
 } cupkee_device_desc_t;
 

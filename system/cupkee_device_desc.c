@@ -26,19 +26,19 @@ SOFTWARE.
 
 #include <cupkee.h>
 
-static const char *device_pin_conf_names[] = {
+static const char * const device_pin_conf_names[] = {
     "pinNum", "pinStart", "dir"
 };
 
-static const char *device_adc_conf_names[] = {
+static const char * const device_adc_conf_names[] = {
     "channel", "interval"
 };
 
-static const char *device_pwm_pulse_timer_counter_conf_names[] = {
+static const char * const device_pwm_pulse_timer_counter_conf_names[] = {
     "channel", "polarity", "period"
 };
 
-static const char *device_uart_conf_names[] = {
+static const char * const device_uart_conf_names[] = {
     "baudrate", "dataBits", "stopBits", "parity"
 };
 
@@ -51,7 +51,7 @@ static const cupkee_device_desc_t device_pin = {
     .type = DEVICE_TYPE_PIN,
     .category = DEVICE_CATEGORY_MAP,
     .conf_num = 3,
-    .conf_names = device_pin_conf_names,
+    .conf_names = device_pin_conf_names
 };
 
 static const cupkee_device_desc_t device_adc = {
