@@ -33,13 +33,13 @@ SOFTWARE.
 static rbuff_t eventq;
 static cupkee_event_t eventq_mem[EVENTQ_SIZE];
 static cupkee_event_emitter_t *emitter_head;
-static unsigned emitter_code_next;
+static unsigned emitter_next;
 
 void cupkee_event_setup(void)
 {
     rbuff_init(&eventq, EVENTQ_SIZE);
     emitter_head = NULL;
-    emitter_code_next = 0;
+    emitter_next = 0;
 }
 
 void cupkee_event_reset(void)
@@ -53,16 +53,17 @@ int cupkee_event_emitter_init(cupkee_event_emitter_t *emitter, cupkee_event_emit
         return -CUPKEE_EINVAL;
     }
 
-    if (emitter_code_next >= EMITTER_CODE_MAX) {
+    if (emitter_next >= EMITTER_CODE_MAX) {
         return -CUPKEE_ERESOURCE;
     }
 
     emitter->handle = handle;
-    emitter->code = emitter_code_next++;
+    emitter->id   = emitter_next++;
     emitter->next = emitter_head;
+
     emitter_head = emitter;
 
-    return emitter->code;
+    return emitter->id;
 }
 
 int cupkee_event_emitter_deinit(cupkee_event_emitter_t *emitter)
@@ -93,20 +94,20 @@ int cupkee_event_emitter_deinit(cupkee_event_emitter_t *emitter)
     return -CUPKEE_EINVAL;
 }
 
-void cupkee_event_emitter_dispatch(uint8_t which, uint16_t code)
+void cupkee_event_emitter_dispatch(uint16_t which, uint8_t code)
 {
     cupkee_event_emitter_t *emitter = emitter_head;
 
     while (emitter) {
-        if (emitter->code == code) {
-            if (emitter->handle) emitter->handle(emitter, which);
+        if (emitter->id == which) {
+            if (emitter->handle) emitter->handle(emitter, code);
             return;
         }
         emitter = emitter->next;
     }
 }
 
-int cupkee_event_post(uint8_t type, uint8_t which, uint16_t code)
+int cupkee_event_post(uint8_t type, uint8_t code, uint16_t which)
 {
     uint32_t state;
     int pos;
@@ -120,8 +121,8 @@ int cupkee_event_post(uint8_t type, uint8_t which, uint16_t code)
     }
 
     eventq_mem[pos].type  = type;
-    eventq_mem[pos].which = which;
     eventq_mem[pos].code  = code;
+    eventq_mem[pos].which = which;
 
     return 1;
 }

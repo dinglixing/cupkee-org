@@ -43,8 +43,8 @@ enum {
 
 typedef struct cupkee_event_t {
     uint8_t type;
-    uint8_t which;
-    uint16_t code;
+    uint8_t code;
+    uint16_t which;
 } cupkee_event_t;
 
 typedef struct cupkee_event_emitter_t cupkee_event_emitter_t;
@@ -54,7 +54,7 @@ typedef void (*cupkee_event_emitter_handle_t)(cupkee_event_emitter_t *emitter, u
 struct cupkee_event_emitter_t {
     cupkee_event_emitter_t *next;
     cupkee_event_emitter_handle_t handle;
-    uint16_t code;
+    uint16_t id;
 };
 
 void cupkee_event_setup(void);
@@ -63,37 +63,33 @@ void cupkee_event_reset(void);
 int cupkee_event_emitter_init(cupkee_event_emitter_t *emitter, cupkee_event_emitter_handle_t handle);
 int cupkee_event_emitter_deinit(cupkee_event_emitter_t *emitter);
 
-int cupkee_event_post(uint8_t type, uint8_t which, uint16_t code);
+int cupkee_event_post(uint8_t type, uint8_t code, uint16_t which);
 int cupkee_event_take(cupkee_event_t *event);
 
-void cupkee_event_emitter_dispatch(uint8_t which, uint16_t code);
+void cupkee_event_emitter_dispatch(uint16_t which, uint8_t code);
 
-static inline int cupkee_event_emitter_emit(cupkee_event_emitter_t *emitter, uint8_t which) {
-    return cupkee_event_post(EVENT_EMITTER, which, emitter->code);
+static inline int cupkee_event_emitter_emit(cupkee_event_emitter_t *emitter, uint8_t code) {
+    return cupkee_event_post(EVENT_EMITTER, code, emitter->id);
 }
 
 static inline int cupkee_event_post_systick(void) {
     return cupkee_event_post(EVENT_SYSTICK, 0, 0);
 }
 
-static inline int cupkee_event_post_device(uint8_t which, uint16_t code) {
-    return cupkee_event_post(EVENT_DEVICE, which, code);
+static inline int cupkee_event_post_device_error(uint16_t which) {
+    return cupkee_event_post(EVENT_DEVICE, EVENT_DEVICE_ERR, which);
 }
 
-static inline int cupkee_event_post_device_error(uint8_t which) {
-    return cupkee_event_post(EVENT_DEVICE, which, EVENT_DEVICE_ERR);
+static inline int cupkee_event_post_device_data(uint16_t which) {
+    return cupkee_event_post(EVENT_DEVICE, EVENT_DEVICE_DATA, which);
 }
 
-static inline int cupkee_event_post_device_data(uint8_t which) {
-    return cupkee_event_post(EVENT_DEVICE, which, EVENT_DEVICE_DATA);
+static inline int cupkee_event_post_device_drain(uint16_t which) {
+    return cupkee_event_post(EVENT_DEVICE, EVENT_DEVICE_DRAIN, which);
 }
 
-static inline int cupkee_event_post_device_drain(uint8_t which) {
-    return cupkee_event_post(EVENT_DEVICE, which, EVENT_DEVICE_DRAIN);
-}
-
-static inline int cupkee_event_post_device_ready(uint8_t which) {
-    return cupkee_event_post(EVENT_DEVICE, which, EVENT_DEVICE_READY);
+static inline int cupkee_event_post_device_ready(uint16_t which) {
+    return cupkee_event_post(EVENT_DEVICE, EVENT_DEVICE_READY, which);
 }
 
 #endif /* __CUPKEE_EVENT_INC__ */

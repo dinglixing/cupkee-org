@@ -63,23 +63,23 @@ static void test_post_take(void)
 
     CU_ASSERT_EQUAL(cupkee_event_post(0, 0, 0), 1);
     CU_ASSERT_EQUAL(cupkee_event_take(&e), 1);
-    CU_ASSERT_EQUAL(e.type , 0);
-    CU_ASSERT_EQUAL(e.which, 0);
+    CU_ASSERT_EQUAL(e.type, 0);
     CU_ASSERT_EQUAL(e.code, 0);
+    CU_ASSERT_EQUAL(e.which, 0);
 
-    CU_ASSERT_EQUAL(cupkee_event_post(1, 1, 1), 1);
+    CU_ASSERT_EQUAL(cupkee_event_post(1, 2, 3), 1);
     CU_ASSERT_EQUAL(cupkee_event_take(&e), 1);
-    CU_ASSERT_EQUAL(e.type , 1);
-    CU_ASSERT_EQUAL(e.which, 1);
-    CU_ASSERT_EQUAL(e.code, 1);
+    CU_ASSERT_EQUAL(e.type, 1);
+    CU_ASSERT_EQUAL(e.code, 2);
+    CU_ASSERT_EQUAL(e.which, 3);
 
-    for (i = 0; i < 256; i++) {
-        cupkee_event_post(i, i, i);
+    for (i = 0; i < 16; i++) {
+        cupkee_event_post(i, i * 2, i * 4);
         cupkee_event_take(&e);
     }
-    CU_ASSERT_EQUAL(e.type , 255);
-    CU_ASSERT_EQUAL(e.which, 255);
-    CU_ASSERT_EQUAL(e.code, 255);
+    CU_ASSERT_EQUAL(e.type, 15);
+    CU_ASSERT_EQUAL(e.code, 30);
+    CU_ASSERT_EQUAL(e.which, 60);
 
     cupkee_event_reset();
 }
@@ -115,15 +115,15 @@ static void test_emitter(void)
     CU_ASSERT(cupkee_event_emitter_init(&emitter1, emitter1_event_handle) >= 0);
     CU_ASSERT(cupkee_event_emitter_init(&emitter2, emitter2_event_handle) >= 0);
 
-    cupkee_event_post(EVENT_EMITTER, 3, emitter1.code);
+    cupkee_event_post(EVENT_EMITTER, 3, emitter1.id);
     dispatch();
     CU_ASSERT(emitter1_storage == 3);
 
-    cupkee_event_post(EVENT_EMITTER, 2, emitter1.code);
+    cupkee_event_post(EVENT_EMITTER, 2, emitter1.id);
     dispatch();
     CU_ASSERT(emitter1_storage == 2);
 
-    cupkee_event_post(EVENT_EMITTER, 3, emitter2.code);
+    cupkee_event_post(EVENT_EMITTER, 3, emitter2.id);
     dispatch();
     CU_ASSERT(emitter2_storage == 3);
 

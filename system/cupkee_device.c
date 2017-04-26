@@ -176,7 +176,7 @@ void cupkee_device_set_error(int id, uint8_t code)
     }
 }
 
-void cupkee_device_event_handle(uint8_t which, uint16_t code)
+void cupkee_device_event_handle(uint16_t which, uint8_t code)
 {
     cupkee_device_t *dev = &devices[which];
 

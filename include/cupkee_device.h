@@ -63,7 +63,7 @@ extern const cupkee_device_desc_t *device_entrys[];
 int  cupkee_device_init(void);
 void cupkee_device_poll(void);
 void cupkee_device_sync(uint32_t systicks);
-void cupkee_device_event_handle(uint8_t which, uint16_t code);
+void cupkee_device_event_handle(uint16_t which, uint8_t code);
 
 cupkee_device_t *cupkee_device_request(const char *name, int instance);
 cupkee_device_t *cupkee_device_request2(int type, int instance);
