@@ -243,7 +243,7 @@ static val_t *device_op_elem_ref(void *env, intptr_t id, val_t *key)
     return key;
 }
 
-static void device_get_option(val_t *opt, int i, int max, const char **opt_list)
+static void device_config_get_option(val_t *opt, int i, int max, const char **opt_list)
 {
     if (i >= max) {
         i = 0;
@@ -252,7 +252,7 @@ static void device_get_option(val_t *opt, int i, int max, const char **opt_list)
     val_set_foreign_string(opt, (intptr_t) opt_list[i]);
 }
 
-static void device_get_sequence(env_t *env, val_t *val, uint8_t n, uint8_t *seq)
+static void device_config_get_sequence(env_t *env, val_t *val, uint8_t n, uint8_t *seq)
 {
     array_t *a;
     int i;
@@ -267,7 +267,7 @@ static void device_get_sequence(env_t *env, val_t *val, uint8_t n, uint8_t *seq)
     }
 }
 
-static int device_set_uint8(val_t *val, uint8_t *conf)
+static int device_config_set_uint8(val_t *val, uint8_t *conf)
 {
     if (val_is_number(val)) {
         *conf = val_2_integer(val);
@@ -276,7 +276,7 @@ static int device_set_uint8(val_t *val, uint8_t *conf)
     return -CUPKEE_EINVAL;
 }
 
-static int device_set_uint16(val_t *val, uint16_t *conf)
+static int device_config_set_uint16(val_t *val, uint16_t *conf)
 {
     if (val_is_number(val)) {
         *conf = val_2_integer(val);
@@ -285,7 +285,7 @@ static int device_set_uint16(val_t *val, uint16_t *conf)
     return -CUPKEE_EINVAL;
 }
 
-static int device_set_uint32(val_t *val, uint32_t *conf)
+static int device_config_set_uint32(val_t *val, uint32_t *conf)
 {
     if (val_is_number(val)) {
         *conf = val_2_integer(val);
@@ -294,7 +294,7 @@ static int device_set_uint32(val_t *val, uint32_t *conf)
     return -CUPKEE_EINVAL;
 }
 
-static int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list)
+static int device_config_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list)
 {
     int opt = shell_val_id(val, max, opt_list);
 
@@ -305,7 +305,7 @@ static int device_set_option(val_t *val, uint8_t *conf, int max, const char **op
     return -CUPKEE_EINVAL;
 }
 
-static int device_set_sequence(val_t *val, int max, uint8_t *n, uint8_t *seq)
+static int device_config_set_sequence(val_t *val, int max, uint8_t *n, uint8_t *seq)
 {
     int i, len;
     val_t *elems;
@@ -374,7 +374,7 @@ static int device_pin_config_get(env_t *env, hw_config_t *conf, int which, val_t
     switch (which) {
     case DEVICE_PIN_CONF_NUM:   val_set_number(val, pin->num);   break;
     case DEVICE_PIN_CONF_START: val_set_number(val, pin->start); break;
-    case DEVICE_PIN_CONF_DIR:   device_get_option(val, pin->dir, DEVICE_OPT_DIR_MAX, device_opt_dir); break;
+    case DEVICE_PIN_CONF_DIR:   device_config_get_option(val, pin->dir, DEVICE_OPT_DIR_MAX, device_opt_dir); break;
     default:                    return -CUPKEE_EINVAL;
     }
 
@@ -388,9 +388,9 @@ static int device_pin_config_set(env_t *env, hw_config_t *conf, int which, val_t
     (void) env;
 
     switch (which) {
-    case DEVICE_PIN_CONF_NUM:   return device_set_uint8(val, &pin->num);
-    case DEVICE_PIN_CONF_START: return device_set_uint8(val, &pin->start);
-    case DEVICE_PIN_CONF_DIR:   return device_set_option(val, &pin->dir, DEVICE_OPT_DIR_MAX, device_opt_dir);
+    case DEVICE_PIN_CONF_NUM:   return device_config_set_uint8(val, &pin->num);
+    case DEVICE_PIN_CONF_START: return device_config_set_uint8(val, &pin->start);
+    case DEVICE_PIN_CONF_DIR:   return device_config_set_option(val, &pin->dir, DEVICE_OPT_DIR_MAX, device_opt_dir);
     default:                    return -CUPKEE_EINVAL;
     }
 }
@@ -400,7 +400,7 @@ static int device_adc_config_get(env_t *env, hw_config_t *conf, int which, val_t
     hw_config_adc_t *adc = (hw_config_adc_t *) conf;
 
     switch (which) {
-    case DEVICE_ADC_CONF_CHANNELS: device_get_sequence(env, val, adc->chn_num, adc->chn_seq);   break;
+    case DEVICE_ADC_CONF_CHANNELS: device_config_get_sequence(env, val, adc->chn_num, adc->chn_seq);   break;
     case DEVICE_ADC_CONF_INTERVAL: val_set_number(val, adc->interval); break;
     default:                       return -CUPKEE_EINVAL;
     }
@@ -415,8 +415,8 @@ static int device_adc_config_set(env_t *env, hw_config_t *conf, int which, val_t
     (void) env;
 
     switch (which) {
-    case DEVICE_ADC_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_ADC, &adc->chn_num, adc->chn_seq);
-    case DEVICE_ADC_CONF_INTERVAL: return device_set_uint16(val, &adc->interval);
+    case DEVICE_ADC_CONF_CHANNELS: return device_config_set_sequence(val, HW_CHN_MAX_ADC, &adc->chn_num, adc->chn_seq);
+    case DEVICE_ADC_CONF_INTERVAL: return device_config_set_uint16(val, &adc->interval);
     default:                       return -CUPKEE_EINVAL;
     }
 }
@@ -426,8 +426,8 @@ static int device_timer_config_get(env_t *env, hw_config_t *conf, int which, val
     hw_config_timer_t *timer = (hw_config_timer_t *) conf;
 
     switch (which) {
-    case DEVICE_TIMER_CONF_CHANNELS: device_get_sequence(env, val, timer->chn_num, timer->chn_seq);   break;
-    case DEVICE_TIMER_CONF_POLARITY: device_get_option(val, timer->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    case DEVICE_TIMER_CONF_CHANNELS: device_config_get_sequence(env, val, timer->chn_num, timer->chn_seq);   break;
+    case DEVICE_TIMER_CONF_POLARITY: device_config_get_option(val, timer->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
     default:                       return -CUPKEE_EINVAL;
     }
     return CUPKEE_OK;
@@ -439,8 +439,8 @@ static int device_timer_config_set(env_t *env, hw_config_t *conf, int which, val
 
     (void) env;
     switch (which) {
-    case DEVICE_TIMER_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_TIMER, &timer->chn_num, timer->chn_seq);
-    case DEVICE_TIMER_CONF_POLARITY: return device_set_option(val, &timer->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    case DEVICE_TIMER_CONF_CHANNELS: return device_config_set_sequence(val, HW_CHN_MAX_TIMER, &timer->chn_num, timer->chn_seq);
+    case DEVICE_TIMER_CONF_POLARITY: return device_config_set_option(val, &timer->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
     default:                       return -CUPKEE_EINVAL;
     }
 }
@@ -450,8 +450,8 @@ static int device_pwm_config_get(env_t *env, hw_config_t *conf, int which, val_t
     hw_config_pwm_t *pwm = (hw_config_pwm_t *) conf;
 
     switch (which) {
-    case DEVICE_PWM_CONF_CHANNELS: device_get_sequence(env, val, pwm->chn_num, pwm->chn_seq);   break;
-    case DEVICE_PWM_CONF_POLARITY: device_get_option(val, pwm->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    case DEVICE_PWM_CONF_CHANNELS: device_config_get_sequence(env, val, pwm->chn_num, pwm->chn_seq);   break;
+    case DEVICE_PWM_CONF_POLARITY: device_config_get_option(val, pwm->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
     case DEVICE_PWM_CONF_PERIOD:   val_set_number(val, pwm->period);   break;
     default:                       return -CUPKEE_EINVAL;
     }
@@ -464,9 +464,9 @@ static int device_pwm_config_set(env_t *env, hw_config_t *conf, int which, val_t
 
     (void) env;
     switch (which) {
-    case DEVICE_PWM_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_PWM, &pwm->chn_num, pwm->chn_seq);
-    case DEVICE_PWM_CONF_POLARITY: return device_set_option(val, &pwm->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    case DEVICE_PWM_CONF_PERIOD:   return device_set_uint16(val, &pwm->period);   break;
+    case DEVICE_PWM_CONF_CHANNELS: return device_config_set_sequence(val, HW_CHN_MAX_PWM, &pwm->chn_num, pwm->chn_seq);
+    case DEVICE_PWM_CONF_POLARITY: return device_config_set_option(val, &pwm->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    case DEVICE_PWM_CONF_PERIOD:   return device_config_set_uint16(val, &pwm->period);   break;
     default:                       return -CUPKEE_EINVAL;
     }
 }
@@ -476,8 +476,8 @@ static int device_pulse_config_get(env_t *env, hw_config_t *conf, int which, val
     hw_config_pulse_t *pulse= (hw_config_pulse_t *) conf;
 
     switch (which) {
-    case DEVICE_PULSE_CONF_CHANNELS: device_get_sequence(env, val, pulse->chn_num, pulse->chn_seq);   break;
-    case DEVICE_PULSE_CONF_POLARITY: device_get_option(val, pulse->polarity, DEVICE_OPT_POLARITY_MAX - 1, device_opt_polarity); break;
+    case DEVICE_PULSE_CONF_CHANNELS: device_config_get_sequence(env, val, pulse->chn_num, pulse->chn_seq);   break;
+    case DEVICE_PULSE_CONF_POLARITY: device_config_get_option(val, pulse->polarity, DEVICE_OPT_POLARITY_MAX - 1, device_opt_polarity); break;
     default:                         return -CUPKEE_EINVAL;
     }
     return CUPKEE_OK;
@@ -490,8 +490,8 @@ static int device_pulse_config_set(env_t *env, hw_config_t *conf, int which, val
     (void) env;
 
     switch (which) {
-    case DEVICE_PULSE_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_PULSE, &pulse->chn_num, pulse->chn_seq);
-    case DEVICE_PULSE_CONF_POLARITY: return device_set_option(val, &pulse->polarity, DEVICE_OPT_POLARITY_MAX - 1, device_opt_polarity);
+    case DEVICE_PULSE_CONF_CHANNELS: return device_config_set_sequence(val, HW_CHN_MAX_PULSE, &pulse->chn_num, pulse->chn_seq);
+    case DEVICE_PULSE_CONF_POLARITY: return device_config_set_option(val, &pulse->polarity, DEVICE_OPT_POLARITY_MAX - 1, device_opt_polarity);
     default:                         return -CUPKEE_EINVAL;
     }
     return CUPKEE_OK;
@@ -502,8 +502,8 @@ static int device_counter_config_get(env_t *env, hw_config_t *conf, int which, v
     hw_config_counter_t *counter = (hw_config_counter_t *) conf;
 
     switch (which) {
-    case DEVICE_COUNTER_CONF_CHANNELS: device_get_sequence(env, val, counter->chn_num, counter->chn_seq);   break;
-    case DEVICE_COUNTER_CONF_POLARITY: device_get_option(val, counter->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    case DEVICE_COUNTER_CONF_CHANNELS: device_config_get_sequence(env, val, counter->chn_num, counter->chn_seq);   break;
+    case DEVICE_COUNTER_CONF_POLARITY: device_config_get_option(val, counter->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
     case DEVICE_COUNTER_CONF_PERIOD:   val_set_number(val, counter->period);   break;
     default:                       return -CUPKEE_EINVAL;
     }
@@ -516,9 +516,9 @@ static int device_counter_config_set(env_t *env, hw_config_t *conf, int which, v
 
     (void) env;
     switch (which) {
-    case DEVICE_COUNTER_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_COUNTER, &counter->chn_num, counter->chn_seq);
-    case DEVICE_COUNTER_CONF_POLARITY: return device_set_option(val, &counter->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    case DEVICE_COUNTER_CONF_PERIOD:   return device_set_uint16(val, &counter->period);   break;
+    case DEVICE_COUNTER_CONF_CHANNELS: return device_config_set_sequence(val, HW_CHN_MAX_COUNTER, &counter->chn_num, counter->chn_seq);
+    case DEVICE_COUNTER_CONF_POLARITY: return device_config_set_option(val, &counter->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
+    case DEVICE_COUNTER_CONF_PERIOD:   return device_config_set_uint16(val, &counter->period);   break;
     default:                       return -CUPKEE_EINVAL;
     }
 }
@@ -533,10 +533,10 @@ static int device_uart_config_get(env_t *env, hw_config_t *conf, int which, val_
     case DEVICE_UART_CONF_BAUDRATE: val_set_number(val, uart->baudrate);  break;
     case DEVICE_UART_CONF_DATABITS: val_set_number(val, uart->data_bits); break;
     case DEVICE_UART_CONF_STOPBITS:
-        device_get_option(val, uart->stop_bits, DEVICE_OPT_STOPBITS_MAX, device_opt_stopbits);
+        device_config_get_option(val, uart->stop_bits, DEVICE_OPT_STOPBITS_MAX, device_opt_stopbits);
         break;
     case DEVICE_UART_CONF_PARITY:
-        device_get_option(val, uart->parity, DEVICE_OPT_PARITY_MAX, device_opt_parity);
+        device_config_get_option(val, uart->parity, DEVICE_OPT_PARITY_MAX, device_opt_parity);
         break;
     default: break;
     }
@@ -551,12 +551,12 @@ static int device_uart_config_set(env_t *env, hw_config_t *conf, int which, val_
     (void) env;
 
     switch (which) {
-    case DEVICE_UART_CONF_BAUDRATE: return device_set_uint32(val, &uart->baudrate);  break;
-    case DEVICE_UART_CONF_DATABITS: return device_set_uint8(val, &uart->data_bits); break;
+    case DEVICE_UART_CONF_BAUDRATE: return device_config_set_uint32(val, &uart->baudrate);  break;
+    case DEVICE_UART_CONF_DATABITS: return device_config_set_uint8(val, &uart->data_bits); break;
     case DEVICE_UART_CONF_STOPBITS:
-        return device_set_option(val, &uart->stop_bits, DEVICE_OPT_STOPBITS_MAX, device_opt_stopbits);
+        return device_config_set_option(val, &uart->stop_bits, DEVICE_OPT_STOPBITS_MAX, device_opt_stopbits);
     case DEVICE_UART_CONF_PARITY:
-        return device_set_option(val, &uart->parity, DEVICE_OPT_PARITY_MAX, device_opt_parity);
+        return device_config_set_option(val, &uart->parity, DEVICE_OPT_PARITY_MAX, device_opt_parity);
     default: break;
     }
 
