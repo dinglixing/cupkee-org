@@ -29,7 +29,6 @@ SOFTWARE.
 static cupkee_device_t devices[APP_DEV_MAX];
 static cupkee_device_t *device_free = NULL;
 static cupkee_device_t *device_work = NULL;
-static uint8_t device_magic;
 
 static cupkee_device_t *device_block_alloc(void)
 {
@@ -37,7 +36,7 @@ static cupkee_device_t *device_block_alloc(void)
 
     if (dev) {
         device_free = dev->next;
-        dev->magic = device_magic++;
+        dev->id = dev - devices;
     }
     return dev;
 }
@@ -138,6 +137,25 @@ int cupkee_device_id(cupkee_device_t *device)
     return id < APP_DEV_MAX ? id : -1;
 }
 
+int cupkee_device_prop_id(cupkee_device_t *dev, int index)
+{
+    int id = cupkee_device_id(dev);
+
+    return id + (index << 8);
+}
+
+int cupkee_device_prop_index(intptr_t id, cupkee_device_t **pdev)
+{
+    int index = id >> 8;
+
+    if (pdev) {
+        id = (uint8_t) id;
+        *pdev = cupkee_device_block(id);
+    }
+    return index;
+}
+
+
 cupkee_device_t *cupkee_device_block(int id)
 {
     if (id >= 0 && id < APP_DEV_MAX) {
@@ -218,7 +236,6 @@ int cupkee_device_init(void)
     memset(devices, 0, sizeof(devices));
     device_free = NULL;
     device_work = NULL;
-    device_magic = cupkee_systicks();
 
     for (i = 0; i < APP_DEV_MAX; i++) {
         cupkee_device_t *d = &devices[i];

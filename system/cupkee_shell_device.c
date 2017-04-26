@@ -83,43 +83,6 @@ static const char *device_category_name(uint8_t category)
     }
 }
 
-static intptr_t device_elem_id_gen(cupkee_device_t *dev, int index)
-{
-    int id = cupkee_device_id(dev);
-
-    return id + (index << 8);
-}
-
-static cupkee_device_t *device_elem_id_block(intptr_t id, int *index)
-{
-    if (index) {
-        *index = id >> 8;
-    }
-    id = (uint8_t) id;
-
-    return cupkee_device_block(id);
-}
-
-static intptr_t device_id_gen(cupkee_device_t *dev)
-{
-    int id = cupkee_device_id(dev);
-
-    return dev->magic + (id << 8);
-}
-
-static cupkee_device_t *device_id_block(intptr_t id)
-{
-    cupkee_device_t *dev;
-    uint8_t magic = (uint8_t) id;
-
-    dev = cupkee_device_block(id >> 8);
-    if (dev && dev->magic == magic) {
-        return dev;
-    } else {
-        return NULL;
-    }
-}
-
 static cupkee_device_t *device_val_block(val_t *v)
 {
     val_foreign_t *vf;
@@ -127,7 +90,7 @@ static cupkee_device_t *device_val_block(val_t *v)
     if (val_is_foreign(v)) {
         vf = (val_foreign_t *)val_2_intptr(v);
         if (vf->op == &device_op) {
-            return device_id_block(vf->data);
+            return cupkee_device_block(vf->data);
         }
     }
     return NULL;
@@ -158,8 +121,8 @@ static int device_is_true(intptr_t ptr)
 
 static void device_elem_op_set(void *env, intptr_t id, val_t *val, val_t *res)
 {
-    int index;
-    cupkee_device_t *dev = device_elem_id_block(id, &index);
+    cupkee_device_t *dev;
+    int index = cupkee_device_prop_index(id, &dev);
 
     (void) env;
 
@@ -174,7 +137,7 @@ static void device_elem_op_set(void *env, intptr_t id, val_t *val, val_t *res)
 
 static void device_op_prop(void *env, intptr_t id, val_t *name, val_t *prop)
 {
-    cupkee_device_t *dev = device_id_block(id);
+    cupkee_device_t *dev = cupkee_device_block(id);
     const char *prop_name = val_2_cstring(name);
 
     (void) env;
@@ -251,7 +214,7 @@ static void device_op_prop(void *env, intptr_t id, val_t *name, val_t *prop)
 static void device_op_elem(void *env, intptr_t id, val_t *which, val_t *elem)
 {
     if (val_is_number(which)) {
-        cupkee_device_t *dev = device_id_block(id);
+        cupkee_device_t *dev = cupkee_device_block(id);
         uint32_t val;
 
         if (dev && 0 < cupkee_device_get(dev, val_2_integer(which), &val)) {
@@ -266,7 +229,7 @@ static void device_op_elem(void *env, intptr_t id, val_t *which, val_t *elem)
 
 static val_t *device_op_elem_ref(void *env, intptr_t id, val_t *key)
 {
-    cupkee_device_t *dev = device_id_block(id);
+    cupkee_device_t *dev = cupkee_device_block(id);
     int index;
 
     if (dev && val_is_number(key)) {
@@ -275,7 +238,7 @@ static val_t *device_op_elem_ref(void *env, intptr_t id, val_t *key)
         return NULL;
     }
 
-    *key = val_create(env, &device_elem_op, device_elem_id_gen(dev, index));
+    *key = val_create(env, &device_elem_op, cupkee_device_prop_id(dev, index));
 
     return key;
 }
@@ -1394,7 +1357,7 @@ val_t native_device_create(env_t *env, int ac, val_t *av)
     if (dev) {
         dev->handle = device_event_handle_wrap;
         dev->handle_param = 0;
-        return val_create(env, &device_op, device_id_gen(dev));
+        return val_create(env, &device_op, cupkee_device_id(dev));
     } else {
         return VAL_UNDEFINED;
     }

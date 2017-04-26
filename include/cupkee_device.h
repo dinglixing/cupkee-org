@@ -42,7 +42,7 @@ typedef struct cupkee_device_desc_t {
 } cupkee_device_desc_t;
 
 struct cupkee_device_t {
-    uint8_t magic;
+    uint8_t id;
     uint8_t flags;
     uint8_t error;
     uint8_t instance;
@@ -67,18 +67,20 @@ void cupkee_device_event_handle(uint16_t which, uint8_t code);
 
 cupkee_device_t *cupkee_device_request(const char *name, int instance);
 cupkee_device_t *cupkee_device_request2(int type, int instance);
+int cupkee_device_release(cupkee_device_t *dev);
 
 cupkee_device_t *cupkee_device_block(int id);
 hw_config_t     *cupkee_device_config(int id);
-void cupkee_device_set_error(int id, uint8_t code);
 
 int cupkee_device_id(cupkee_device_t *device);
-int cupkee_device_release(cupkee_device_t *dev);
+int cupkee_device_prop_id(cupkee_device_t *dev, int index);
+int cupkee_device_prop_index(intptr_t id, cupkee_device_t **pdev);
 
 static inline int cupkee_device_is_enabled(cupkee_device_t *dev) {
     return (dev && (dev->flags & DEVICE_FL_ENABLE));
 }
 
+void cupkee_device_set_error(int id, uint8_t code);
 int cupkee_device_enable(cupkee_device_t *dev);
 int cupkee_device_disable(cupkee_device_t *dev);
 
