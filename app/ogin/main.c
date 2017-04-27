@@ -83,7 +83,7 @@ static void app_systick_proc(void)
     }
 }
 
-static int app_event_handle(event_info_t *e)
+static int app_event_handle(cupkee_event_t *e)
 {
     switch(e->type) {
     case EVENT_SYSTICK: app_systick_proc(); break;

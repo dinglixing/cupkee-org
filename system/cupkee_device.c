@@ -310,68 +310,6 @@ int cupkee_device_disable(cupkee_device_t *dev)
     return CUPKEE_OK;
 }
 
-int cupkee_device_send(cupkee_device_t *dev, int n, const void *data)
-{
-    if (cupkee_device_is_enabled(dev)) {
-        if (dev->driver->io.stream.send) {
-            return dev->driver->io.stream.send(dev->instance, n, (void *)data);
-        } else {
-            return -CUPKEE_EIMPLEMENT;
-        }
-    } else {
-        return -CUPKEE_EENABLED;
-    }
-}
-
-int cupkee_device_recv(cupkee_device_t *dev, int n, void *buf)
-{
-    if (cupkee_device_is_enabled(dev)) {
-        if (dev->driver->io.stream.recv) {
-            return dev->driver->io.stream.recv(dev->instance, n, buf);
-        } else {
-            return -CUPKEE_EIMPLEMENT;
-        }
-    } else {
-        return -CUPKEE_EENABLED;
-    }
-}
-
-int cupkee_device_send_sync(cupkee_device_t *dev, int n, const void *data)
-{
-    if (cupkee_device_is_enabled(dev)) {
-        if (dev->driver->io.stream.send_sync) {
-            return dev->driver->io.stream.send_sync(dev->instance, n, (void *)data);
-        } else {
-            return -CUPKEE_EIMPLEMENT;
-        }
-    } else {
-        return -CUPKEE_EENABLED;
-    }
-}
-
-int cupkee_device_recv_sync(cupkee_device_t *dev, int n, void *buf)
-{
-    if (cupkee_device_is_enabled(dev)) {
-        if (dev->driver->io.stream.recv_sync) {
-            return dev->driver->io.stream.recv_sync(dev->instance, n, buf);
-        } else {
-            return -CUPKEE_EIMPLEMENT;
-        }
-    } else {
-        return -CUPKEE_EENABLED;
-    }
-}
-
-int cupkee_device_received(cupkee_device_t *dev)
-{
-    if (dev->desc->category == DEVICE_CATEGORY_STREAM) {
-        if (dev->driver->io.stream.received) {
-            return dev->driver->io.stream.received(dev->instance);
-        }
-    }
-    return 0;
-}
-
 int cupkee_device_set(cupkee_device_t *dev, int n, uint32_t data)
 {
     if (cupkee_device_is_enabled(dev)) {

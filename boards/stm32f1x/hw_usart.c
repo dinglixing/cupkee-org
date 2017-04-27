@@ -231,65 +231,77 @@ static void uart_poll(int instance)
     }
 }
 
-static int uart_recv(int instance, int size, void *buf)
+static int uart_recv(int instance, size_t n, void *buf)
 {
     hw_uart_t *control = uart_get(instance);
 
-    return cupkee_buf_take(control->rx_buff, size, buf);
+    return cupkee_buf_take(control->rx_buff, n, buf);
 }
 
-static int uart_send(int instance, int len, void *data)
+static int uart_send(int instance, size_t n, const void *data)
 {
     hw_uart_t *control = uart_get(instance);
 
-    return cupkee_buf_give(control->tx_buff, len, data);
+    return cupkee_buf_give(control->tx_buff, n, data);
 }
 
-static int uart_send_sync(int instance, int len, const uint8_t *data)
+static int uart_send_sync(int instance, size_t n, const void *data)
 {
-    int i = 0;
+    const uint8_t *ptr = data;
+    size_t i = 0;
 
-    while (i < len) {
+    while (i < n) {
         while (!uart_not_busy(instance)) {
         }
-        uart_data_put(instance, data[i++]);
+        uart_data_put(instance, ptr[i++]);
     }
 
     return i;
 }
 
-static int uart_recv_sync(int instance, int len, uint8_t *data)
+static int uart_recv_sync(int instance, size_t n, void *data)
 {
-    int i = 0;
+    uint8_t *ptr = data;
+    size_t i = 0;
 
-    while (i < len) {
+    while (i < n) {
         while (!uart_has_data(instance)) {
         }
-        data[i++] = uart_data_get(instance);
+        ptr[i++] = uart_data_get(instance);
     }
 
     return i;
 }
 
-static int uart_received(int instance)
+static int uart_io_cached(int instance, size_t *in, size_t *out)
 {
     hw_uart_t *control = uart_get(instance);
 
-    return cupkee_buf_length(control->rx_buff);
+    if (!control) {
+        return -CUPKEE_EINVAL;
+    }
+
+    if (in) {
+        *in = cupkee_buf_length(control->rx_buff);
+    }
+    if (out) {
+        *out = cupkee_buf_length(control->tx_buff);
+    }
+    return 0;
 }
+
 
 static const hw_driver_t uart_driver = {
     .release = uart_release,
     .reset   = uart_reset,
     .setup   = uart_setup,
     .poll    = uart_poll,
-    .io.stream = {
-        .recv = uart_recv,
-        .send = uart_send,
-        .recv_sync = uart_recv_sync,
-        .send_sync = uart_send_sync,
-        .received = uart_received,
-    }
+
+    .read    = uart_recv,
+    .write   = uart_send,
+    .read_sync    = uart_recv_sync,
+    .write_sync   = uart_send_sync,
+    .io_cached    = uart_io_cached
 };
 
 const hw_driver_t *hw_request_uart(int instance)

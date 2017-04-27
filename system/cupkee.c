@@ -56,7 +56,7 @@ void cupkee_init(void)
     /* Memory pool initial */
     cupkee_memory_init(0, NULL);
 
-    /* Sys timer initial */
+    /* System timer initial */
     cupkee_timer_init();
 
     /* Devices initial */
