@@ -128,16 +128,16 @@ int cupkee_device_id(cupkee_device_t *device)
     return device->id;
 }
 
-int cupkee_device_prop_id(cupkee_device_t *dev, int index)
+int cupkee_device_elem_id(cupkee_device_t *dev, int index)
 {
     int id = cupkee_device_id(dev);
 
-    return id + (index << 8);
+    return id + (index << 16);
 }
 
-int cupkee_device_prop_index(intptr_t id, cupkee_device_t **pdev)
+int cupkee_device_elem_index(intptr_t id, cupkee_device_t **pdev)
 {
-    int index = id >> 8;
+    int index = id >> 16;
 
     if (pdev) {
         id = (uint8_t) id;

@@ -107,7 +107,7 @@ static int device_is_true(intptr_t ptr)
 static void device_elem_op_set(void *env, intptr_t id, val_t *val, val_t *res)
 {
     cupkee_device_t *dev;
-    int index = cupkee_device_prop_index(id, &dev);
+    int index = cupkee_device_elem_index(id, &dev);
 
     (void) env;
 
@@ -215,7 +215,7 @@ static val_t *device_op_elem_ref(void *env, intptr_t id, val_t *key)
         return NULL;
     }
 
-    *key = val_create(env, &device_elem_op, cupkee_device_prop_id(dev, index));
+    *key = val_create(env, &device_elem_op, cupkee_device_elem_id(dev, index));
 
     return key;
 }

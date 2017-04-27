@@ -71,8 +71,8 @@ cupkee_device_t *cupkee_device_block(int id);
 hw_config_t     *cupkee_device_config(int id);
 
 int cupkee_device_id(cupkee_device_t *device);
-int cupkee_device_prop_id(cupkee_device_t *dev, int index);
-int cupkee_device_prop_index(intptr_t id, cupkee_device_t **pdev);
+int cupkee_device_elem_id(cupkee_device_t *dev, int index);
+int cupkee_device_elem_index(intptr_t id, cupkee_device_t **pdev);
 
 static inline int cupkee_device_is_enabled(cupkee_device_t *dev) {
     return (dev && (dev->flags & DEVICE_FL_ENABLE));
