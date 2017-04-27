@@ -63,6 +63,8 @@ void cupkee_init(void)
     /* Hardware startup */
     hw_setup();
 
+    hw_led_map(0, 8);
+
     /* memory pool initial */
     cupkee_memory_init(0, NULL);
 
