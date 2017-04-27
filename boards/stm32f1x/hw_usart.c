@@ -137,8 +137,8 @@ static void uart_release(int instance)
 
     uart_reset(instance);
 
-    cupkee_buf_release(control->rx_buff);
-    cupkee_buf_release(control->tx_buff);
+    cupkee_buffer_release(control->rx_buff);
+    cupkee_buffer_release(control->tx_buff);
 
     control->flags = 0;
 }
@@ -199,7 +199,7 @@ static void uart_poll(int instance)
 
     if (uart_has_data(instance)) {
         do {
-            if (cupkee_buf_push(control->rx_buff, uart_data_get(instance)) == 0) {
+            if (cupkee_buffer_push(control->rx_buff, uart_data_get(instance)) == 0) {
                 //device_error_post(control->dev_id, CUPKEE_EOVERFLOW);
                 cupkee_event_post_device_error(control->dev_id);
                 break;
@@ -207,21 +207,21 @@ static void uart_poll(int instance)
             control->last_tick = _cupkee_systicks;
         } while (uart_has_data(instance));
 
-        if (cupkee_buf_is_full(control->rx_buff)) {
+        if (cupkee_buffer_is_full(control->rx_buff)) {
             cupkee_event_post_device_data(control->dev_id);
         }
     } else {
-        if (!cupkee_buf_is_empty(control->rx_buff)) {
+        if (!cupkee_buffer_is_empty(control->rx_buff)) {
             if (_cupkee_systicks - control->last_tick > 10) {
                 cupkee_event_post_device_data(control->dev_id);
             }
         }
     }
 
-    if (uart_not_busy(instance) && !cupkee_buf_is_empty(control->tx_buff)) {
+    if (uart_not_busy(instance) && !cupkee_buffer_is_empty(control->tx_buff)) {
         do {
             uint8_t d;
-            if (cupkee_buf_shift(control->tx_buff, &d)) {
+            if (cupkee_buffer_shift(control->tx_buff, &d)) {
                 uart_data_put(instance, d);
             } else {
                 cupkee_event_post_device_drain(control->dev_id);
@@ -235,14 +235,14 @@ static int uart_recv(int instance, size_t n, void *buf)
 {
     hw_uart_t *control = uart_get(instance);
 
-    return cupkee_buf_take(control->rx_buff, n, buf);
+    return cupkee_buffer_take(control->rx_buff, n, buf);
 }
 
 static int uart_send(int instance, size_t n, const void *data)
 {
     hw_uart_t *control = uart_get(instance);
 
-    return cupkee_buf_give(control->tx_buff, n, data);
+    return cupkee_buffer_give(control->tx_buff, n, data);
 }
 
 static int uart_send_sync(int instance, size_t n, const void *data)
@@ -282,10 +282,10 @@ static int uart_io_cached(int instance, size_t *in, size_t *out)
     }
 
     if (in) {
-        *in = cupkee_buf_length(control->rx_buff);
+        *in = cupkee_buffer_length(control->rx_buff);
     }
     if (out) {
-        *out = cupkee_buf_length(control->tx_buff);
+        *out = cupkee_buffer_length(control->tx_buff);
     }
     return 0;
 }
@@ -313,14 +313,14 @@ const hw_driver_t *hw_request_uart(int instance)
         return NULL;
     }
 
-    rx_buff = cupkee_buf_alloc(128);
+    rx_buff = cupkee_buffer_alloc(128);
     if (!rx_buff) {
         return NULL;
     }
 
-    tx_buff = cupkee_buf_alloc(128);
+    tx_buff = cupkee_buffer_alloc(128);
     if (!tx_buff) {
-        cupkee_buf_release(rx_buff);
+        cupkee_buffer_release(rx_buff);
         return NULL;
     }
 
