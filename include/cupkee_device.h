@@ -58,8 +58,6 @@ struct cupkee_device_t {
     struct cupkee_device_t *next;
 };
 
-extern const cupkee_device_desc_t *device_entrys[];
-
 int  cupkee_device_init(void);
 void cupkee_device_poll(void);
 void cupkee_device_sync(uint32_t systicks);

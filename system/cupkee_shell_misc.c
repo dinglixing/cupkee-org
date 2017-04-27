@@ -293,7 +293,7 @@ void shell_do_callback_buffer(env_t *env, val_t *cb, type_buffer_t *buffer)
     shell_do_callback(env, cb, 2, args);
 }
 
-int shell_str_id(const char *s, int max, const char **names)
+int shell_str_id(const char *s, int max, const char * const *names)
 {
     if (s) {
         int id;
@@ -306,13 +306,29 @@ int shell_str_id(const char *s, int max, const char **names)
     return -1;
 }
 
-int shell_val_id(val_t *v, int max, const char **names)
+int shell_val_id(val_t *v, int max, const char * const *names)
 {
     if (val_is_number(v)) {
         return val_2_integer(v);
     } else {
         return shell_str_id(val_2_cstring(v), max, names);
     }
+}
+
+int shell_input_data(val_t *data, void **ptr)
+{
+    int size;
+
+    if (val_is_buffer(data)) {
+        size = _val_buffer_size(data);
+        *ptr = _val_buffer_addr(data);
+    } else
+    if ((size = string_len(data)) > 0) {
+        *ptr = (void *) val_2_cstring(data);
+    } else {
+        *ptr = NULL;
+    }
+    return size;
 }
 
 val_t native_sysinfos(env_t *env, int ac, val_t *av)

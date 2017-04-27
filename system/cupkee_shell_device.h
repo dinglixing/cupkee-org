@@ -60,5 +60,17 @@ SOFTWARE.
 #define DEVICE_COUNTER_CONF_PERIOD      2
 #define DEVICE_COUNTER_CONF_MAX         3
 
+#define DEVICE_I2C_CONF_SPEED           0
+#define DEVICE_I2C_CONF_ADDRESS         1
+
+const cupkee_device_desc_t *cupkee_device_query_by_name(const char *name);
+const cupkee_device_desc_t *cupkee_device_query_by_type(uint16_t type);
+const cupkee_device_desc_t *cupkee_device_query_by_index(int i);
+
+val_t cupkee_device_config_set_one(cupkee_device_t *dev, env_t *env, val_t *which, val_t *val);
+val_t cupkee_device_config_get_one(cupkee_device_t *dev, env_t *env, val_t *which);
+int   cupkee_device_config_set_all(cupkee_device_t *dev, env_t *env, val_t *settings);
+val_t cupkee_device_config_get_all(cupkee_device_t *dev);
+
 #endif /* __CUPKEE_SHELL_DEVICE_INC__ */
 

@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "cupkee.h"
+#include "cupkee_shell_device.h"
 
 static cupkee_device_t *devices[APP_DEV_MAX];
 static cupkee_device_t *device_work = NULL;
@@ -83,30 +84,6 @@ static void device_drop_work_list(cupkee_device_t *device)
     }
 
     device->next = NULL;
-}
-
-static const cupkee_device_desc_t *device_query_by_name(const char *name)
-{
-    unsigned i;
-
-    for (i = 0; device_entrys[i]; i++) {
-        if (strcmp(name, device_entrys[i]->name) == 0) {
-            return device_entrys[i];
-        }
-    }
-    return NULL;
-}
-
-static const cupkee_device_desc_t *device_query_by_type(uint16_t type)
-{
-    unsigned i;
-
-    for (i = 0; device_entrys[i]; i++) {
-        if (device_entrys[i]->type == type) {
-            return device_entrys[i];
-        }
-    }
-    return NULL;
 }
 
 static cupkee_device_t *device_request(const cupkee_device_desc_t *desc, int instance)
@@ -246,7 +223,7 @@ cupkee_device_t *cupkee_device_request(const char *name, int instance)
 {
     const cupkee_device_desc_t *desc;
 
-    desc = device_query_by_name(name);
+    desc = cupkee_device_query_by_name(name);
     if (!desc) {
         return NULL;
     }
@@ -258,7 +235,7 @@ cupkee_device_t *cupkee_device_request2(int type, int instance)
 {
     const cupkee_device_desc_t *desc;
 
-    desc = device_query_by_type(type);
+    desc = cupkee_device_query_by_type(type);
     if (!desc) {
         return NULL;
     }
