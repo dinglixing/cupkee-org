@@ -143,7 +143,7 @@ static inline void hw_i2c_reset_pin(int instance)
 static int request_read(hw_i2c_t *control, size_t n)
 {
     if (control->req_num >= I2C_REQ_MAX ||
-        cupkee_buf_space(control->recv_buf) < n) {
+        cupkee_buffer_space(control->recv_buf) < n) {
         return 0;
     }
 
@@ -161,7 +161,7 @@ static int request_read(hw_i2c_t *control, size_t n)
 static int request_write(hw_i2c_t *control, size_t n, const void *data)
 {
     if (control->req_num >= I2C_REQ_MAX ||
-        cupkee_buf_space(control->send_buf) < n) {
+        cupkee_buffer_space(control->send_buf) < n) {
         return 0;
     }
 
@@ -169,7 +169,7 @@ static int request_write(hw_i2c_t *control, size_t n, const void *data)
     if (pos >= I2C_REQ_MAX) {
         pos -= I2C_REQ_MAX;
     }
-    cupkee_buf_give(control->send_buf, n, data);
+    cupkee_buffer_give(control->send_buf, n, data);
 
     control->req[pos].rw = 0;
     control->req[pos].size = n;
@@ -291,7 +291,7 @@ static void do_wait_data_1(uint32_t i2c, hw_i2c_t *control)
 {
     if(hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVED)) {
         control->trans_pos++;
-        cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
+        cupkee_buffer_push(control->recv_buf, I2C_DR(i2c));
         control->state = I2C_STATE_STOP;
     }
 }
@@ -305,9 +305,9 @@ static void do_wait_data_2(uint32_t i2c, hw_i2c_t *control)
 
         hw_enter_critical(&irq_state);
         I2C_CR1(i2c) |= I2C_CR1_STOP;
-        cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
+        cupkee_buffer_push(control->recv_buf, I2C_DR(i2c));
         hw_exit_critical(irq_state);
-        cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
+        cupkee_buffer_push(control->recv_buf, I2C_DR(i2c));
 
         control->state = I2C_STATE_STOP;
     }
@@ -318,21 +318,21 @@ static void do_wait_data_n(uint32_t i2c, hw_i2c_t *control)
     if(hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVE_HOLD)) {
         unsigned lft = control->trans_size - control->trans_pos;
         if (lft > 3) {
-            cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
+            cupkee_buffer_push(control->recv_buf, I2C_DR(i2c));
             control->trans_pos++;
         } else
         if (lft == 3) {
             I2C_CR1(i2c) &= ~I2C_CR1_ACK; // Nack to last byte
-            cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
+            cupkee_buffer_push(control->recv_buf, I2C_DR(i2c));
             control->trans_pos++;
         } else {
             uint32_t irq_state;
 
             hw_enter_critical(&irq_state);
             I2C_CR1(i2c) |= I2C_CR1_STOP;
-            cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
+            cupkee_buffer_push(control->recv_buf, I2C_DR(i2c));
             hw_exit_critical(irq_state);
-            cupkee_buf_push(control->recv_buf, I2C_DR(i2c));
+            cupkee_buffer_push(control->recv_buf, I2C_DR(i2c));
 
             control->trans_pos += 2;
             control->state = I2C_STATE_STOP;
@@ -345,7 +345,7 @@ static void do_wait_waddr(uint32_t i2c, hw_i2c_t *control)
     if (hw_i2c_match_event(i2c, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECT)) {
         uint8_t data;
 
-        cupkee_buf_shift(control->send_buf, &data);
+        cupkee_buffer_shift(control->send_buf, &data);
         I2C_DR(i2c) = data;
 
         control->trans_pos = 1;
@@ -359,7 +359,7 @@ static void do_send_data(uint32_t i2c, hw_i2c_t *control)
         if (control->trans_pos < control->trans_size) {
             uint8_t data;
 
-            cupkee_buf_shift(control->send_buf, &data);
+            cupkee_buffer_shift(control->send_buf, &data);
             I2C_DR(i2c) = data;
             control->trans_pos++;
         } else {
@@ -405,11 +405,11 @@ static void hw_i2c_reset(int instance)
 
     // release resource
     if (control->recv_buf) {
-        cupkee_buf_release(control->recv_buf);
+        cupkee_buffer_release(control->recv_buf);
         control->recv_buf = NULL;
     }
     if (control->send_buf) {
-        cupkee_buf_release(control->send_buf);
+        cupkee_buffer_release(control->send_buf);
         control->send_buf = NULL;
     }
 }
@@ -440,14 +440,14 @@ static int hw_i2c_setup(int instance, uint8_t dev_id, const hw_config_t *conf)
     control->req_num = 0;
     control->req_head = 0;
 
-    if (NULL == (control->recv_buf = cupkee_buf_alloc(64))) {
+    if (NULL == (control->recv_buf = cupkee_buffer_alloc(64))) {
         hw_i2c_reset_pin(instance);
         return -CUPKEE_ERESOURCE;
     }
 
-    if (NULL == (control->send_buf = cupkee_buf_alloc(64))) {
+    if (NULL == (control->send_buf = cupkee_buffer_alloc(64))) {
         hw_i2c_reset_pin(instance);
-        cupkee_buf_release(control->recv_buf);
+        cupkee_buffer_release(control->recv_buf);
         control->recv_buf = NULL;
         return -CUPKEE_ERESOURCE;
     }
@@ -557,7 +557,7 @@ static int hw_i2c_read(int instance, size_t n, void *buf)
         return -CUPKEE_EINVAL;
     }
 
-    return cupkee_buf_take(control->recv_buf, n, buf);
+    return cupkee_buffer_take(control->recv_buf, n, buf);
 }
 
 static int hw_i2c_write(int instance, size_t n, const void *data)
@@ -793,14 +793,14 @@ static int hw_i2c_io_cached(int instance, size_t *in, size_t *out)
 
     if (in) {
         if (control->recv_buf) {
-            *in = cupkee_buf_length(control->recv_buf);
+            *in = cupkee_buffer_length(control->recv_buf);
         } else {
             *in = 0;
         }
     }
     if (out) {
         if (control->send_buf) {
-            *out = cupkee_buf_length(control->send_buf);
+            *out = cupkee_buffer_length(control->send_buf);
         } else {
             *out = 0;
         }

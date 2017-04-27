@@ -26,109 +26,80 @@ SOFTWARE.
 
 #include "cupkee.h"
 
-#define CK_BUF_NUM              4    // No more then 32
-#define CK_BUF_SIZE             128
-
-typedef struct cupkee_buf_t {
+typedef struct cupkee_buffer_t {
     uint16_t cap;
     uint16_t bgn;
     uint16_t len;
-    uint8_t  ptr[CK_BUF_SIZE];
-} cupkee_buf_t;
-
-static uint32_t     cupkee_buffer_inused = 0;
-static cupkee_buf_t cupkee_buffers[CK_BUF_NUM];
+    uint8_t  ptr[0];
+} cupkee_buffer_t;
 
 void cupkee_buffer_init(void)
 {
-    cupkee_buffer_inused = 0;
 }
 
-static inline void _cupkee_buf_reset(cupkee_buf_t *b) {
-    b->cap = CK_BUF_SIZE;
+void cupkee_buffer_reset(void *p)
+{
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
+
     b->len = 0;
     b->bgn = 0;
 }
 
-void cupkee_buf_reset(void *p)
+void *cupkee_buffer_alloc(size_t size)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *buf = cupkee_malloc(size + sizeof(cupkee_buffer_t));
 
-    _cupkee_buf_reset(b);
+    if (buf) {
+        buf->cap = size;
+        buf->len = 0;
+        buf->bgn = 0;
+    }
+    return buf;
 }
 
-void *cupkee_buf_alloc(size_t size)
+void cupkee_buffer_release(void *p)
 {
-    int i;
-
-    if (size > CK_BUF_SIZE) {
-        return NULL;
-    }
-
-    for (i = 0; i < CK_BUF_NUM; i++) {
-        if (!(cupkee_buffer_inused & (1 << i))) {
-            cupkee_buf_t *b = cupkee_buffers + i;
-
-            b->cap = size;
-            b->len = 0;
-            b->bgn = 0;
-
-            cupkee_buffer_inused |= (1 << i);
-
-            return b;
-        }
-    }
-    return NULL;
+    cupkee_free(p);
 }
 
-void cupkee_buf_release(void *p)
+int cupkee_buffer_is_empty(void *p)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
-    int i = b - cupkee_buffers;
-
-    if (i >= 0 && i < CK_BUF_NUM) {
-        cupkee_buffer_inused &= ~(1 << i);
-    }
-}
-
-int cupkee_buf_is_empty(void *p)
-{
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
 
     return b->len == 0;
 }
 
-int cupkee_buf_is_full(void *p)
+int cupkee_buffer_is_full(void *p)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
 
     return b->len == b->cap;
 }
 
-size_t cupkee_buf_capacity(void *p)
+size_t cupkee_buffer_capacity(void *p)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
 
     return b->cap;
 }
 
-size_t cupkee_buf_space(void *p)
+size_t cupkee_buffer_space(void *p)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
 
     return b->cap - b->len;
 }
 
-size_t cupkee_buf_length(void *p)
+size_t cupkee_buffer_length(void *p)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
 
     return b->len;
 }
 
-int cupkee_buf_push(void *p, uint8_t d)
+int cupkee_buffer_push(void *p, uint8_t d)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
 
     if (b->len < b->cap) {
         int tail = b->bgn + b->len++;
@@ -142,9 +113,9 @@ int cupkee_buf_push(void *p, uint8_t d)
     }
 }
 
-int cupkee_buf_shift(void *p, uint8_t *d)
+int cupkee_buffer_shift(void *p, uint8_t *d)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
 
     if (b->len) {
         *d = b->ptr[b->bgn++];
@@ -157,9 +128,9 @@ int cupkee_buf_shift(void *p, uint8_t *d)
     return 0;
 }
 
-int cupkee_buf_take(void *p, size_t n, void *buf)
+int cupkee_buffer_take(void *p, size_t n, void *buf)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
 
     if (n > b->len) {
         n = b->len;
@@ -186,9 +157,9 @@ int cupkee_buf_take(void *p, size_t n, void *buf)
     return n;
 }
 
-int cupkee_buf_give(void *p, size_t n, const void *buf)
+int cupkee_buffer_give(void *p, size_t n, const void *buf)
 {
-    cupkee_buf_t *b = (cupkee_buf_t *)p;
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
 
     if (n + b->len > b->cap) {
         n = b->cap - b->len;
