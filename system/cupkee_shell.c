@@ -231,9 +231,9 @@ int cupkee_shell_init(cupkee_device_t *tty, int n, const native_t *natives)
 {
     int heap_mem_sz, stack_mem_sz;
 
-    shell_memory_location(&heap_mem_sz, &stack_mem_sz);
-
     shell_console_init(tty);
+
+    shell_memory_location(&heap_mem_sz, &stack_mem_sz);
 
     shell_interp_init(heap_mem_sz, stack_mem_sz, n, natives);
 
