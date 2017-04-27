@@ -814,7 +814,7 @@ static int hw_i2c_prop_num(int instance)
     return 1;
 }
 
-static hw_driver_t i2c_driver = {
+static const hw_driver_t i2c_driver = {
     .release = hw_i2c_release,
     .reset   = hw_i2c_reset,
     .setup   = hw_i2c_setup,

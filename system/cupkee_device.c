@@ -25,29 +25,36 @@ SOFTWARE.
 */
 
 #include "cupkee.h"
+#include "cupkee_shell_device.h"
 
-static cupkee_device_t devices[APP_DEV_MAX];
-static cupkee_device_t *device_free = NULL;
+static cupkee_device_t *devices[APP_DEV_MAX];
 static cupkee_device_t *device_work = NULL;
-static uint8_t device_magic;
 
 static cupkee_device_t *device_block_alloc(void)
 {
-    cupkee_device_t *dev = device_free;
+    int i;
 
-    if (dev) {
-        device_free = dev->next;
-        dev->magic = device_magic++;
+    for (i = 0; i < APP_DEV_MAX; i++) {
+        if (devices[i] == NULL) {
+            cupkee_device_t *dev = (cupkee_device_t *)cupkee_malloc(sizeof(cupkee_device_t));
+            if (dev) {
+                devices[i] = dev;
+                dev->id = i;
+            }
+            return dev;
+        }
     }
-    return dev;
+    return NULL;
 }
 
 static void device_block_release(cupkee_device_t *dev)
 {
     memset(dev, 0, sizeof(cupkee_device_t));
 
-    dev->next = device_free;
-    device_free = dev;
+    if (dev == devices[dev->id]) {
+        devices[dev->id] = NULL;
+        cupkee_free(dev);
+    }
 }
 
 static void device_join_work_list(cupkee_device_t *device)
@@ -79,30 +86,6 @@ static void device_drop_work_list(cupkee_device_t *device)
     device->next = NULL;
 }
 
-static const cupkee_device_desc_t *device_query_by_name(const char *name)
-{
-    unsigned i;
-
-    for (i = 0; device_entrys[i]; i++) {
-        if (strcmp(name, device_entrys[i]->name) == 0) {
-            return device_entrys[i];
-        }
-    }
-    return NULL;
-}
-
-static const cupkee_device_desc_t *device_query_by_type(uint16_t type)
-{
-    unsigned i;
-
-    for (i = 0; device_entrys[i]; i++) {
-        if (device_entrys[i]->type == type) {
-            return device_entrys[i];
-        }
-    }
-    return NULL;
-}
-
 static cupkee_device_t *device_request(const cupkee_device_desc_t *desc, int instance)
 {
     cupkee_device_t *dev;
@@ -131,17 +114,43 @@ static cupkee_device_t *device_request(const cupkee_device_desc_t *desc, int ins
     return dev;
 }
 
+int cupkee_device_init(void)
+{
+    /* Device blocks initial */
+    memset(devices, 0, sizeof(devices));
+    device_work = NULL;
+
+    return 0;
+}
+
 int cupkee_device_id(cupkee_device_t *device)
 {
-    int id = device - devices;
-
-    return id < APP_DEV_MAX ? id : -1;
+    return device->id;
 }
+
+int cupkee_device_elem_id(cupkee_device_t *dev, int index)
+{
+    int id = cupkee_device_id(dev);
+
+    return id + (index << 16);
+}
+
+int cupkee_device_elem_index(intptr_t id, cupkee_device_t **pdev)
+{
+    int index = id >> 16;
+
+    if (pdev) {
+        id = (uint8_t) id;
+        *pdev = cupkee_device_block(id);
+    }
+    return index;
+}
+
 
 cupkee_device_t *cupkee_device_block(int id)
 {
     if (id >= 0 && id < APP_DEV_MAX) {
-        cupkee_device_t *dev = &devices[id];
+        cupkee_device_t *dev = devices[id];
 
         if (dev->desc) {
             return dev;
@@ -154,7 +163,7 @@ cupkee_device_t *cupkee_device_block(int id)
 hw_config_t *cupkee_device_config(int id)
 {
     if (id >= 0 && id < APP_DEV_MAX) {
-        cupkee_device_t *dev = &devices[id];
+        cupkee_device_t *dev = devices[id];
 
         if (dev->desc) {
             return &dev->config;
@@ -167,7 +176,7 @@ hw_config_t *cupkee_device_config(int id)
 void cupkee_device_set_error(int id, uint8_t code)
 {
     if (id >= 0 && id < APP_DEV_MAX) {
-        cupkee_device_t *dev = &devices[id];
+        cupkee_device_t *dev = devices[id];
 
         if (cupkee_device_is_enabled(dev)) {
             dev->error = code;
@@ -178,7 +187,7 @@ void cupkee_device_set_error(int id, uint8_t code)
 
 void cupkee_device_event_handle(uint16_t which, uint8_t code)
 {
-    cupkee_device_t *dev = &devices[which];
+    cupkee_device_t *dev = devices[which];
 
     if ((dev->flags & DEVICE_FL_ENABLE) && dev->handle) {
         dev->handle(dev, code, dev->handle_param);
@@ -210,31 +219,11 @@ void cupkee_device_poll(void)
     }
 }
 
-int cupkee_device_init(void)
-{
-    int i;
-
-    /* Device blocks initial */
-    memset(devices, 0, sizeof(devices));
-    device_free = NULL;
-    device_work = NULL;
-    device_magic = cupkee_systicks();
-
-    for (i = 0; i < APP_DEV_MAX; i++) {
-        cupkee_device_t *d = &devices[i];
-
-        d->next = device_free;
-        device_free = d;
-    }
-
-    return 0;
-}
-
 cupkee_device_t *cupkee_device_request(const char *name, int instance)
 {
     const cupkee_device_desc_t *desc;
 
-    desc = device_query_by_name(name);
+    desc = cupkee_device_query_by_name(name);
     if (!desc) {
         return NULL;
     }
@@ -246,7 +235,7 @@ cupkee_device_t *cupkee_device_request2(int type, int instance)
 {
     const cupkee_device_desc_t *desc;
 
-    desc = device_query_by_type(type);
+    desc = cupkee_device_query_by_type(type);
     if (!desc) {
         return NULL;
     }

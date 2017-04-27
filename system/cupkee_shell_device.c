@@ -43,21 +43,6 @@ static void device_elem_op_set(void *env, intptr_t id, val_t *val, val_t *res);
 static const char *category_names[3] = {
     "MAP", "STREAM", "BLOCK"
 };
-static const char *device_opt_dir[] = {
-    "in", "out", "dual"
-};
-
-static const char *device_opt_polarity[] = {
-    "positive", "negative", "edge"
-};
-
-static const char *device_opt_parity[] = {
-    "none", "odd", "even",
-};
-
-static const char *device_opt_stopbits[] = {
-    "1bit", "2bit", "0.5bit", "1.5bit"
-};
 
 static const char *device_event_names[] = {
     "error", "data", "drain", "ready"
@@ -83,43 +68,6 @@ static const char *device_category_name(uint8_t category)
     }
 }
 
-static intptr_t device_elem_id_gen(cupkee_device_t *dev, int index)
-{
-    int id = cupkee_device_id(dev);
-
-    return id + (index << 8);
-}
-
-static cupkee_device_t *device_elem_id_block(intptr_t id, int *index)
-{
-    if (index) {
-        *index = id >> 8;
-    }
-    id = (uint8_t) id;
-
-    return cupkee_device_block(id);
-}
-
-static intptr_t device_id_gen(cupkee_device_t *dev)
-{
-    int id = cupkee_device_id(dev);
-
-    return dev->magic + (id << 8);
-}
-
-static cupkee_device_t *device_id_block(intptr_t id)
-{
-    cupkee_device_t *dev;
-    uint8_t magic = (uint8_t) id;
-
-    dev = cupkee_device_block(id >> 8);
-    if (dev && dev->magic == magic) {
-        return dev;
-    } else {
-        return NULL;
-    }
-}
-
 static cupkee_device_t *device_val_block(val_t *v)
 {
     val_foreign_t *vf;
@@ -127,7 +75,7 @@ static cupkee_device_t *device_val_block(val_t *v)
     if (val_is_foreign(v)) {
         vf = (val_foreign_t *)val_2_intptr(v);
         if (vf->op == &device_op) {
-            return device_id_block(vf->data);
+            return cupkee_device_block(vf->data);
         }
     }
     return NULL;
@@ -136,10 +84,10 @@ static cupkee_device_t *device_val_block(val_t *v)
 static void device_list(void)
 {
     const cupkee_device_desc_t *desc;
-    int i;
+    int i = 0;
 
     console_log_sync("\r\n%8s%6s%6s%6s:%s\r\n", "DEVICE", "CONF", "INST", "TYPE", "CATEGORY");
-    for (i = 0, desc = device_entrys[0]; desc; desc = device_entrys[++i]) {
+    while ((desc = cupkee_device_query_by_index(i++)) != NULL) {
         console_log_sync("%8s%6d%6d%6d:%s\r\n",
                 desc->name,
                 desc->conf_num,
@@ -158,8 +106,8 @@ static int device_is_true(intptr_t ptr)
 
 static void device_elem_op_set(void *env, intptr_t id, val_t *val, val_t *res)
 {
-    int index;
-    cupkee_device_t *dev = device_elem_id_block(id, &index);
+    cupkee_device_t *dev;
+    int index = cupkee_device_elem_index(id, &dev);
 
     (void) env;
 
@@ -174,7 +122,7 @@ static void device_elem_op_set(void *env, intptr_t id, val_t *val, val_t *res)
 
 static void device_op_prop(void *env, intptr_t id, val_t *name, val_t *prop)
 {
-    cupkee_device_t *dev = device_id_block(id);
+    cupkee_device_t *dev = cupkee_device_block(id);
     const char *prop_name = val_2_cstring(name);
 
     (void) env;
@@ -235,10 +183,6 @@ static void device_op_prop(void *env, intptr_t id, val_t *name, val_t *prop)
         if (!strcmp(prop_name, "type")) {
             val_set_foreign_string(prop, (intptr_t) dev->desc->name);
             return;
-        } else
-        if (!strcmp(prop_name, "category")) {
-            val_set_foreign_string(prop, (intptr_t) device_category_name(dev->desc->category));
-            return;
         }
     }
     val_set_undefined(prop);
@@ -247,7 +191,7 @@ static void device_op_prop(void *env, intptr_t id, val_t *name, val_t *prop)
 static void device_op_elem(void *env, intptr_t id, val_t *which, val_t *elem)
 {
     if (val_is_number(which)) {
-        cupkee_device_t *dev = device_id_block(id);
+        cupkee_device_t *dev = cupkee_device_block(id);
         uint32_t val;
 
         if (dev && 0 < cupkee_device_get(dev, val_2_integer(which), &val)) {
@@ -262,7 +206,7 @@ static void device_op_elem(void *env, intptr_t id, val_t *which, val_t *elem)
 
 static val_t *device_op_elem_ref(void *env, intptr_t id, val_t *key)
 {
-    cupkee_device_t *dev = device_id_block(id);
+    cupkee_device_t *dev = cupkee_device_block(id);
     int index;
 
     if (dev && val_is_number(key)) {
@@ -271,427 +215,9 @@ static val_t *device_op_elem_ref(void *env, intptr_t id, val_t *key)
         return NULL;
     }
 
-    *key = val_create(env, &device_elem_op, device_elem_id_gen(dev, index));
+    *key = val_create(env, &device_elem_op, cupkee_device_elem_id(dev, index));
 
     return key;
-}
-
-static void device_get_option(val_t *opt, int i, int max, const char **opt_list)
-{
-    if (i >= max) {
-        i = 0;
-    }
-
-    val_set_foreign_string(opt, (intptr_t) opt_list[i]);
-}
-
-static void device_get_sequence(env_t *env, val_t *val, uint8_t n, uint8_t *seq)
-{
-    array_t *a;
-    int i;
-
-    a = _array_create(env, n);
-    if (a) {
-        for (i = 0; i < n; i++) {
-            val_set_number(_array_elem(a, i), seq[i]);
-        }
-
-        val_set_array(val, (intptr_t) a);
-    }
-}
-
-static int device_set_uint8(val_t *val, uint8_t *conf)
-{
-    if (val_is_number(val)) {
-        *conf = val_2_integer(val);
-        return CUPKEE_OK;
-    }
-    return -CUPKEE_EINVAL;
-}
-
-static int device_set_uint16(val_t *val, uint16_t *conf)
-{
-    if (val_is_number(val)) {
-        *conf = val_2_integer(val);
-        return CUPKEE_OK;
-    }
-    return -CUPKEE_EINVAL;
-}
-
-static int device_set_uint32(val_t *val, uint32_t *conf)
-{
-    if (val_is_number(val)) {
-        *conf = val_2_integer(val);
-        return CUPKEE_OK;
-    }
-    return -CUPKEE_EINVAL;
-}
-
-static int device_set_option(val_t *val, uint8_t *conf, int max, const char **opt_list)
-{
-    int opt = shell_val_id(val, max, opt_list);
-
-    if (opt >= 0) {
-        *conf = opt;
-        return CUPKEE_OK;
-    }
-    return -CUPKEE_EINVAL;
-}
-
-static int device_set_sequence(val_t *val, int max, uint8_t *n, uint8_t *seq)
-{
-    int i, len;
-    val_t *elems;
-
-    if (val_is_array(val)) {
-        array_t *array = (array_t *)val_2_intptr(val);
-
-        len   = array_len(array);
-        if (len > max) {
-            return -CUPKEE_EINVAL;
-        }
-        elems = array_values(array);
-    } else
-    if (val_is_number(val)) {
-        len = 1;
-        elems = val;
-    } else{
-        return -CUPKEE_EINVAL;
-    }
-
-    for (i = 0; i < len; i++) {
-        val_t *cur = elems + i;
-        int    num;
-
-        if (!val_is_number(cur)) {
-            return -CUPKEE_EINVAL;
-        }
-
-        num = val_2_integer(cur);
-        if (num > 255) {
-            return -CUPKEE_EINVAL;
-        }
-        seq[i] = num;
-    }
-
-    if (len) {
-        *n = len;
-        return CUPKEE_OK;
-    } else {
-        return -CUPKEE_EINVAL;
-    }
-}
-
-static int device_convert_data(val_t *data, void **ptr)
-{
-    int size;
-
-    if (val_is_buffer(data)) {
-        size = _val_buffer_size(data);
-        *ptr = _val_buffer_addr(data);
-    } else
-    if ((size = string_len(data)) > 0) {
-        *ptr = (void *) val_2_cstring(data);
-    } else {
-        *ptr = NULL;
-    }
-    return size;
-}
-
-static int device_pin_config_get(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_pin_t *pin = (hw_config_pin_t *) conf;
-
-    (void) env;
-
-    switch (which) {
-    case DEVICE_PIN_CONF_NUM:   val_set_number(val, pin->num);   break;
-    case DEVICE_PIN_CONF_START: val_set_number(val, pin->start); break;
-    case DEVICE_PIN_CONF_DIR:   device_get_option(val, pin->dir, DEVICE_OPT_DIR_MAX, device_opt_dir); break;
-    default:                    return -CUPKEE_EINVAL;
-    }
-
-    return CUPKEE_OK;
-}
-
-static int device_pin_config_set(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_pin_t *pin = (hw_config_pin_t *) conf;
-
-    (void) env;
-
-    switch (which) {
-    case DEVICE_PIN_CONF_NUM:   return device_set_uint8(val, &pin->num);
-    case DEVICE_PIN_CONF_START: return device_set_uint8(val, &pin->start);
-    case DEVICE_PIN_CONF_DIR:   return device_set_option(val, &pin->dir, DEVICE_OPT_DIR_MAX, device_opt_dir);
-    default:                    return -CUPKEE_EINVAL;
-    }
-}
-
-static int device_adc_config_get(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_adc_t *adc = (hw_config_adc_t *) conf;
-
-    switch (which) {
-    case DEVICE_ADC_CONF_CHANNELS: device_get_sequence(env, val, adc->chn_num, adc->chn_seq);   break;
-    case DEVICE_ADC_CONF_INTERVAL: val_set_number(val, adc->interval); break;
-    default:                       return -CUPKEE_EINVAL;
-    }
-
-    return CUPKEE_OK;
-}
-
-static int device_adc_config_set(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_adc_t *adc = (hw_config_adc_t *) conf;
-
-    (void) env;
-
-    switch (which) {
-    case DEVICE_ADC_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_ADC, &adc->chn_num, adc->chn_seq);
-    case DEVICE_ADC_CONF_INTERVAL: return device_set_uint16(val, &adc->interval);
-    default:                       return -CUPKEE_EINVAL;
-    }
-}
-
-static int device_timer_config_get(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_timer_t *timer = (hw_config_timer_t *) conf;
-
-    switch (which) {
-    case DEVICE_TIMER_CONF_CHANNELS: device_get_sequence(env, val, timer->chn_num, timer->chn_seq);   break;
-    case DEVICE_TIMER_CONF_POLARITY: device_get_option(val, timer->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    default:                       return -CUPKEE_EINVAL;
-    }
-    return CUPKEE_OK;
-}
-
-static int device_timer_config_set(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_timer_t *timer = (hw_config_timer_t *) conf;
-
-    (void) env;
-    switch (which) {
-    case DEVICE_TIMER_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_TIMER, &timer->chn_num, timer->chn_seq);
-    case DEVICE_TIMER_CONF_POLARITY: return device_set_option(val, &timer->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    default:                       return -CUPKEE_EINVAL;
-    }
-}
-
-static int device_pwm_config_get(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_pwm_t *pwm = (hw_config_pwm_t *) conf;
-
-    switch (which) {
-    case DEVICE_PWM_CONF_CHANNELS: device_get_sequence(env, val, pwm->chn_num, pwm->chn_seq);   break;
-    case DEVICE_PWM_CONF_POLARITY: device_get_option(val, pwm->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    case DEVICE_PWM_CONF_PERIOD:   val_set_number(val, pwm->period);   break;
-    default:                       return -CUPKEE_EINVAL;
-    }
-    return CUPKEE_OK;
-}
-
-static int device_pwm_config_set(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_pwm_t *pwm = (hw_config_pwm_t *) conf;
-
-    (void) env;
-    switch (which) {
-    case DEVICE_PWM_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_PWM, &pwm->chn_num, pwm->chn_seq);
-    case DEVICE_PWM_CONF_POLARITY: return device_set_option(val, &pwm->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    case DEVICE_PWM_CONF_PERIOD:   return device_set_uint16(val, &pwm->period);   break;
-    default:                       return -CUPKEE_EINVAL;
-    }
-}
-
-static int device_pulse_config_get(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_pulse_t *pulse= (hw_config_pulse_t *) conf;
-
-    switch (which) {
-    case DEVICE_PULSE_CONF_CHANNELS: device_get_sequence(env, val, pulse->chn_num, pulse->chn_seq);   break;
-    case DEVICE_PULSE_CONF_POLARITY: device_get_option(val, pulse->polarity, DEVICE_OPT_POLARITY_MAX - 1, device_opt_polarity); break;
-    default:                         return -CUPKEE_EINVAL;
-    }
-    return CUPKEE_OK;
-}
-
-static int device_pulse_config_set(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_pulse_t *pulse= (hw_config_pulse_t *) conf;
-
-    (void) env;
-
-    switch (which) {
-    case DEVICE_PULSE_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_PULSE, &pulse->chn_num, pulse->chn_seq);
-    case DEVICE_PULSE_CONF_POLARITY: return device_set_option(val, &pulse->polarity, DEVICE_OPT_POLARITY_MAX - 1, device_opt_polarity);
-    default:                         return -CUPKEE_EINVAL;
-    }
-    return CUPKEE_OK;
-}
-
-static int device_counter_config_get(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_counter_t *counter = (hw_config_counter_t *) conf;
-
-    switch (which) {
-    case DEVICE_COUNTER_CONF_CHANNELS: device_get_sequence(env, val, counter->chn_num, counter->chn_seq);   break;
-    case DEVICE_COUNTER_CONF_POLARITY: device_get_option(val, counter->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    case DEVICE_COUNTER_CONF_PERIOD:   val_set_number(val, counter->period);   break;
-    default:                       return -CUPKEE_EINVAL;
-    }
-    return CUPKEE_OK;
-}
-
-static int device_counter_config_set(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_counter_t *counter = (hw_config_counter_t *) conf;
-
-    (void) env;
-    switch (which) {
-    case DEVICE_COUNTER_CONF_CHANNELS: return device_set_sequence(val, HW_CHN_MAX_COUNTER, &counter->chn_num, counter->chn_seq);
-    case DEVICE_COUNTER_CONF_POLARITY: return device_set_option(val, &counter->polarity, DEVICE_OPT_POLARITY_MAX, device_opt_polarity); break;
-    case DEVICE_COUNTER_CONF_PERIOD:   return device_set_uint16(val, &counter->period);   break;
-    default:                       return -CUPKEE_EINVAL;
-    }
-}
-
-static int device_uart_config_get(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_uart_t *uart = (hw_config_uart_t *) conf;
-
-    (void) env;
-
-    switch (which) {
-    case DEVICE_UART_CONF_BAUDRATE: val_set_number(val, uart->baudrate);  break;
-    case DEVICE_UART_CONF_DATABITS: val_set_number(val, uart->data_bits); break;
-    case DEVICE_UART_CONF_STOPBITS:
-        device_get_option(val, uart->stop_bits, DEVICE_OPT_STOPBITS_MAX, device_opt_stopbits);
-        break;
-    case DEVICE_UART_CONF_PARITY:
-        device_get_option(val, uart->parity, DEVICE_OPT_PARITY_MAX, device_opt_parity);
-        break;
-    default: break;
-    }
-
-    return CUPKEE_OK;
-}
-
-static int device_uart_config_set(env_t *env, hw_config_t *conf, int which, val_t *val)
-{
-    hw_config_uart_t *uart = (hw_config_uart_t *) conf;
-
-    (void) env;
-
-    switch (which) {
-    case DEVICE_UART_CONF_BAUDRATE: return device_set_uint32(val, &uart->baudrate);  break;
-    case DEVICE_UART_CONF_DATABITS: return device_set_uint8(val, &uart->data_bits); break;
-    case DEVICE_UART_CONF_STOPBITS:
-        return device_set_option(val, &uart->stop_bits, DEVICE_OPT_STOPBITS_MAX, device_opt_stopbits);
-    case DEVICE_UART_CONF_PARITY:
-        return device_set_option(val, &uart->parity, DEVICE_OPT_PARITY_MAX, device_opt_parity);
-    default: break;
-    }
-
-    return CUPKEE_EINVAL;
-}
-
-static int device_config_set(cupkee_device_t *dev, env_t *env, int index, val_t *val)
-{
-    if (index >= 0 && index < dev->desc->conf_num) {
-        switch (dev->desc->type) {
-        case DEVICE_TYPE_PIN:      return device_pin_config_set  (env, &dev->config, index, val);
-        case DEVICE_TYPE_ADC:      return device_adc_config_set  (env, &dev->config, index, val);
-        case DEVICE_TYPE_DAC:      break;
-        case DEVICE_TYPE_PWM:      return device_pwm_config_set  (env, &dev->config, index, val);
-        case DEVICE_TYPE_PULSE:    return device_pulse_config_set(env, &dev->config, index, val);
-        case DEVICE_TYPE_TIMER:    return device_timer_config_set(env, &dev->config, index, val);
-        case DEVICE_TYPE_COUNTER:  return device_counter_config_set(env, &dev->config, index, val);
-        case DEVICE_TYPE_UART:     return device_uart_config_set (env, &dev->config, index, val);
-        case DEVICE_TYPE_USART:
-        case DEVICE_TYPE_SPI:
-        case DEVICE_TYPE_I2C:
-        case DEVICE_TYPE_USB_CDC:
-        default: break;
-        }
-        return -CUPKEE_EIMPLEMENT;
-    }
-
-    return -CUPKEE_EINVAL;
-}
-
-static int device_config_get(cupkee_device_t *dev, env_t *env, int index, val_t *val)
-{
-    if (index >= 0 && index < dev->desc->conf_num) {
-        switch (dev->desc->type) {
-        case DEVICE_TYPE_PIN:      return device_pin_config_get(env, &dev->config, index, val);
-        case DEVICE_TYPE_ADC:      return device_adc_config_get(env, &dev->config, index, val);
-        case DEVICE_TYPE_DAC:      return -CUPKEE_EIMPLEMENT; break;
-        case DEVICE_TYPE_PWM:      return device_pwm_config_get(env, &dev->config, index, val);
-        case DEVICE_TYPE_PULSE:    return device_pulse_config_get(env, &dev->config, index, val);
-        case DEVICE_TYPE_TIMER:    return device_timer_config_get(env, &dev->config, index, val);
-        case DEVICE_TYPE_COUNTER:  return device_counter_config_get(env, &dev->config, index, val);
-        case DEVICE_TYPE_UART:     return device_uart_config_get(env, &dev->config, index, val);
-        case DEVICE_TYPE_USART:
-        case DEVICE_TYPE_SPI:
-        case DEVICE_TYPE_I2C:
-        case DEVICE_TYPE_USB_CDC:
-        default: return -CUPKEE_EIMPLEMENT;
-        }
-    }
-
-    return -CUPKEE_EINVAL;
-}
-
-static val_t device_config_set_one(cupkee_device_t *dev, env_t *env, val_t *which, val_t *val)
-{
-    int index = shell_val_id(which, dev->desc->conf_num, dev->desc->conf_names);
-
-    return device_config_set(dev, env, index, val) == CUPKEE_OK ? VAL_TRUE : VAL_FALSE;
-}
-
-static val_t device_config_get_one(cupkee_device_t *dev, env_t *env, val_t *which)
-{
-    int index = shell_val_id(which, dev->desc->conf_num, dev->desc->conf_names);
-    val_t val;
-
-    if (CUPKEE_OK == device_config_get(dev, env, index, &val)) {
-        return val;
-    } else {
-        return VAL_UNDEFINED;
-    }
-}
-
-static int device_config_set_all(cupkee_device_t *dev, env_t *env, val_t *settings)
-{
-    object_iter_t it;
-    const char *key;
-    val_t *val;
-
-    if (object_iter_init(&it, settings)) {
-        return -CUPKEE_EINVAL;
-    }
-
-    while (object_iter_next(&it, &key, &val)) {
-        int index = shell_str_id(key, dev->desc->conf_num, dev->desc->conf_names);
-
-        if (index < 0) {
-            // skip unknowned config items
-            continue;
-        }
-
-        if (device_config_set(dev, env, index, val)) {
-            return -CUPKEE_EINVAL;
-        }
-    }
-
-    return CUPKEE_OK;
-}
-
-static val_t device_config_get_all(cupkee_device_t *dev)
-{
-    (void) dev;
-    return VAL_UNDEFINED;
 }
 
 static void device_get_all(cupkee_device_t *dev, env_t *env, val_t *result)
@@ -903,16 +429,16 @@ val_t native_device_config(env_t *env, int ac, val_t *av)
     setting = ac > 0 ? av : NULL;
 
     if (setting) {
-        // config set is forbidden, if device is enabled
+        // config set is forbidden, if device is disabled
         if (cupkee_device_is_enabled(dev)) {
             return VAL_FALSE;
         }
 
-        return which ? device_config_set_one(dev, env, which, setting) :
-                       device_config_set_all(dev, env, setting) ? VAL_FALSE : VAL_TRUE;
+        return which ? cupkee_device_config_set_one(dev, env, which, setting) :
+                       cupkee_device_config_set_all(dev, env, setting) ? VAL_FALSE : VAL_TRUE;
     } else {
-        return which ? device_config_get_one(dev, env, which) :
-                       device_config_get_all(dev);
+        return which ? cupkee_device_config_get_one(dev, env, which) :
+                       cupkee_device_config_get_all(dev);
     }
 }
 
@@ -992,7 +518,7 @@ val_t native_device_write(env_t *env, int ac, val_t *av)
         return VAL_FALSE;
     }
 
-    if (ac < 1 || (size = device_convert_data(av, &ptr)) < 0) {
+    if (ac < 1 || (size = shell_input_data(av, &ptr)) < 0) {
         err = -CUPKEE_EINVAL;
     } else {
         data = av; ac--; av++;
@@ -1179,7 +705,7 @@ val_t native_device_enable(env_t *env, int ac, val_t *av)
         if (cupkee_device_is_enabled(dev)) {
             err = -CUPKEE_EENABLED;
         } else {
-            err = device_config_set_all(dev, env, setting);
+            err = cupkee_device_config_set_all(dev, env, setting);
         }
         ac--; av++;
     }
@@ -1240,7 +766,7 @@ val_t native_device_create(env_t *env, int ac, val_t *av)
     if (dev) {
         dev->handle = device_event_handle_wrap;
         dev->handle_param = 0;
-        return val_create(env, &device_op, device_id_gen(dev));
+        return val_create(env, &device_op, cupkee_device_id(dev));
     } else {
         return VAL_UNDEFINED;
     }
