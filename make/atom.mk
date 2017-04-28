@@ -24,7 +24,7 @@
 ## SOFTWARE.
 ##
 
-MAIN_DIR ?=${APP_DIR}/atom
+MAIN_DIR ?=${BOARD_DIR}/atom
 elf_NAMES = cupkee
 
 cupkee_SRCS = ${notdir ${wildcard ${MAIN_DIR}/*.c}}

@@ -41,7 +41,7 @@ export SYS_DIR = ${BASE_DIR}/system
 export TST_DIR  = ${BASE_DIR}/test
 
 export MOD_DIR = ${BASE_DIR}/module
-export APP_DIR = ${BASE_DIR}/app
+export BOARD_DIR = ${BASE_DIR}/boards
 
 export LANG_DIR  = ${MOD_DIR}/panda
 
@@ -55,7 +55,7 @@ export BSP_BUILD_DIR = ${BUILD_DIR}/bsp
 export SYS_BUILD_DIR = ${BUILD_DIR}/sys
 export LANG_BUILD_DIR = ${BUILD_DIR}/lang
 
-all: ogin
+all: test
 	@printf "ok\n"
 
 setup:

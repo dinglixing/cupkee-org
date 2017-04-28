@@ -24,7 +24,7 @@
 ## SOFTWARE.
 ##
 
-MAIN_DIR ?= ${APP_DIR}/ogin
+MAIN_DIR ?= ${BOARD_DIR}/ogin
 
 elf_NAMES = cupkee
 
