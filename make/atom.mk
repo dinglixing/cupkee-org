@@ -28,6 +28,8 @@ MAIN_DIR ?=${BOARD_DIR}/atom
 elf_NAMES = cupkee
 
 cupkee_SRCS = ${notdir ${wildcard ${MAIN_DIR}/*.c}}
+$(info hello ${MAIN_DIR})
+$(info files ${cupkee_SRCS})
 
 cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
 cupkee_CFLAGS   =
