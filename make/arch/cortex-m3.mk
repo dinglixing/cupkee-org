@@ -30,7 +30,7 @@ LDSCRIPT    = ${MAKE_DIR}/ld/$(MCU).ld
 
 ARCH_FLAGS	= -mthumb -mcpu=cortex-m3 -msoft-float -mfix-cortex-m3-ldrd
 
-OPENCM3_DIR = ${BASE_DIR}/module/libopencm3
+OPENCM3_DIR = ${BASE_DIR}/share/libopencm3
 OPENCM3_LIB = opencm3_stm32f1
 
 DEFS		+= -DSTM32F1

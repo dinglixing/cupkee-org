@@ -40,10 +40,10 @@ export BSP_DIR = ${BASE_DIR}/bsp
 export SYS_DIR = ${BASE_DIR}/system
 export TST_DIR  = ${BASE_DIR}/test
 
-export MOD_DIR = ${BASE_DIR}/module
+export SHARE_DIR = ${BASE_DIR}/share
 export BOARD_DIR = ${BASE_DIR}/boards
 
-export LANG_DIR  = ${MOD_DIR}/panda
+export LANG_DIR  = ${SHARE_DIR}/panda
 
 ifeq (${MAIN_DIR},)
 BUILD_DIR = ${BASE_DIR}/build/${CPU}
@@ -76,7 +76,7 @@ sys:
 lang:
 	@make -C ${LANG_BUILD_DIR} -f ${MAKE_DIR}/lang.mk
 
-ogin: build bsp sys lang
+ogin: build bsp sys
 	@mkdir -p ${BUILD_DIR}/ogin
 	@make -C ${BUILD_DIR}/ogin -f ${MAKE_DIR}/ogin.mk extend
 
