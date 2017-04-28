@@ -24,19 +24,19 @@
 ## SOFTWARE.
 ##
 
-ifeq (${BOARD},)
-$(info "Target board not specified...")
+ifeq (${CPU},)
+$(info "Target processor not specified...")
 endif
 
-# Define default target board
-export BOARD ?= test
+# Define default target processor
+export CPU ?= test
 
 
 export BASE_DIR = ${PWD}
 export MAKE_DIR = ${BASE_DIR}/make
 
 export INC_DIR = ${BASE_DIR}/include
-export BSP_DIR = ${BASE_DIR}/boards
+export BSP_DIR = ${BASE_DIR}/bsp
 export SYS_DIR = ${BASE_DIR}/system
 export TST_DIR  = ${BASE_DIR}/test
 
@@ -46,9 +46,9 @@ export APP_DIR = ${BASE_DIR}/app
 export LANG_DIR  = ${MOD_DIR}/panda
 
 ifeq (${MAIN_DIR},)
-BUILD_DIR = ${BASE_DIR}/build/${BOARD}
+BUILD_DIR = ${BASE_DIR}/build/${CPU}
 else
-BUILD_DIR = ${MAIN_DIR}/build/${BOARD}
+BUILD_DIR = ${MAIN_DIR}/build/${CPU}
 endif
 
 export BSP_BUILD_DIR = ${BUILD_DIR}/bsp

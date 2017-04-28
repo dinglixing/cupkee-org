@@ -33,13 +33,13 @@
 ###############################################################################
 
 # include board config files
-ifeq (${BOARD},)
-	include ${MAKE_DIR}/board/host.mk
+ifeq (${CPU},)
+	include ${MAKE_DIR}/cup/test.mk
 else
-ifneq (${wildcard ${MAKE_DIR}/board/${BOARD}}.mk,)
-	include ${MAKE_DIR}/board/${BOARD}.mk
+ifneq (${wildcard ${MAKE_DIR}/cpu/${CPU}}.mk,)
+	include ${MAKE_DIR}/cpu/${CPU}.mk
 else
-	$(error board: ${BOARD}, is not support now)
+	$(error CPU: ${CPU}, is not support now)
 endif
 endif
 
