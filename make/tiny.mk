@@ -24,14 +24,14 @@
 ## SOFTWARE.
 ##
 
-MAIN_DIR ?=${FRAMEWORK_DIR}/ogin
+MAIN_DIR ?=${FRAMEWORK_DIR}/tiny
 elf_NAMES = cupkee
 
 cupkee_SRCS = ${notdir ${wildcard ${MAIN_DIR}/*.c}}
 
 cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
 cupkee_CFLAGS   =
-cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -lsys -lbsp
+cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -L${LANG_BUILD_DIR} -lsys -lbsp -llang
 
 include ${MAKE_DIR}/cupkee.ruls.mk
 

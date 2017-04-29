@@ -38,21 +38,23 @@ export MAKE_DIR = ${BASE_DIR}/make
 export INC_DIR = ${BASE_DIR}/include
 export BSP_DIR = ${BASE_DIR}/bsp
 export SYS_DIR = ${BASE_DIR}/system
-export TST_DIR  = ${BASE_DIR}/test
+export TST_DIR = ${BASE_DIR}/test
+export FRAMEWORK_DIR = ${BASE_DIR}/frameworks
 
 export SHARE_DIR = ${BASE_DIR}/share
-export BOARD_DIR = ${BASE_DIR}/boards
-
 export LANG_DIR  = ${SHARE_DIR}/panda
 
 ifeq (${MAIN_DIR},)
 BUILD_DIR = ${BASE_DIR}/build/${CPU}
+MOD_DIR = ${BASE_DIR}/modules
 else
 BUILD_DIR = ${MAIN_DIR}/build/${CPU}
+MOD_DIR = ${MAIN_DIR}/modules
 endif
 
 export BSP_BUILD_DIR = ${BUILD_DIR}/bsp
 export SYS_BUILD_DIR = ${BUILD_DIR}/sys
+export MOD_BUILD_DIR = ${BUILD_DIR}/modules
 export LANG_BUILD_DIR = ${BUILD_DIR}/lang
 
 all: test
@@ -76,17 +78,18 @@ sys:
 lang:
 	@make -C ${LANG_BUILD_DIR} -f ${MAKE_DIR}/lang.mk
 
+module: build bsp sys lang
+	@mkdir -p ${BUILD_DIR}/module
+	@make -C ${BUILD_DIR}/module -f ${MAKE_DIR}/module.mk extend
+
 ogin: build bsp sys
-	@mkdir -p ${BUILD_DIR}/ogin
-	@make -C ${BUILD_DIR}/ogin -f ${MAKE_DIR}/ogin.mk extend
+	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/ogin.mk extend
 
-tiny:  build bsp sys lang
-	@mkdir -p ${BUILD_DIR}/tiny
-	@make -C ${BUILD_DIR}/tiny -f ${MAKE_DIR}/main.mk extend
+tiny: build bsp sys lang
+	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/main.mk extend
 
-atom:  build bsp sys lang
-	@mkdir -p ${BUILD_DIR}/atom
-	@make -C ${BUILD_DIR}/atom -f ${MAKE_DIR}/atom.mk extend
+atom: build bsp sys lang
+	@make -C ${BUILD_DIR} -f ${MAKE_DIR}/atom.mk extend
 
 test: build sys
 	@rm -rf ${BUILD_DIR}/test.elf

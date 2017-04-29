@@ -24,32 +24,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <cupkee.h>
+#include "module_test.h"
 
-static const native_t native_entry[] = {
-    /* Panda natives */
-    {"Buffer",          buffer_native_create},
-
-    /* Cupkee natives */
-    {"sysinfos",        native_sysinfos},
-    {"systicks",        native_systicks},
-    {"print",           native_print},
-    {"pinMap",          native_pin_map},
-    {"ledMap",          native_led_map},
-    {"led",             native_led},
-
-    {"setTimeout",      native_set_timeout},
-    {"setInterval",     native_set_interval},
-    {"clearTimeout",    native_clear_timeout},
-    {"clearInterval",   native_clear_interval},
-
-    {"Device",          native_device_create},
-
-    /* User native */
-};
-
-// system initial scripts
-static char *initial = NULL;
 
 int main(void)
 {
@@ -70,16 +46,17 @@ int main(void)
 #endif
     cupkee_device_enable(tty);
 
-    cupkee_shell_init(tty, sizeof(native_entry)/sizeof(native_t), native_entry);
+    cupkee_shell_init(tty, module_test_native_number(), module_test_native_entries());
 
     /**********************************************************
      * user setup code
      *********************************************************/
+    module_test_setup();
 
     /**********************************************************
      * Let's Go!
      *********************************************************/
-    cupkee_shell_loop(initial);
+    cupkee_shell_loop(module_test_script());
 
     /**********************************************************
      * Let's Go!
