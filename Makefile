@@ -63,7 +63,7 @@ setup:
 	git pull
 	git submodule init
 	git submodule update
-	make -C module/libopencm3
+	make -C share/libopencm3
 
 build:
 	@mkdir -p ${LANG_BUILD_DIR} ${BSP_BUILD_DIR} ${SYS_BUILD_DIR}
