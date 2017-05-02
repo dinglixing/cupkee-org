@@ -208,13 +208,13 @@ endef
 ###############################################################################
 # Build target
 
-all: elf lib
+all: lib elf
 
-extend: elf bin hex list srec
-
-elf: ${elf_NAMES}
+extend: lib elf bin hex list srec
 
 lib: ${lib_NAMES}
+
+elf: ${elf_NAMES}
 
 bin: ${elf_NAMES} ${elf_NAMES:%=%.bin}
 

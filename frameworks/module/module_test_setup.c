@@ -24,18 +24,48 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __MODULE_TEST_INC__
-#define __MODULE_TEST_INC__
+#include "module_test.h"
 
-#include <cupkee.h>
+static val_t native_module_add(env_t *env, int ac, val_t *av)
+{
+    (void) env;
+    (void) ac;
 
-#include "module_example.h"
+    int a = val_2_integer(av);
+    int b = val_2_integer(av + 1);
 
-int module_test_native_number(void);
-const native_t *module_test_native_entries(void);
+    return val_mk_number(a + b);
+}
 
-void module_test_setup(void);
-const char     *module_test_script(void);
+static const native_t native_entries[] = {
+    {"add",   native_module_add},
+    {"print", native_print},
+    {"clearInterval",   native_clear_interval},
+};
 
-#endif /* __MODULE_TEST_INC__ */
+void module_test_setup(void)
+{
+    module_example_init();
+}
+
+int module_test_native_number(void)
+{
+    return sizeof(native_entries) / sizeof(native_t);
+}
+
+const native_t *module_test_native_entries(void)
+{
+    return native_entries;
+}
+
+const char *module_test_script(void)
+{
+    return "\
+print('test mod add:') \
+if (10 == add(1, 9)) { \
+  print('OK') \
+} else { \
+  print('Fail') \
+}";
+}
 

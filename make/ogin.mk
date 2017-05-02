@@ -25,13 +25,16 @@
 ##
 
 MAIN_DIR ?=${FRAMEWORK_DIR}/ogin
-elf_NAMES = cupkee
 
+include ${MAKE_DIR}/cupkee.modules.mk
+
+elf_NAMES = cupkee
 cupkee_SRCS = ${notdir ${wildcard ${MAIN_DIR}/*.c}}
 
-cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
+cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include ${mod_INC}
 cupkee_CFLAGS   =
-cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -lsys -lbsp
+cupkee_LDFLAGS  = -L${BUILD_DIR} -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} \
+				  -lsys -lbsp ${mod_LDFLAGS}
 
 include ${MAKE_DIR}/cupkee.ruls.mk
 

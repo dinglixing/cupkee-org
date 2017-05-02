@@ -3,7 +3,7 @@
 ##
 ## This file is part of cupkee project.
 ##
-## Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
+## Copyright (c) 2017 Lixing Ding <ding.lixing@gmail.com>
 ##
 ## Permission is hereby granted, free of charge, to any person obtaining a copy
 ## of this software and associated documentation files (the "Software"), to deal
@@ -24,15 +24,24 @@
 ## SOFTWARE.
 ##
 
-MAIN_DIR ?=${FRAMEWORK_DIR}/tiny
-elf_NAMES = cupkee
+MOD_DIR = ${MAIN_DIR}/modules
 
-cupkee_SRCS = ${notdir ${wildcard ${MAIN_DIR}/*.c}}
+mod_NAMES = ${notdir ${wildcard ${MOD_DIR}/*}}
+mod_LDFLAGS = $(addprefix -l, ${mod_NAMES})
+mod_INC = $(addprefix -I${MOD_DIR}/, ${mod_NAMES})
 
-cupkee_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
-cupkee_CFLAGS   =
-cupkee_LDFLAGS  = -L${BSP_BUILD_DIR} -L${SYS_BUILD_DIR} -L${LANG_BUILD_DIR} -lsys -lbsp -llang
+# ${info modules:${mod_LDFLAGS} ${mod_INC}}
 
-include ${MAKE_DIR}/cupkee.ruls.mk
+# Marco build_mod_rule
+# param ${1}: module name
+define build_mod_rule
+DUMMY = $(shell mkdir -p ${BUILD_DIR}/modules/${1}/lib)
+${1}_SRCS = ${addprefix modules/${1}/lib/, ${notdir ${wildcard ${MAIN_DIR}/modules/${1}/lib/*.c}}}
+${1}_CPPFLAGS = -I${INC_DIR} -I${LANG_DIR}/include
+${1}_CFLAGS   =
+endef
 
-VPATH = ${MAIN_DIR}
+$(foreach mod,${mod_NAMES},$(eval $(call build_mod_rule,${mod})))
+
+lib_NAMES = ${mod_NAMES}
+

@@ -24,18 +24,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __MODULE_TEST_INC__
-#define __MODULE_TEST_INC__
+#ifndef __MODULE_EXAMPLE_INC__
+#define __MODULE_EXAMPLE_INC__
 
-#include <cupkee.h>
+int module_example_init(void);
+int module_example_register(void);
 
-#include "module_example.h"
+int module_example_add(int a, int b);
 
-int module_test_native_number(void);
-const native_t *module_test_native_entries(void);
-
-void module_test_setup(void);
-const char     *module_test_script(void);
-
-#endif /* __MODULE_TEST_INC__ */
+#endif /* __MODULE_EXAMPLE_INC__ */
 

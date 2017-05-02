@@ -3,7 +3,7 @@ MIT License
 
 This file is part of cupkee project.
 
-Copyright (c) 2017 Lixing Ding <ding.lixing@gmail.com>
+Copyright (c) 2016-2017 Lixing Ding <ding.lixing@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,45 +26,40 @@ SOFTWARE.
 
 #include "module_test.h"
 
-static const native_t native_entries[] = {
-    /* Panda natives */
-    {"Buffer",          buffer_native_create},
-
-    /* Cupkee natives */
-    {"sysinfos",        native_sysinfos},
-    {"systicks",        native_systicks},
-    {"print",           native_print},
-    {"pinMap",          native_pin_map},
-    {"ledMap",          native_led_map},
-    {"led",             native_led},
-
-    {"setTimeout",      native_set_timeout},
-    {"setInterval",     native_set_interval},
-    {"clearTimeout",    native_clear_timeout},
-    {"clearInterval",   native_clear_interval},
-
-    {"Device",          native_device_create},
-
-    /* User native */
-};
-
-void module_test_setup(void)
-{}
-
-int module_test_native_number(void)
+int main(void)
 {
-    return sizeof(native_entries) / sizeof(native_t);
-}
+    cupkee_device_t *tty;
 
-const native_t *module_test_native_entries(void)
-{
-    return native_entries;
-}
+    /**********************************************************
+     * Cupkee system initial
+     *********************************************************/
+    cupkee_init();
 
-const char *module_test_script(void)
-{
-    return "\
-print('OK')\
-";
+#ifdef USE_USB_CONSOLE
+    tty = cupkee_device_request("usb-cdc", 0);
+#else
+    tty = cupkee_device_request("uart", 0);
+    tty->config.data.uart.baudrate = 115200;
+    tty->config.data.uart.stop_bits = DEVICE_OPT_STOPBITS_1;
+    tty->config.data.uart.data_bits = 8;
+#endif
+    cupkee_device_enable(tty);
+
+    cupkee_shell_init(tty, module_test_native_number(), module_test_native_entries());
+
+    /**********************************************************
+     * user setup code
+     *********************************************************/
+    module_test_setup();
+
+    /**********************************************************
+     * Let's Go!
+     *********************************************************/
+    cupkee_shell_loop(module_test_script());
+
+    /**********************************************************
+     * Let's Go!
+     *********************************************************/
+    return 0;
 }
 
