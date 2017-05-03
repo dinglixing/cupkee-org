@@ -554,12 +554,17 @@ static int hw_i2c_write(int instance, size_t n, const void *data)
     return n;
 }
 
+#define TOUT_TRY(cond)  while (cond) { \
+    if (cupkee_systicks() - begin >= I2C_TOUT_THRESHOLD) return -1; \
+}
+
 static int hw_i2c_write_sync(int instance, size_t n, const void *data)
 {
     hw_i2c_t *control;
     uint32_t i2c;
     uint8_t addr;
     const uint8_t *byte = data;
+    uint32_t begin = cupkee_systicks();
     unsigned i;
 
     if (n < 1) {
@@ -575,19 +580,19 @@ static int hw_i2c_write_sync(int instance, size_t n, const void *data)
     }
 
     // Start
-    while (I2C_SR2(i2c) & I2C_SR2_BUSY);
+    TOUT_TRY (I2C_SR2(i2c) & I2C_SR2_BUSY);
     I2C_CR1(i2c) |= I2C_CR1_START;
 
     // Send address
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_MODE_SELECT));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_MODE_SELECT));
     I2C_DR(i2c) = addr;
 
     // Send data
     for (i = 0; i < n; i++) {
-        while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_TRANSMITTING));
+        TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_TRANSMITTING));
         I2C_DR(i2c) = byte[i];
     }
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_TRANSMITTED));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_TRANSMITTED));
 
     // Stop
     I2C_CR1(i2c) |= I2C_CR1_STOP;
@@ -599,15 +604,16 @@ static int hw_i2c_write_sync(int instance, size_t n, const void *data)
 static int hw_i2c_read_1byte(uint32_t i2c, uint8_t addr, uint8_t *buf)
 {
     uint32_t irq_state;
+    uint32_t begin = cupkee_systicks();
 
     // Start
     I2C_CR1(i2c) |= I2C_CR1_START;
 
     // Send address
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_MODE_SELECT));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_MODE_SELECT));
     I2C_DR(i2c) = addr;
 
-    while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+    TOUT_TRY (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
     I2C_CR1(i2c) &= ~I2C_CR1_ACK; // Nack for DataN
 
     hw_enter_critical(&irq_state);
@@ -615,11 +621,11 @@ static int hw_i2c_read_1byte(uint32_t i2c, uint8_t addr, uint8_t *buf)
     I2C_CR1(i2c) |= I2C_CR1_STOP;
     hw_exit_critical(irq_state);
 
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVED));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVED));
     *buf = I2C_DR(i2c);
 
     // wait stop
-    //while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
+    //TOUT_TRY (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
     I2C_CR1(i2c) |= I2C_CR1_ACK;
 
     return 1;
@@ -628,14 +634,15 @@ static int hw_i2c_read_1byte(uint32_t i2c, uint8_t addr, uint8_t *buf)
 static int hw_i2c_read_2byte(uint32_t i2c, uint8_t addr, uint8_t *buf)
 {
     uint32_t irq_state;
+    uint32_t begin = cupkee_systicks();
 
     // trigger start for data receive
     I2C_CR1(i2c) |= I2C_CR1_START;
 
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_MODE_SELECT));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_MODE_SELECT));
     I2C_DR(i2c) = addr;
 
-    while (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
+    TOUT_TRY (!(I2C_SR1(i2c) & I2C_SR1_ADDR));
     I2C_CR1(i2c) |= I2C_CR1_POS; // Trigger Nack at next shift complete
 
     hw_enter_critical(&irq_state);
@@ -644,7 +651,7 @@ static int hw_i2c_read_2byte(uint32_t i2c, uint8_t addr, uint8_t *buf)
     hw_exit_critical(irq_state);
 
     // Wait for Data1 and Data2 received
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVE_HOLD));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVE_HOLD));
     hw_enter_critical(&irq_state);
     I2C_CR1(i2c) |= I2C_CR1_STOP;
     buf[0] = I2C_DR(i2c);
@@ -652,7 +659,7 @@ static int hw_i2c_read_2byte(uint32_t i2c, uint8_t addr, uint8_t *buf)
 
     buf[1] = I2C_DR(i2c);
 
-    //while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
+    //TOUT_TRY (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
     I2C_CR1(i2c) |= I2C_CR1_ACK;
 
     return 2;
@@ -662,21 +669,22 @@ static int hw_i2c_read_Nbyte(uint32_t i2c, uint8_t addr, uint8_t n, uint8_t *buf
 {
     uint8_t i;
     uint32_t irq_state;
+    uint32_t begin = cupkee_systicks();
 
     // trigger start for data receive
     I2C_CR1(i2c) |= I2C_CR1_START;
 
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_MODE_SELECT));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_MODE_SELECT));
     I2C_DR(i2c) = addr; // Set the BIT0 of address for read
 
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVER_MODE_SELECT));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVER_MODE_SELECT));
     for (i = 0; i < n - 3; i++) {
-        while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVED));
+        TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVED));
         buf[i] = I2C_DR(i2c);
     }
 
     // Wait for DataN-2 and DataN-1 received
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVE_HOLD));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVE_HOLD));
 
     // Nack for DataN
     I2C_CR1(i2c) &= ~I2C_CR1_ACK;
@@ -685,7 +693,7 @@ static int hw_i2c_read_Nbyte(uint32_t i2c, uint8_t addr, uint8_t n, uint8_t *buf
     buf[i++] = I2C_DR(i2c);
 
     // Wait for DataN received
-    while (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVE_HOLD));
+    TOUT_TRY (!hw_i2c_match_event(i2c, I2C_EVENT_MASTER_RECEIVE_HOLD));
 
     hw_enter_critical(&irq_state);
     I2C_CR1(i2c) |= I2C_CR1_STOP;
@@ -693,7 +701,7 @@ static int hw_i2c_read_Nbyte(uint32_t i2c, uint8_t addr, uint8_t n, uint8_t *buf
     hw_exit_critical(irq_state);
     buf[i++] = I2C_DR(i2c);
 
-    //while (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
+    //TOUT_TRY (hw_i2c_match_event(i2c, I2C_EVENT_STOP));
     I2C_CR1(i2c) |= I2C_CR1_ACK;
 
     return i;
@@ -704,6 +712,7 @@ static int hw_i2c_read_sync(int instance, size_t n, void *buf)
     hw_i2c_t *control;
     uint32_t i2c;
     uint8_t addr;
+    uint32_t begin = cupkee_systicks();
 
     if (n < 1) {
         return 0;
@@ -717,7 +726,7 @@ static int hw_i2c_read_sync(int instance, size_t n, void *buf)
         return -CUPKEE_EINVAL;
     }
 
-    while (I2C_SR2(i2c) & I2C_SR2_BUSY);
+    TOUT_TRY (I2C_SR2(i2c) & I2C_SR2_BUSY);
 
     if (n == 1) {
         return hw_i2c_read_1byte(i2c, addr, buf);
