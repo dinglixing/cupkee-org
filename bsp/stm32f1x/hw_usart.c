@@ -26,7 +26,8 @@ SOFTWARE.
 
 #include "hardware.h"
 
-#define HW_FL_USED      1
+#define HW_FL_USED              1
+#define USART_TOUT_THRESHOLD    20
 
 typedef struct hw_uart_t {
     uint8_t flags;
@@ -262,10 +263,14 @@ static int uart_send_sync(int instance, size_t n, const void *data)
 static int uart_recv_sync(int instance, size_t n, void *data)
 {
     uint8_t *ptr = data;
+    uint32_t begin = cupkee_systicks();
     size_t i = 0;
 
     while (i < n) {
         while (!uart_has_data(instance)) {
+            if (cupkee_systicks() - begin > USART_TOUT_THRESHOLD) {
+                return -1;
+            }
         }
         ptr[i++] = uart_data_get(instance);
     }
