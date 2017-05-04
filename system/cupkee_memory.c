@@ -95,7 +95,7 @@ static int memory_pool_setup(size_t block_size, size_t block_cnt)
     block_size = SIZE_ALIGN(block_size);
 
     pool = (mem_pool_t *) hw_malloc(sizeof(mem_pool_t), 4);
-    base = hw_malloc(sizeof(mem_head_t) + block_size, 4);
+    base = hw_malloc((sizeof(mem_head_t) + block_size) * block_cnt, 4);
     if (!base || !pool) {
         return -CUPKEE_ERESOURCE;
     }
