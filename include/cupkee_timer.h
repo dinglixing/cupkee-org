@@ -27,7 +27,7 @@ SOFTWARE.
 #ifndef __CUPKEE_TIMER_INC__
 #define __CUPKEE_TIMER_INC__
 
-extern uint32_t _cupkee_systicks;
+extern volatile uint32_t _cupkee_systicks;
 
 typedef void (*cupkee_timer_handle_t)(int drop, void *param);
 typedef struct cupkee_timer_t {

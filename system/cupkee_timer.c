@@ -179,5 +179,5 @@ int cupkee_timer_clear_with_id(uint32_t id)
     return timer_clear_by(timer_with_id, id);
 }
 
-uint32_t _cupkee_systicks;
+volatile uint32_t _cupkee_systicks;
 
