@@ -33,6 +33,7 @@ static const native_t native_entries[] = {
     /* Cupkee natives */
     {"sysinfos",        native_sysinfos},
     {"systicks",        native_systicks},
+    {"require",         native_require},
     {"print",           native_print},
     {"pinMap",          native_pin_map},
     {"ledMap",          native_led_map},

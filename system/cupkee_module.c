@@ -205,7 +205,7 @@ static const val_foreign_op_t module_op = {
 val_t native_require(env_t *env, int ac, val_t *av)
 {
     const char *name = ac ? val_2_cstring(av) : NULL;
-    val_t mod = VAL_NULL;
+    val_t mod = VAL_UNDEFINED;
 
     if (name) {
         cupkee_module_t *cur = module_head;
