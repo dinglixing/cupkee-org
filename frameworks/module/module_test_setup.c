@@ -38,9 +38,8 @@ static val_t native_module_add(env_t *env, int ac, val_t *av)
 }
 
 static const native_t native_entries[] = {
-    {"add",   native_module_add},
-    {"print", native_print},
-    {"clearInterval",   native_clear_interval},
+    {"print",   native_print},
+    {"require", native_require},
 };
 
 void module_test_setup(void)
@@ -61,11 +60,13 @@ const native_t *module_test_native_entries(void)
 const char *module_test_script(void)
 {
     return "\
-print('test mod add:') \
-if (10 == add(1, 9)) { \
-  print('OK') \
-} else { \
-  print('Fail') \
-}";
+var mod = require('example');   \
+                                \
+if (mod.number == 0)            \
+    print('module number ok')   \
+if (mod.boolean)                \
+    print('module boolean ok')  \
+mod.native()                    \
+";
 }
 

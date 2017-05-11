@@ -68,6 +68,9 @@ void cupkee_init(void)
     /* Buffer initial */
     cupkee_buffer_init();
 
+    /* Module initial */
+    cupkee_module_init();
+
     /* Event initial */
     cupkee_event_setup();
 }

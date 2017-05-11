@@ -62,6 +62,7 @@ void cupkee_loop(void);
 #include "cupkee_history.h"
 #include "cupkee_command.h"
 #include "cupkee_shell.h"
+#include "cupkee_module.h"
 #include "cupkee_native.h"
 
 #endif /* __CUPKEE_INC__ */

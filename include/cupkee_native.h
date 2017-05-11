@@ -35,6 +35,9 @@ val_t native_led_map(env_t *env, int ac, val_t *av);
 val_t native_pin_map(env_t *env, int ac, val_t *av);
 val_t native_led(env_t *env, int ac, val_t *av);
 
+/* cupkee_module.c */
+val_t native_require(env_t *env, int ac, val_t *av);
+
 /* cupkee_shell_systice.c */
 val_t native_set_timeout(env_t *env, int ac, val_t *av);
 val_t native_set_interval(env_t *env, int ac, val_t *av);

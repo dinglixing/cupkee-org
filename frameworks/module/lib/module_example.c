@@ -26,19 +26,31 @@ SOFTWARE.
 
 #include "../module_example.h"
 
+static val_t native_example_hello(env_t *env, int ac, val_t *av)
+{
+    (void) env;
+    (void) ac;
+    (void) av;
+
+    return val_mk_foreign_string((intptr_t)"hello cupkee module!");
+}
 
 int module_example_init(void)
 {
-    return 0;
-}
+    void * mod = cupkee_module_create("example", 3);
 
-int module_example_register(void)
-{
-    return 0;
-}
+    if (!mod) {
+        return -1;
+    }
 
-int module_example_add(int a, int b)
-{
-    return a + b;
+    cupkee_module_export_number(mod, "number", 0);
+    cupkee_module_export_native(mod, "native", native_example_hello);
+    cupkee_module_export_boolean(mod, "bool", 0);
+
+    if (0 != cupkee_module_register(mod)) {
+        cupkee_module_release(mod);
+    }
+
+    return 0;
 }
 

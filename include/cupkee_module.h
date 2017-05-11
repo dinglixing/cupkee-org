@@ -24,15 +24,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __MODULE_EXAMPLE_INC__
-#define __MODULE_EXAMPLE_INC__
 
-#include <cupkee.h>
+#ifndef __CUPKEE_MODULE_INC__
+#define __CUPKEE_MODULE_INC__
 
-int module_example_init(void);
-int module_example_register(void);
+void cupkee_module_init(void);
 
-int module_example_add(int a, int b);
+void *cupkee_module_create(const char *name, int members);
+void cupkee_module_release(void *mod);
 
-#endif /* __MODULE_EXAMPLE_INC__ */
+int cupkee_module_export_number(void *mod, const char *name, double n);
+int cupkee_module_export_boolean(void *mod, const char *name, int b);
+int cupkee_module_export_string(void *mod, const char *name, const char *s);
+int cupkee_module_export_native(void *mod, const char *name, void *fn);
+
+int cupkee_module_register(void *mod);
+
+
+#endif /* __CUPKEE_MODULE_INC__ */
 
