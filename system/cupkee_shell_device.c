@@ -508,7 +508,8 @@ val_t native_device_set(env_t *env, int ac, val_t *av)
 val_t native_device_write(env_t *env, int ac, val_t *av)
 {
     cupkee_device_t *dev;
-    int   size, offset = 0, n = 0, err = 0;
+    int size, offset = 0, n = 0;
+    int err = 0;
     void  *ptr;
     val_t *data;
 
@@ -518,10 +519,10 @@ val_t native_device_write(env_t *env, int ac, val_t *av)
         return VAL_FALSE;
     }
 
-    if (ac < 1 || (size = shell_input_data(av, &ptr)) < 0) {
+    if (ac < 1 || (ptr = cupkee_val2data(av, &size)) == NULL) {
         err = -CUPKEE_EINVAL;
     } else {
-        data = av; ac--; av++;
+        data = av++; ac--;
 
         if (ac && val_is_number(av)) {
             if (ac > 1 && val_is_number(av + 1)) {

@@ -315,20 +315,26 @@ int shell_val_id(val_t *v, int max, const char * const *names)
     }
 }
 
-int shell_input_data(val_t *data, void **ptr)
+void *cupkee_val2data(val_t *data, int *size)
 {
-    int size;
+    void *ptr;
+    int len;
 
     if (val_is_buffer(data)) {
-        size = _val_buffer_size(data);
-        *ptr = _val_buffer_addr(data);
+        ptr = _val_buffer_addr(data);
+        len = _val_buffer_size(data);
     } else
-    if ((size = string_len(data)) > 0) {
-        *ptr = (void *) val_2_cstring(data);
+    if ((len = string_len(data)) > 0) {
+        ptr = (void *) val_2_cstring(data);
     } else {
-        *ptr = NULL;
+        ptr = NULL;
+        len = 0;
     }
-    return size;
+
+    if (size)
+        *size = len;
+
+    return ptr;
 }
 
 val_t native_sysinfos(env_t *env, int ac, val_t *av)
