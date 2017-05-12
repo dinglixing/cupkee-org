@@ -337,7 +337,7 @@ static void device_data_proc(cupkee_device_t *dev, env_t *env, val_t *handle)
         val_t data;
 
         err = device_read_2_buffer(dev, env, n, &data);
-        if (err) {
+        if (err < 0) {
             shell_do_callback_error(env, handle, err);
         } else {
             shell_do_callback(env, handle, 1, &data);
@@ -363,7 +363,7 @@ static void device_event_handle_wrap(cupkee_device_t *dev, uint8_t code, intptr_
         // Todo: combine process of all type of device
         switch(dev->desc->category) {
         case DEVICE_CATEGORY_MAP:     device_map_data_proc(dev, env, handle); break;
-        case DEVICE_CATEGORY_STREAM:  device_data_proc(dev, env, handle); break;
+        case DEVICE_CATEGORY_STREAM:
         case DEVICE_CATEGORY_BLOCK:   device_data_proc(dev, env, handle); break;
         default:                break;
         }

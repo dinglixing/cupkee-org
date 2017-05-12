@@ -244,11 +244,14 @@ int cupkee_shell_start(const char *initial)
 {
     const char *app = cupkee_sysdisk_app_script();
     val_t *res;
-    int   err;
+    int   err = 0;
 
     (void) initial;
 
-    err = interp_execute_string(&shell_env, app, &res);
+    if (app) {
+        err = interp_execute_string(&shell_env, app, &res);
+        console_log_sync("run app: %s\r\n", err < 0 ? "fail" : "ok");
+    }
 
     return err;
 }
