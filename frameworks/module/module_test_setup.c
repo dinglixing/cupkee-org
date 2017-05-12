@@ -26,17 +26,6 @@ SOFTWARE.
 
 #include "module_test.h"
 
-static val_t native_module_add(env_t *env, int ac, val_t *av)
-{
-    (void) env;
-    (void) ac;
-
-    int a = val_2_integer(av);
-    int b = val_2_integer(av + 1);
-
-    return val_mk_number(a + b);
-}
-
 static const native_t native_entries[] = {
     {"print",   native_print},
     {"require", native_require},
