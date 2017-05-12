@@ -68,19 +68,6 @@ static const char *device_category_name(uint8_t category)
     }
 }
 
-static cupkee_device_t *device_val_block(val_t *v)
-{
-    val_foreign_t *vf;
-
-    if (val_is_foreign(v)) {
-        vf = (val_foreign_t *)val_2_intptr(v);
-        if (vf->op == &device_op) {
-            return cupkee_device_block(vf->data);
-        }
-    }
-    return NULL;
-}
-
 static void device_list(void)
 {
     const cupkee_device_desc_t *desc;
@@ -391,13 +378,26 @@ static void device_event_handle_wrap(cupkee_device_t *dev, uint8_t code, intptr_
     }
 }
 
+cupkee_device_t *cupkee_val2device(val_t *v)
+{
+    val_foreign_t *vf;
+
+    if (val_is_foreign(v)) {
+        vf = (val_foreign_t *)val_2_intptr(v);
+        if (vf->op == &device_op) {
+            return cupkee_device_block(vf->data);
+        }
+    }
+    return NULL;
+}
+
 val_t native_device_destroy(env_t *env, int ac, val_t *av)
 {
     cupkee_device_t *dev;
 
     (void) env;
 
-    if (ac && (dev = device_val_block(av)) != NULL) {
+    if (ac && (dev = cupkee_val2device(av)) != NULL) {
         av++; ac--;
     } else {
         return VAL_FALSE;
@@ -417,7 +417,7 @@ val_t native_device_config(env_t *env, int ac, val_t *av)
     val_t *which = NULL;
     val_t *setting;
 
-    if (ac && (dev = device_val_block(av)) != NULL) {
+    if (ac && (dev = cupkee_val2device(av)) != NULL) {
         av++; ac--;
     } else {
         return VAL_UNDEFINED;
@@ -448,7 +448,7 @@ val_t native_device_get(env_t *env, int ac, val_t *av)
     val_t result;
     int offset;
 
-    if (ac && (dev= device_val_block(av))) {
+    if (ac && (dev= cupkee_val2device(av))) {
         av++; ac--;
     } else {
         return VAL_UNDEFINED;
@@ -472,7 +472,7 @@ val_t native_device_set(env_t *env, int ac, val_t *av)
 
     (void) env;
 
-    if (ac && (dev = device_val_block(av)) != NULL) {
+    if (ac && (dev = cupkee_val2device(av)) != NULL) {
         av++; ac--;
     } else {
         return VAL_FALSE;
@@ -512,7 +512,7 @@ val_t native_device_write(env_t *env, int ac, val_t *av)
     void  *ptr;
     val_t *data;
 
-    if (ac && (dev = device_val_block(av)) != NULL) {
+    if (ac && (dev = cupkee_val2device(av)) != NULL) {
         av++; ac--;
     } else {
         return VAL_FALSE;
@@ -577,7 +577,7 @@ val_t native_device_read(env_t *env, int ac, val_t *av)
     int want, err = 0;
     size_t in;
 
-    if (ac && (dev = device_val_block(av)) != NULL) {
+    if (ac && (dev = cupkee_val2device(av)) != NULL) {
         av++; ac--;
     } else {
         return VAL_FALSE;
@@ -627,7 +627,7 @@ val_t native_device_listen(env_t *env, int ac, val_t *av)
 
     (void) env;
 
-    if (ac >= 3 && (dev = device_val_block(av)) != NULL) {
+    if (ac >= 3 && (dev = cupkee_val2device(av)) != NULL) {
         av++; ac--;
     } else {
         return VAL_FALSE;
@@ -653,7 +653,7 @@ val_t native_device_ignore(env_t *env, int ac, val_t *av)
 
     (void) env;
 
-    if (ac >= 2 && (dev = device_val_block(av)) != NULL) {
+    if (ac >= 2 && (dev = cupkee_val2device(av)) != NULL) {
         av++; ac--;
     } else {
         return VAL_UNDEFINED;
@@ -679,7 +679,7 @@ val_t native_device_is_enabled(env_t *env, int ac, val_t *av)
 
     (void) env;
 
-    if (ac == 0 || (dev = device_val_block(av)) == NULL) {
+    if (ac == 0 || (dev = cupkee_val2device(av)) == NULL) {
         return VAL_UNDEFINED;
     } else {
         return cupkee_device_is_enabled(dev) ? VAL_TRUE : VAL_FALSE;
@@ -694,7 +694,7 @@ val_t native_device_enable(env_t *env, int ac, val_t *av)
 
     (void) env;
 
-    if (ac && (dev = device_val_block(av)) != NULL) {
+    if (ac && (dev = cupkee_val2device(av)) != NULL) {
         hnd = av++; ac--;
     } else {
         return VAL_UNDEFINED;
@@ -732,7 +732,7 @@ val_t native_device_disable(env_t *env, int ac, val_t *av)
 
     (void) env;
 
-    if (ac == 0 || (dev = device_val_block(av)) == NULL) {
+    if (ac == 0 || (dev = cupkee_val2device(av)) == NULL) {
         return VAL_UNDEFINED;
     }
     cupkee_device_disable(dev);

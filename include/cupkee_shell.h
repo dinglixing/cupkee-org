@@ -35,6 +35,8 @@ env_t *cupkee_shell_env(void);
 int cupkee_shell_init(cupkee_device_t *tty, int n, const native_t *natives);
 int cupkee_shell_start(const char *initial);
 
+cupkee_device_t *cupkee_val2device(val_t *v);
+
 static inline void cupkee_shell_loop(const char *initial) {
     cupkee_shell_start(initial);
     cupkee_loop();
