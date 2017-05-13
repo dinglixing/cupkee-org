@@ -30,6 +30,7 @@ SOFTWARE.
 void cupkee_buffer_init(void);
 
 void   *cupkee_buffer_alloc(size_t size);
+void   *cupkee_buffer_create(size_t n, const char *data);
 void   cupkee_buffer_release(void *b);
 void   cupkee_buffer_reset(void *b);
 size_t cupkee_buffer_capacity(void *b);
@@ -40,6 +41,8 @@ int    cupkee_buffer_is_full(void *b);
 int    cupkee_buffer_set(void *b, int offset, uint8_t d);
 int    cupkee_buffer_get(void *b, int offset, uint8_t d);
 int    cupkee_buffer_push(void *b, uint8_t d);
+int    cupkee_buffer_pop(void *b, uint8_t *d);
+int    cupkee_buffer_unshift(void *b, uint8_t d);
 int    cupkee_buffer_shift(void *b, uint8_t *d);
 int    cupkee_buffer_take(void *b, size_t n, void *buf);
 int    cupkee_buffer_give(void *b, size_t n, const void *buf);

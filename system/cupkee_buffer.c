@@ -57,6 +57,19 @@ void *cupkee_buffer_alloc(size_t size)
     return buf;
 }
 
+void *cupkee_buffer_create(size_t n, const char *data)
+{
+    cupkee_buffer_t *buf = cupkee_malloc(n + sizeof(cupkee_buffer_t));
+
+    if (buf) {
+        buf->cap = n;
+        buf->len = n;
+        buf->bgn = 0;
+        memcpy(buf->ptr, data, n);
+    }
+    return buf;
+}
+
 void cupkee_buffer_release(void *p)
 {
     cupkee_free(p);
@@ -113,6 +126,22 @@ int cupkee_buffer_push(void *p, uint8_t d)
     }
 }
 
+int cupkee_buffer_pop(void *p, uint8_t *d)
+{
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
+
+    if (b->len) {
+        int tail = b->bgn + (--b->len);
+        if (tail >= b->cap) {
+            tail -= b->cap;
+        }
+        *d = b->ptr[tail];
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 int cupkee_buffer_shift(void *p, uint8_t *d)
 {
     cupkee_buffer_t *b = (cupkee_buffer_t *)p;
@@ -126,6 +155,25 @@ int cupkee_buffer_shift(void *p, uint8_t *d)
         return 1;
     }
     return 0;
+}
+
+int cupkee_buffer_unshift(void *p, uint8_t d)
+{
+    cupkee_buffer_t *b = (cupkee_buffer_t *)p;
+
+    if (b->len < b->cap) {
+        b->len++;
+        if (b->bgn) {
+            b->bgn--;
+        } else {
+            b->bgn = b->cap - 1;
+        }
+        b->ptr[b->bgn] = d;
+
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 int cupkee_buffer_take(void *p, size_t n, void *buf)

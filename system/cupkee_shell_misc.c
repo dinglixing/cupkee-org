@@ -179,7 +179,7 @@ void shell_reference_init(env_t *env)
     env_reference_set(env, reference_vals, VARIABLE_REF_MAX);
 }
 
-val_t *shell_reference_create(val_t *v)
+val_t *cupkee_shell_reference_create(val_t *v)
 {
     int i;
 
@@ -194,7 +194,7 @@ val_t *shell_reference_create(val_t *v)
     return NULL;
 }
 
-void shell_reference_release(val_t *ref)
+void cupkee_shell_reference_release(val_t *ref)
 {
     if (ref) {
         int pos = ref - reference_vals;
