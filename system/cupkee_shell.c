@@ -249,7 +249,7 @@ int cupkee_shell_start(const char *initial)
     (void) initial;
 
     if (app) {
-        err = interp_execute_string(&shell_env, app, &res);
+        err = interp_execute_stmts(&shell_env, app, &res);
         console_log_sync("run app: %s\r\n", err < 0 ? "fail" : "ok");
     }
 
