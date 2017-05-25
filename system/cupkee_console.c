@@ -475,8 +475,22 @@ int console_putc_sync(int c)
 int console_puts_sync(const char *s)
 {
     int len = strlen(s);
+    int pos = 0;
 
-    return cupkee_device_write_sync(console_dev, len, s);
+    while (pos < len) {
+        char ch = s[pos++];
+
+        if (ch == '\n') {
+            if (pos < 2 || s[pos - 2] != '\r') {
+                char cr = '\r';
+                cupkee_device_write_sync(console_dev, 1, &cr);
+            }
+        }
+
+        cupkee_device_write_sync(console_dev, 1, &ch);
+    }
+
+    return pos;
 }
 
 int console_log_sync(const char *fmt, ...)
