@@ -1,7 +1,7 @@
 /*
 MIT License
 
-This file is part of cupkee project.
+This file is part of cupkee project
 
 Copyright (c) 2016 Lixing Ding <ding.lixing@gmail.com>
 
@@ -24,20 +24,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __TEST_INC__
-#define __TEST_INC__
+#include <stdio.h>
+#include <string.h>
 
-#include "CUnit.h"
-#include "CUnit_Basic.h"
+#include "test.h"
 
-#include <hardware.h>
-#include <cupkee.h>
+static int test_setup(void)
+{
+    return 0;
+}
 
-CU_pSuite test_hello(void);
-CU_pSuite test_sys_event(void);
-CU_pSuite test_sys_memory(void);
-CU_pSuite test_sys_timer(void);
-CU_pSuite test_sys_stream(void);
+static int test_clean(void)
+{
+    return 0;
+}
 
-#endif /* __TEST_INC__ */
+static void test_template(void)
+{
+    // add test code here
+    //CU_ASSERT(1);
+}
+
+CU_pSuite test_sys_stream(void)
+{
+    CU_pSuite suite = CU_add_suite("system stream", test_setup, test_clean);
+
+    if (suite) {
+        CU_add_test(suite, "template", test_template);
+    }
+
+    return suite;
+}
+
 

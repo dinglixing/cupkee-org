@@ -54,7 +54,7 @@ typedef void (*cupkee_event_emitter_handle_t)(cupkee_event_emitter_t *emitter, u
 struct cupkee_event_emitter_t {
     cupkee_event_emitter_t *next;
     cupkee_event_emitter_handle_t handle;
-    uint16_t id;
+    uint32_t id;
 };
 
 void cupkee_event_setup(void);
