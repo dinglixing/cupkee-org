@@ -46,6 +46,16 @@ static int test_clean(void)
 
 static int v1[2], v2[2], v3[2], v4[2];
 
+static void dump_v(void)
+{
+    printf("===========================\n");
+    printf("[1] %u, %u\n", v1[0], v1[1]);
+    printf("[2] %u, %u\n", v2[0], v2[1]);
+    printf("[3] %u, %u\n", v3[0], v3[1]);
+    printf("[4] %u, %u\n", v4[0], v4[1]);
+    printf("===========================\n");
+}
+
 static void test_handle(int drop, void *param)
 {
     int *pv = (int *) param;
@@ -109,6 +119,67 @@ static void test_wakeup(void)
     CU_ASSERT(v2[1] == 1);
 }
 
+static void test_running(void)
+{
+    cupkee_timer_t *t1, *t2, *t3;
+
+    cupkee_timer_init();
+    _cupkee_systicks = 0;
+
+    v1[0] = 0; v1[1] = 0;
+    v2[0] = 0; v2[1] = 0;
+    v3[0] = 0; v3[1] = 0;
+
+    CU_ASSERT_FATAL((t1 = cupkee_timer_register(10, 1, test_handle, &v1)) != NULL);
+
+    while (_cupkee_systicks < 1000) {
+        cupkee_timer_sync(++_cupkee_systicks);
+    }
+    CU_ASSERT(v1[0] == 100 && v1[1] == 0);
+    CU_ASSERT(v2[0] == 0 && v2[1] == 0);
+    CU_ASSERT(v3[0] == 0 && v3[1] == 0);
+
+    CU_ASSERT_FATAL((t2 = cupkee_timer_register(20, 1, test_handle, &v2)) != NULL);
+    while (_cupkee_systicks < 2000) {
+        cupkee_timer_sync(++_cupkee_systicks);
+    }
+    CU_ASSERT(v1[0] == 200 && v1[1] == 0);
+    CU_ASSERT(v2[0] == 50 && v2[1] == 0);
+    CU_ASSERT(v3[0] == 0 && v3[1] == 0);
+
+    CU_ASSERT_FATAL((t3 = cupkee_timer_register(50, 1, test_handle, &v3)) != NULL);
+    while (_cupkee_systicks < 3000) {
+        cupkee_timer_sync(++_cupkee_systicks);
+    }
+    CU_ASSERT(v1[0] == 300 && v1[1] == 0);
+    CU_ASSERT(v2[0] == 100 && v2[1] == 0);
+    CU_ASSERT(v3[0] == 20 && v3[1] == 0);
+
+    cupkee_timer_unregister(t2);
+    while (_cupkee_systicks < 4000) {
+        cupkee_timer_sync(++_cupkee_systicks);
+    }
+    CU_ASSERT(v1[0] == 400 && v1[1] == 0);
+    CU_ASSERT(v2[0] == 100 && v2[1] == 1);
+    CU_ASSERT(v3[0] == 40 && v3[1] == 0);
+
+    cupkee_timer_unregister(t1);
+    while (_cupkee_systicks < 5000) {
+        cupkee_timer_sync(++_cupkee_systicks);
+    }
+    CU_ASSERT(v1[0] == 400 && v1[1] == 1);
+    CU_ASSERT(v2[0] == 100 && v2[1] == 1);
+    CU_ASSERT(v3[0] == 60 && v3[1] == 0);
+
+    cupkee_timer_unregister(t3);
+    while (_cupkee_systicks < 6000) {
+        cupkee_timer_sync(++_cupkee_systicks);
+    }
+    CU_ASSERT(v1[0] == 400 && v1[1] == 1);
+    CU_ASSERT(v2[0] == 100 && v2[1] == 1);
+    CU_ASSERT(v3[0] == 60 && v3[1] == 1);
+}
+
 static void test_self_clear(void)
 {
     cupkee_timer_t *t1, *t2, *t3, *t4;
@@ -156,8 +227,6 @@ static void test_self_clear(void)
     CU_ASSERT(v2[0] == 2 && v2[1] == 2);
     CU_ASSERT(v3[0] == 2 && v3[1] == 2);
     CU_ASSERT(v4[0] == 2 && v4[1] == 2);
-
-
 }
 
 static void test_timer_clear(void)
@@ -235,6 +304,7 @@ CU_pSuite test_sys_timer(void)
 
     if (suite) {
         CU_add_test(suite, "timer wakeup",    test_wakeup);
+        CU_add_test(suite, "timer running",   test_running);
         CU_add_test(suite, "timer clear1",    test_self_clear);
         CU_add_test(suite, "timer clear2",    test_timer_clear);
     }
