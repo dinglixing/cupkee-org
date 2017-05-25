@@ -451,7 +451,7 @@ int console_puts(const char *s)
 
 int console_log(const char *fmt, ...)
 {
-    char buf[128];
+    char buf[129];
     int  n;
 
     va_list va;
@@ -460,9 +460,12 @@ int console_log(const char *fmt, ...)
     n = vsnprintf(buf, 128, fmt, va);
 
     va_end(va);
-    buf[n] = 0;
-
-    return console_puts(buf);
+    if (n >= 0) {
+        buf[n] = 0;
+        return console_puts(buf);
+    } else {
+        return 0;
+    }
 }
 
 int console_putc_sync(int c)
