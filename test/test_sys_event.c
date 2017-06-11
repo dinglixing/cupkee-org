@@ -154,6 +154,14 @@ static void test_emitter_emit(void)
     CU_ASSERT(cupkee_event_emitter_deinit(&emitter1) == CUPKEE_OK);
     CU_ASSERT(cupkee_event_emitter_deinit(&emitter2) == CUPKEE_OK);
 
+    /* Do nothing when emitter had deinited */
+    cupkee_event_emitter_emit(&emitter1, 5);
+    cupkee_event_emitter_emit(&emitter2, 5);
+    dispatch();
+    dispatch();
+    CU_ASSERT(emitter1_storage == 3);
+    CU_ASSERT(emitter2_storage == 7);
+
     cupkee_event_reset();
 }
 
