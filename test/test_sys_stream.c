@@ -29,6 +29,8 @@ SOFTWARE.
 
 #include "test.h"
 
+static int     implement_consume_cnt;
+static uint8_t implement_send_trigger_cnt;
 static uint8_t implement_load_trigger_cnt;
 static uint8_t implement_data;
 
@@ -39,6 +41,7 @@ static int test_setup(void)
     };
 
     cupkee_memory_init(2, descs);
+    cupkee_event_setup();
 
     return 0;
 }
@@ -46,6 +49,19 @@ static int test_setup(void)
 static int test_clean(void)
 {
     return 0;
+}
+
+static int read_implement_load(cupkee_stream_t *s)
+{
+    int count = 0;
+    while (implement_load_trigger_cnt) {
+        if (1 != cupkee_stream_push(s, 1, &implement_data)) {
+            implement_load_trigger_cnt = 0;
+            break;
+        }
+        count++;
+    }
+    return count;
 }
 
 static void read_implement_idle(cupkee_stream_t *s, size_t n)
@@ -69,17 +85,59 @@ static void read_implement_trigger(cupkee_stream_t *s, size_t n)
     implement_load_trigger_cnt++;
 }
 
-static int read_implement_load(cupkee_stream_t *s)
+static void rw_implement_loop(cupkee_stream_t *s)
+{
+    uint8_t data;
+
+    if (implement_load_trigger_cnt) {
+        int space = cupkee_stream_rx_cache_space(s);
+
+        while (space && 1 == cupkee_stream_pull(s, 1, &data)) {
+            cupkee_stream_push(s, 1, &data);
+            space--;
+        }
+
+        if (space == 0) {
+            implement_load_trigger_cnt = 0;
+        }
+    }
+}
+
+static void read_implement_loop(cupkee_stream_t *s, size_t n)
+{
+    (void) n;
+
+    implement_load_trigger_cnt++;
+
+    rw_implement_loop(s);
+}
+
+static int write_implement_consume(cupkee_stream_t *s, int n)
 {
     int count = 0;
-    while (implement_load_trigger_cnt) {
-        if (1 != cupkee_stream_push(s, 1, &implement_data)) {
-            implement_load_trigger_cnt = 0;
-            break;
-        }
+    uint8_t data;
+
+    while (count < n && 1 == cupkee_stream_pull(s, 1, &data)) {
+        implement_consume_cnt++;
         count++;
     }
     return count;
+}
+
+static void write_implement_immediately(cupkee_stream_t *s)
+{
+    write_implement_consume(s, 9999);
+}
+
+static void write_implement_trigger(cupkee_stream_t *s)
+{
+    (void) s;
+    implement_send_trigger_cnt++;
+}
+
+static void write_implement_loop(cupkee_stream_t *s)
+{
+    rw_implement_loop(s);
 }
 
 static void test_readable_init(void)
@@ -97,6 +155,40 @@ static void test_readable_init(void)
 
     // init with emitter
     CU_ASSERT(0 == cupkee_stream_init_readable(&stream, &emitter, 32, read_implement_idle));
+}
+
+static void test_writable_init(void)
+{
+    cupkee_event_emitter_t emitter;
+    cupkee_stream_t stream;
+
+    CU_ASSERT(0 <= cupkee_event_emitter_init(&emitter, NULL));
+
+    CU_ASSERT(0 != cupkee_stream_init_writable(NULL, &emitter, 32, write_implement_immediately));
+    CU_ASSERT(0 != cupkee_stream_init_writable(&stream, &emitter, 32, NULL));
+
+    // init without emitter
+    CU_ASSERT(0 == cupkee_stream_init_writable(&stream, NULL, 32, write_implement_immediately));
+
+    // init with emitter
+    CU_ASSERT(0 == cupkee_stream_init_writable(&stream, &emitter, 32, write_implement_immediately));
+}
+
+static void test_duplex_init(void)
+{
+    cupkee_event_emitter_t emitter;
+    cupkee_stream_t stream;
+
+    CU_ASSERT(0 <= cupkee_event_emitter_init(&emitter, NULL));
+
+    CU_ASSERT(0 != cupkee_stream_init_writable(NULL, &emitter, 32, write_implement_immediately));
+    CU_ASSERT(0 != cupkee_stream_init_writable(&stream, &emitter, 32, NULL));
+
+    // init without emitter
+    CU_ASSERT(0 == cupkee_stream_init_writable(&stream, NULL, 32, write_implement_immediately));
+
+    // init with emitter
+    CU_ASSERT(0 == cupkee_stream_init_writable(&stream, &emitter, 32, write_implement_immediately));
 }
 
 static void test_read_nopush(void)
@@ -181,12 +273,98 @@ static void test_read_trigger(void)
     CU_ASSERT(20 == read_implement_load(&stream));
     CU_ASSERT(0 == implement_load_trigger_cnt);
 
-
     // Cached equal want
-    // Should trigger load ?
     CU_ASSERT(32 == cupkee_stream_read(&stream, 32, buf));
 
     CU_ASSERT(32 == read_implement_load(&stream));
+}
+
+static void test_write_immediately(void)
+{
+    cupkee_stream_t stream;
+
+    implement_consume_cnt = 0;
+    CU_ASSERT(0 == cupkee_stream_init_writable(&stream, NULL, 32, write_implement_immediately));
+
+    CU_ASSERT(1 == cupkee_stream_write(&stream, 1, "test code"));
+    CU_ASSERT(1 == implement_consume_cnt);
+    CU_ASSERT(2 == cupkee_stream_write(&stream, 2, "test code"));
+    CU_ASSERT(3 == implement_consume_cnt);
+    CU_ASSERT(9 == cupkee_stream_write(&stream, 9, "test code"));
+    CU_ASSERT(12 == implement_consume_cnt);
+}
+
+static void test_write_trigger(void)
+{
+    cupkee_stream_t stream;
+
+    implement_consume_cnt = 0;
+    implement_send_trigger_cnt = 0;
+
+    CU_ASSERT(0 == cupkee_stream_init_writable(&stream, NULL, 16, write_implement_trigger));
+    CU_ASSERT(16 == cupkee_stream_writable(&stream));
+
+    // trigger send, when first write to writable
+    CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(1 == implement_send_trigger_cnt);
+
+    CU_ASSERT(6 == cupkee_stream_writable(&stream));
+    CU_ASSERT(6 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(0 == cupkee_stream_writable(&stream));
+
+    CU_ASSERT(2 == write_implement_consume(&stream, 2));
+    CU_ASSERT(2 == cupkee_stream_writable(&stream));
+
+    // send would not be trigger, when write data to tx_buf not empty
+    CU_ASSERT(2 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(1 == implement_send_trigger_cnt);
+
+    // clear tx_buff
+    CU_ASSERT(16 == write_implement_consume(&stream, 20));
+
+    // trigger send, when write data to tx_buf empty
+    CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(10 == write_implement_consume(&stream, 20));
+    CU_ASSERT(2 == implement_send_trigger_cnt);
+
+    CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(10 == write_implement_consume(&stream, 20));
+    CU_ASSERT(3 == implement_send_trigger_cnt);
+}
+
+static void test_rw_loop(void)
+{
+    cupkee_stream_t stream;
+    char buf[16];
+
+    implement_load_trigger_cnt = 0;
+    CU_ASSERT(0 == cupkee_stream_init_duplex(&stream, NULL, 16, 16, read_implement_loop, write_implement_loop));
+    CU_ASSERT(16 == cupkee_stream_writable(&stream));
+
+    CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(10 == cupkee_stream_read(&stream, 10, buf));
+    CU_ASSERT(1 == implement_load_trigger_cnt);
+    CU_ASSERT(0 == memcmp(buf, "0123456789", 10));
+
+    CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(16 == cupkee_stream_writable(&stream));
+    CU_ASSERT(1 == implement_load_trigger_cnt);
+    CU_ASSERT(10 == cupkee_stream_readable(&stream));
+
+    CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(0 == implement_load_trigger_cnt);
+
+    CU_ASSERT(16 == cupkee_stream_readable(&stream));
+
+    CU_ASSERT(12 == cupkee_stream_writable(&stream));
+    CU_ASSERT(12 == cupkee_stream_write(&stream, 16, "0123456789012345"));
+    CU_ASSERT(0 == implement_load_trigger_cnt);
+
+    CU_ASSERT(16 == cupkee_stream_readable(&stream));
+    CU_ASSERT( 0 == cupkee_stream_writable(&stream));
+
+    CU_ASSERT(16 == cupkee_stream_read(&stream, 16, buf));
+    CU_ASSERT(16 == cupkee_stream_read(&stream, 16, buf));
 }
 
 CU_pSuite test_sys_stream(void)
@@ -194,10 +372,18 @@ CU_pSuite test_sys_stream(void)
     CU_pSuite suite = CU_add_suite("system stream", test_setup, test_clean);
 
     if (suite) {
-        CU_add_test(suite, "readable init",     test_readable_init);
-        CU_add_test(suite, "read no push",      test_read_nopush);
-        CU_add_test(suite, "read immediately",  test_read_immediately);
-        CU_add_test(suite, "read trigger",      test_read_trigger);
+        CU_add_test(suite, "readable init    ", test_readable_init);
+        CU_add_test(suite, "writable init    ", test_writable_init);
+        CU_add_test(suite, "duplex init      ", test_duplex_init);
+
+        CU_add_test(suite, "read no push     ", test_read_nopush);
+        CU_add_test(suite, "read immediately ", test_read_immediately);
+        CU_add_test(suite, "read trigger     ", test_read_trigger);
+
+        CU_add_test(suite, "write immediately", test_write_immediately);
+        CU_add_test(suite, "write trigger    ", test_write_trigger);
+
+        CU_add_test(suite, "r&w loop         ", test_rw_loop);
     }
 
     return suite;

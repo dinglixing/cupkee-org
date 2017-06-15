@@ -59,50 +59,63 @@ typedef struct cupkee_stream_t cupkee_stream_t;
 struct cupkee_stream_t {
     cupkee_event_emitter_t *emitter;
 
+    void *ex_data;
+
     uint8_t flags;
-    uint8_t event_offset;
     uint8_t rx_state;
+    uint8_t event_offset;
+    uint8_t error_code;
 
     uint16_t rx_size_max;
     uint16_t tx_size_max;
-
-    int error;
 
     void *rx_buf;
     void *tx_buf;
 
     void (*_read) (cupkee_stream_t *s, size_t n);
-    void (*_write)(cupkee_stream_t *s, void *buf);
+    void (*_write)(cupkee_stream_t *s);
 };
 
+int cupkee_stream_rx_cache_space(cupkee_stream_t *s);
+int cupkee_stream_tx_cache_space(cupkee_stream_t *s);
 int cupkee_stream_readable(cupkee_stream_t *s);
+int cupkee_stream_writable(cupkee_stream_t *s);
+
 int cupkee_stream_push(cupkee_stream_t *s, size_t n, const void *data);
+int cupkee_stream_pull(cupkee_stream_t *s, size_t n, void *data);
 
 int cupkee_stream_init_readable(
    cupkee_stream_t *stream,
    cupkee_event_emitter_t *emitter,
-   size_t buf_size,
+   size_t buf_max_size,
    void (*_read)(cupkee_stream_t *s, size_t n)
 );
 
 int cupkee_stream_init_writable(
    cupkee_stream_t *stream,
    cupkee_event_emitter_t *emitter,
-   void (*_write)(cupkee_stream_t *s, void *buf)
+   size_t buf_max_size,
+   void (*_write)(cupkee_stream_t *s)
 );
 
 int cupkee_stream_init_duplex(
    cupkee_stream_t *stream,
    cupkee_event_emitter_t *emitter,
+   size_t rx_buf_max_size,
+   size_t tx_buf_max_size,
    void (*_read)(cupkee_stream_t *s, size_t n),
-   void (*_write)(cupkee_stream_t *s, void *buf)
+   void (*_write)(cupkee_stream_t *s)
 );
 
 int cupkee_stream_read(cupkee_stream_t *s, size_t n, void *buf);
+int cupkee_stream_write(cupkee_stream_t *s, size_t n, const void *data);
+
+int cupkee_stream_shift(cupkee_stream_t *s, uint8_t *data);
+int cupkee_stream_unshift(cupkee_stream_t *s, uint8_t data);
+
 void *cupkee_stream_read_buf(cupkee_stream_t *s, size_t n);
 
 int cupkee_stream_write_buf(cupkee_stream_t *s, size_t n, const uint8_t *data);
-int cupkee_stream_write(cupkee_stream_t *s, size_t n, const uint8_t *data);
 
 int cupkee_stream_error(cupkee_stream_t *s, int err);
 int cupkee_stream_pipe(cupkee_stream_t *s, cupkee_stream_t *reader);
