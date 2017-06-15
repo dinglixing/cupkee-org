@@ -182,6 +182,25 @@ int cupkee_stream_tx_cache_space(cupkee_stream_t *s)
     return -CUPKEE_EINVAL;
 }
 
+void cupkee_stream_set_error(cupkee_stream_t *s, uint8_t code)
+{
+    if (s) {
+        s->error_code = code;
+        if (code) {
+            stream_event_emit(s, CUPKEE_EVENT_STREAM_ERROR);
+        }
+    }
+}
+
+int cupkee_stream_get_error(cupkee_stream_t *s)
+{
+    if (s) {
+        return -s->error_code;
+    } else {
+        return -CUPKEE_EINVAL;
+    }
+}
+
 int cupkee_stream_push(cupkee_stream_t *s, size_t n, const void *data)
 {
     int cnt = 0;

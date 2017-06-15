@@ -33,6 +33,7 @@ static int     implement_consume_cnt;
 static uint8_t implement_send_trigger_cnt;
 static uint8_t implement_load_trigger_cnt;
 static uint8_t implement_data;
+static uint8_t implement_event = 0xff;
 
 static int test_setup(void)
 {
@@ -49,6 +50,24 @@ static int test_setup(void)
 static int test_clean(void)
 {
     return 0;
+}
+
+static void event_dispatch(void)
+{
+    cupkee_event_t e;
+    if (cupkee_event_take(&e) && e.type == EVENT_EMITTER) {
+        cupkee_event_emitter_dispatch(e.which, e.code);
+    }
+}
+
+static int event_match(uint8_t code)
+{
+    if (implement_event == code) {
+        implement_event = 0xFF;
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 static int read_implement_load(cupkee_stream_t *s)
@@ -138,6 +157,11 @@ static void write_implement_trigger(cupkee_stream_t *s)
 static void write_implement_loop(cupkee_stream_t *s)
 {
     rw_implement_loop(s);
+}
+
+static void event_handle(cupkee_event_emitter_t *emitter, uint8_t code)
+{
+    implement_event = code;
 }
 
 static void test_readable_init(void)
@@ -367,23 +391,39 @@ static void test_rw_loop(void)
     CU_ASSERT(16 == cupkee_stream_read(&stream, 16, buf));
 }
 
+static void test_event_error(void)
+{
+    cupkee_stream_t stream;
+    cupkee_event_emitter_t emitter;
+
+    CU_ASSERT(0 <= cupkee_event_emitter_init(&emitter, event_handle));
+    CU_ASSERT(0 == cupkee_stream_init_duplex(&stream, &emitter, 16, 16, read_implement_loop, write_implement_loop));
+
+    cupkee_stream_set_error(&stream, 1);
+
+    event_dispatch();
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_ERROR));
+    CU_ASSERT(-1 == cupkee_stream_get_error(&stream));
+}
+
 CU_pSuite test_sys_stream(void)
 {
     CU_pSuite suite = CU_add_suite("system stream", test_setup, test_clean);
 
     if (suite) {
         CU_add_test(suite, "readable init    ", test_readable_init);
-        CU_add_test(suite, "writable init    ", test_writable_init);
-        CU_add_test(suite, "duplex init      ", test_duplex_init);
-
         CU_add_test(suite, "read no push     ", test_read_nopush);
         CU_add_test(suite, "read immediately ", test_read_immediately);
         CU_add_test(suite, "read trigger     ", test_read_trigger);
 
+        CU_add_test(suite, "writable init    ", test_writable_init);
         CU_add_test(suite, "write immediately", test_write_immediately);
         CU_add_test(suite, "write trigger    ", test_write_trigger);
 
+        CU_add_test(suite, "duplex init      ", test_duplex_init);
         CU_add_test(suite, "r&w loop         ", test_rw_loop);
+
+        CU_add_test(suite, "event error      ", test_event_error);
     }
 
     return suite;

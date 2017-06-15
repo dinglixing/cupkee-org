@@ -96,6 +96,7 @@ static void emitter2_event_handle(cupkee_event_emitter_t *emitter, uint8_t e)
     (void) emitter;
     emitter2_storage = e;
 }
+
 static void dispatch(void)
 {
     cupkee_event_t e;

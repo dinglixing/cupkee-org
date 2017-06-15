@@ -117,7 +117,9 @@ void *cupkee_stream_read_buf(cupkee_stream_t *s, size_t n);
 
 int cupkee_stream_write_buf(cupkee_stream_t *s, size_t n, const uint8_t *data);
 
-int cupkee_stream_error(cupkee_stream_t *s, int err);
+void cupkee_stream_set_error(cupkee_stream_t *s, uint8_t err);
+int cupkee_stream_get_error(cupkee_stream_t *s);
+
 int cupkee_stream_pipe(cupkee_stream_t *s, cupkee_stream_t *reader);
 int cupkee_stream_unpipe(cupkee_stream_t *s);
 
