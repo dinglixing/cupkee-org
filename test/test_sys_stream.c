@@ -230,8 +230,7 @@ static void test_read_immediately(void)
 
     CU_ASSERT(0 == cupkee_stream_init_readable(&stream, NULL, 30, read_implement_immediately));
 
-    // 0 should be return, if want more then rx_size_max
-    CU_ASSERT(0 == cupkee_stream_read(&stream, 100, buf));
+    CU_ASSERT(30 == cupkee_stream_read(&stream, 100, buf));
 
     memset(buf, 0, 30);
 
@@ -272,7 +271,7 @@ static void test_read_trigger(void)
     memset(buf, 0, 32);
     CU_ASSERT(10 == cupkee_stream_read(&stream, 10, buf));
     CU_ASSERT(buf[0] == 1 && buf[9] == 1);
-    // load should be trigger, since full cache be read
+    // load should be trigger, since the reading on full cache
     CU_ASSERT(1 == implement_load_trigger_cnt);
 
     memset(buf, 0, 32);
@@ -281,15 +280,15 @@ static void test_read_trigger(void)
     // load should not be trigger
     CU_ASSERT(1 == implement_load_trigger_cnt);
 
-    // Cached less than want, should return nothing
+    // Cached less than want, should return all cached
     memset(buf, 0, 32);
-    CU_ASSERT(0 == cupkee_stream_read(&stream, 13, buf));
-    CU_ASSERT(buf[0] == 0 && buf[9] == 0);
+    CU_ASSERT(12 == cupkee_stream_read(&stream, 13, buf));
+    CU_ASSERT(buf[0] == 1 && buf[11] == 1);
 
     // load should not be trigger
     CU_ASSERT(1 == implement_load_trigger_cnt);
 
-    CU_ASSERT(20 == read_implement_load(&stream));
+    CU_ASSERT(32 == read_implement_load(&stream));
     CU_ASSERT(0 == implement_load_trigger_cnt);
 
     // Cached equal want
@@ -405,14 +404,36 @@ static void test_event_data(void)
 {
     cupkee_stream_t stream;
     cupkee_event_emitter_t emitter;
+    uint8_t buf[30];
 
     implement_load_trigger_cnt = 0;
 
     CU_ASSERT(0 <= cupkee_event_emitter_init(&emitter, event_handle));
-    CU_ASSERT(0 == cupkee_stream_init_readable(&stream, &emitter, 16, read_implement_trigger));
+    CU_ASSERT(0 == cupkee_stream_init_readable(&stream, &emitter, 30, read_implement_trigger));
     CU_ASSERT(0 == cupkee_stream_readable(&stream));
 
+    cupkee_stream_resume(&stream);
 
+    read_implement_load(&stream);
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DATA));
+    // event post once
+    CU_ASSERT(0 == TU_emitter_event_dispatch());
+
+    // event should not post, rx_buf not be read clean
+    CU_ASSERT(10 == cupkee_stream_read(&stream, 10, buf));
+    CU_ASSERT(20 == cupkee_stream_readable(&stream));
+    read_implement_load(&stream);
+    CU_ASSERT(30 == cupkee_stream_readable(&stream));
+    CU_ASSERT(0 == TU_emitter_event_dispatch());
+
+    // event should post, rx_buf be read clean
+    CU_ASSERT(30 == cupkee_stream_read(&stream, 30, buf));
+    CU_ASSERT(0 == cupkee_stream_readable(&stream));
+    read_implement_load(&stream);
+    CU_ASSERT(30 == cupkee_stream_readable(&stream));
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DATA));
 }
 
 static void test_event_drain(void)

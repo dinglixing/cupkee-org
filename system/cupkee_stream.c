@@ -205,16 +205,21 @@ int cupkee_stream_push(cupkee_stream_t *s, size_t n, const void *data)
 {
     int cnt = 0;
 
-    if (s && s->rx_buf && n && data) {
-        cnt = cupkee_buffer_give(s->rx_buf, n, data);
-        if (s->rx_state == CUPKEE_STREAM_STATE_FLOWING && !(s->flags & CUPKEE_STREAM_FL_RX_UPDATE)) {
-            s->flags |= CUPKEE_STREAM_FL_RX_UPDATE;
-            stream_event_emit(s, CUPKEE_EVENT_STREAM_DATA);
-        }
+    if (!s || !n || !data) {
+        return 0;
+    }
 
-        if (cupkee_buffer_is_full(s->rx_buf)) {
-            s->flags |= CUPKEE_STREAM_FL_RX_FULL;
-        }
+    if (!s->rx_buf && (NULL == (s->rx_buf = cupkee_buffer_alloc(s->rx_size_max)))) {
+        return -CUPKEE_ENOMEM;
+    }
+
+    if (s->rx_state == CUPKEE_STREAM_STATE_FLOWING && cupkee_buffer_is_empty(s->rx_buf)) {
+        stream_event_emit(s, CUPKEE_EVENT_STREAM_DATA);
+    }
+
+    cnt = cupkee_buffer_give(s->rx_buf, n, data);
+    if (cupkee_buffer_is_full(s->rx_buf)) {
+        s->flags |= CUPKEE_STREAM_FL_RX_FULL;
     }
 
     return cnt;
@@ -248,44 +253,53 @@ int cupkee_stream_unshift(cupkee_stream_t *s, uint8_t data)
     }
 }
 
+void cupkee_stream_pause(cupkee_stream_t *s)
+{
+    if (stream_is_readable(s)) {
+        s->rx_state = CUPKEE_STREAM_STATE_PAUSED;
+    }
+}
+
+void cupkee_stream_resume(cupkee_stream_t *s)
+{
+    if (stream_is_readable(s) && s->rx_state != CUPKEE_STREAM_STATE_FLOWING) {
+        s->rx_state = CUPKEE_STREAM_STATE_FLOWING;
+        if (s->rx_buf) {
+            stream_rx_request(s, cupkee_buffer_space(s->rx_buf));
+        } else {
+            stream_rx_request(s, s->rx_size_max);
+        }
+    }
+}
+
 int cupkee_stream_read(cupkee_stream_t *s, size_t n, void *buf)
 {
-    size_t cached;
+    int cnt;
 
     if (!stream_is_readable(s) || !buf) {
         return -CUPKEE_EINVAL;
     }
 
     if (s->rx_state == CUPKEE_STREAM_STATE_IDLE) {
-        if (0 != cupkee_stream_rx_buf_create(s)) {
-            return -CUPKEE_ENOMEM;
-        }
-
         s->rx_state = CUPKEE_STREAM_STATE_PAUSED;
-        stream_rx_request(s, s->rx_size_max);
-    } else
+        stream_rx_request(s, n);
+    }
+
     if (!s->rx_buf) {
-        return -CUPKEE_ENOMEM;
-    }
-
-    if (s->rx_size_max < n) {
         return 0;
     }
 
-    cached = cupkee_buffer_length(s->rx_buf);
-    if (n > cached) {
+    if (cupkee_buffer_is_empty(s->rx_buf)) {
+        stream_rx_request(s, n);
         return 0;
     }
 
-    cupkee_buffer_take(s->rx_buf, n, buf);
-
-    if (s->flags & CUPKEE_STREAM_FL_RX_FULL) {
+    cnt = cupkee_buffer_take(s->rx_buf, n, buf);
+    if (cnt >0 && s->flags & CUPKEE_STREAM_FL_RX_FULL) {
         s->flags &= ~CUPKEE_STREAM_FL_RX_FULL;
-        stream_rx_request(s, s->rx_size_max - cached + n);
-    } else {
-        s->flags &= ~(CUPKEE_STREAM_FL_RX_FULL | CUPKEE_STREAM_FL_RX_UPDATE);
+        stream_rx_request(s, cupkee_buffer_space(s->rx_buf));
     }
-    return n;
+    return cnt;
 }
 
 int cupkee_stream_write(cupkee_stream_t *s, size_t n, const void *data)
