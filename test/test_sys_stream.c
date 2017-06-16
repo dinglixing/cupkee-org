@@ -38,7 +38,7 @@ static uint8_t implement_event = 0xff;
 static int test_setup(void)
 {
     cupkee_memory_desc_t descs[2] = {
-        {64, 4}, {256, 4}
+        {64, 8}, {256, 4}
     };
 
     TU_pre_init();
@@ -208,16 +208,6 @@ static void test_duplex_init(void)
 
     // init with emitter
     CU_ASSERT(0 == cupkee_stream_init_writable(&stream, &emitter, 32, write_implement_immediately));
-}
-
-static void test_read_nopush(void)
-{
-    cupkee_stream_t stream;
-    uint8_t buf[32];
-
-    CU_ASSERT(0 == cupkee_stream_init_readable(&stream, NULL, 32, read_implement_idle));
-
-    CU_ASSERT(0 == cupkee_stream_read(&stream, 10, buf));
 }
 
 static void test_read_immediately(void)
@@ -481,13 +471,84 @@ static void test_event_drain(void)
     CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DRAIN));
 }
 
+static void test_shutdown_writable(void)
+{
+    cupkee_stream_t stream;
+    cupkee_event_emitter_t emitter;
+
+    implement_consume_cnt = 0;
+    implement_send_trigger_cnt = 0;
+
+    CU_ASSERT(0 <= cupkee_event_emitter_init(&emitter, event_handle));
+
+    CU_ASSERT(0 == cupkee_stream_init_writable(&stream, &emitter, 16, write_implement_trigger));
+    cupkee_stream_shutdown(&stream, CUPKEE_STREAM_FL_WRITABLE);
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_FINISH));
+    CU_ASSERT(0 == cupkee_stream_writable(&stream));
+
+    CU_ASSERT(0 == cupkee_stream_init_writable(&stream, &emitter, 16, write_implement_trigger));
+    CU_ASSERT(16 == cupkee_stream_writable(&stream));
+
+    CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(1  == write_implement_consume(&stream, 1));
+
+    cupkee_stream_shutdown(&stream, CUPKEE_STREAM_FL_WRITABLE);
+    CU_ASSERT(0 == cupkee_stream_writable(&stream));
+    CU_ASSERT(0 == TU_emitter_event_dispatch());
+
+    CU_ASSERT(0 == cupkee_stream_write(&stream, 10, "0123456789"));
+
+    CU_ASSERT(9 == write_implement_consume(&stream, 10));
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_FINISH));
+    CU_ASSERT(0 == TU_emitter_event_dispatch());
+}
+
+static void test_shutdown_readable(void)
+{
+    cupkee_stream_t stream;
+    cupkee_event_emitter_t emitter;
+    uint8_t buf[30];
+
+    CU_ASSERT(0 <= cupkee_event_emitter_init(&emitter, event_handle));
+
+    CU_ASSERT(0 == cupkee_stream_init_readable(&stream, &emitter, 30, read_implement_trigger));
+    cupkee_stream_shutdown(&stream, CUPKEE_STREAM_FL_READABLE);
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_END));
+
+    CU_ASSERT(0 == cupkee_stream_init_readable(&stream, &emitter, 30, read_implement_trigger));
+
+    cupkee_stream_resume(&stream);
+    read_implement_load(&stream);
+
+    CU_ASSERT(30 == cupkee_stream_readable(&stream));
+    CU_ASSERT(10 == cupkee_stream_read(&stream, 10, buf));
+    CU_ASSERT(20 == cupkee_stream_readable(&stream));
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DATA));
+
+    cupkee_stream_shutdown(&stream, CUPKEE_STREAM_FL_READABLE);
+    CU_ASSERT(0 == read_implement_load(&stream));
+    CU_ASSERT(20 == cupkee_stream_readable(&stream));
+
+    CU_ASSERT(10 == cupkee_stream_read(&stream, 10, buf));
+    CU_ASSERT(0 == TU_emitter_event_dispatch());
+
+    CU_ASSERT(10 == cupkee_stream_read(&stream, 10, buf));
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_END));
+
+    CU_ASSERT(0 == read_implement_load(&stream));
+}
+
 CU_pSuite test_sys_stream(void)
 {
     CU_pSuite suite = CU_add_suite("system stream", test_setup, test_clean);
 
     if (suite) {
         CU_add_test(suite, "readable init    ", test_readable_init);
-        CU_add_test(suite, "read no push     ", test_read_nopush);
         CU_add_test(suite, "read immediately ", test_read_immediately);
         CU_add_test(suite, "read trigger     ", test_read_trigger);
 
@@ -501,9 +562,11 @@ CU_pSuite test_sys_stream(void)
         CU_add_test(suite, "event error      ", test_event_error);
         CU_add_test(suite, "event data       ", test_event_data);
         CU_add_test(suite, "event drain      ", test_event_drain);
+
+        CU_add_test(suite, "shutdown readable", test_shutdown_readable);
+        CU_add_test(suite, "shutdown writable", test_shutdown_writable);
     }
 
     return suite;
 }
-
 

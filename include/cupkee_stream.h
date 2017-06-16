@@ -32,7 +32,9 @@ enum {
     CUPKEE_STREAM_FL_WRITABLE = 0x02,
     CUPKEE_STREAM_FL_TRANSFORM = 0x04,
 
-    CUPKEE_STREAM_FL_RX_FULL    = 0x40,
+    CUPKEE_STREAM_FL_RX_SHUTDOWN = 0x10,
+    CUPKEE_STREAM_FL_TX_SHUTDOWN = 0x20,
+    CUPKEE_STREAM_FL_RX_BLOCKED = 0x40,
     CUPKEE_STREAM_FL_TX_BLOCKED = 0x80
 };
 
@@ -80,9 +82,6 @@ int cupkee_stream_tx_cache_space(cupkee_stream_t *s);
 int cupkee_stream_readable(cupkee_stream_t *s);
 int cupkee_stream_writable(cupkee_stream_t *s);
 
-int cupkee_stream_push(cupkee_stream_t *s, size_t n, const void *data);
-int cupkee_stream_pull(cupkee_stream_t *s, size_t n, void *data);
-
 int cupkee_stream_init_readable(
    cupkee_stream_t *stream,
    cupkee_event_emitter_t *emitter,
@@ -108,16 +107,15 @@ int cupkee_stream_init_duplex(
 
 void cupkee_stream_resume(cupkee_stream_t *s);
 void cupkee_stream_pause(cupkee_stream_t *s);
+void cupkee_stream_shutdown(cupkee_stream_t *s, uint8_t flags);
+
+int cupkee_stream_push(cupkee_stream_t *s, size_t n, const void *data);
+int cupkee_stream_pull(cupkee_stream_t *s, size_t n, void *data);
 
 int cupkee_stream_read(cupkee_stream_t *s, size_t n, void *buf);
 int cupkee_stream_write(cupkee_stream_t *s, size_t n, const void *data);
 
-int cupkee_stream_shift(cupkee_stream_t *s, uint8_t *data);
 int cupkee_stream_unshift(cupkee_stream_t *s, uint8_t data);
-
-void *cupkee_stream_read_buf(cupkee_stream_t *s, size_t n);
-
-int cupkee_stream_write_buf(cupkee_stream_t *s, size_t n, const uint8_t *data);
 
 void cupkee_stream_set_error(cupkee_stream_t *s, uint8_t err);
 int cupkee_stream_get_error(cupkee_stream_t *s);
@@ -125,8 +123,11 @@ int cupkee_stream_get_error(cupkee_stream_t *s);
 int cupkee_stream_pipe(cupkee_stream_t *s, cupkee_stream_t *reader);
 int cupkee_stream_unpipe(cupkee_stream_t *s);
 
-int cupkee_stream_event_on  (cupkee_stream_t *s, int event, void *param);
-int cupkee_stream_event_once(cupkee_stream_t *s, int event, void *param);
+int cupkee_stream_push_buf(cupkee_stream_t *s, void *data);
+void *cupkee_stream_pull_buf(cupkee_stream_t *s);
+
+void *cupkee_stream_read_buf(cupkee_stream_t *s);
+int cupkee_stream_write_buf(cupkee_stream_t *s, void *data);
 
 #endif /* __CUPKEE_STREAM_INC__ */
 
