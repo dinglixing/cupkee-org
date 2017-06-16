@@ -34,6 +34,8 @@ static int test_setup(void)
 {
     cupkee_memory_desc_t desc = {64, 4};
 
+    TU_pre_init();
+
     cupkee_memory_init(1, &desc);
 
     return 0;
@@ -41,6 +43,7 @@ static int test_setup(void)
 
 static int test_clean(void)
 {
+    TU_pre_deinit();
     return 0;
 }
 

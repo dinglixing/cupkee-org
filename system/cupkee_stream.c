@@ -224,11 +224,11 @@ int cupkee_stream_pull(cupkee_stream_t *s, size_t n, void *data)
 {
     int cnt = 0;
 
-    if (s && s->tx_buf) {
+    if (s && s->tx_buf && n && data) {
         cnt = cupkee_buffer_take(s->tx_buf, n, data);
 
-        if (cnt > 0 && (s->flags & CUPKEE_STREAM_FL_TX_FULL)) {
-            s->flags &= ~CUPKEE_STREAM_FL_TX_FULL;
+        if (cnt > 0 && (s->flags & CUPKEE_STREAM_FL_TX_BLOCKED)) {
+            s->flags &= ~CUPKEE_STREAM_FL_TX_BLOCKED;
             stream_event_emit(s, CUPKEE_EVENT_STREAM_DRAIN);
         }
     }
@@ -305,14 +305,11 @@ int cupkee_stream_write(cupkee_stream_t *s, size_t n, const void *data)
     } else
     if (cupkee_buffer_is_empty(s->tx_buf)) {
         should_trigger = 1;
-    } else
-    if (s->flags & CUPKEE_STREAM_FL_TX_FULL) {
-        return 0;
     }
 
     cached = cupkee_buffer_give(s->tx_buf, n, data);
     if (cached != (int) n) {
-        s->flags |= CUPKEE_STREAM_FL_TX_FULL;
+        s->flags |= CUPKEE_STREAM_FL_TX_BLOCKED;
     }
 
     if (should_trigger) {

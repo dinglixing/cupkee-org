@@ -41,6 +41,8 @@ static int test_setup(void)
         {64, 4}, {256, 4}
     };
 
+    TU_pre_init();
+
     cupkee_memory_init(2, descs);
     cupkee_event_setup();
 
@@ -49,15 +51,8 @@ static int test_setup(void)
 
 static int test_clean(void)
 {
+    TU_pre_deinit();
     return 0;
-}
-
-static void event_dispatch(void)
-{
-    cupkee_event_t e;
-    if (cupkee_event_take(&e) && e.type == EVENT_EMITTER) {
-        cupkee_event_emitter_dispatch(e.which, e.code);
-    }
 }
 
 static int event_match(uint8_t code)
@@ -67,6 +62,24 @@ static int event_match(uint8_t code)
         return 1;
     } else {
         return 0;
+    }
+}
+
+static void rw_implement_loop(cupkee_stream_t *s)
+{
+    uint8_t data;
+
+    if (implement_load_trigger_cnt) {
+        int space = cupkee_stream_rx_cache_space(s);
+
+        while (space && 1 == cupkee_stream_pull(s, 1, &data)) {
+            cupkee_stream_push(s, 1, &data);
+            space--;
+        }
+
+        if (space == 0) {
+            implement_load_trigger_cnt = 0;
+        }
     }
 }
 
@@ -102,24 +115,6 @@ static void read_implement_trigger(cupkee_stream_t *s, size_t n)
     (void) s;
     (void) n;
     implement_load_trigger_cnt++;
-}
-
-static void rw_implement_loop(cupkee_stream_t *s)
-{
-    uint8_t data;
-
-    if (implement_load_trigger_cnt) {
-        int space = cupkee_stream_rx_cache_space(s);
-
-        while (space && 1 == cupkee_stream_pull(s, 1, &data)) {
-            cupkee_stream_push(s, 1, &data);
-            space--;
-        }
-
-        if (space == 0) {
-            implement_load_trigger_cnt = 0;
-        }
-    }
 }
 
 static void read_implement_loop(cupkee_stream_t *s, size_t n)
@@ -401,9 +396,68 @@ static void test_event_error(void)
 
     cupkee_stream_set_error(&stream, 1);
 
-    event_dispatch();
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
     CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_ERROR));
     CU_ASSERT(-1 == cupkee_stream_get_error(&stream));
+}
+
+static void test_event_data(void)
+{
+    cupkee_stream_t stream;
+    cupkee_event_emitter_t emitter;
+
+    implement_load_trigger_cnt = 0;
+
+    CU_ASSERT(0 <= cupkee_event_emitter_init(&emitter, event_handle));
+    CU_ASSERT(0 == cupkee_stream_init_readable(&stream, &emitter, 16, read_implement_trigger));
+    CU_ASSERT(0 == cupkee_stream_readable(&stream));
+
+
+}
+
+static void test_event_drain(void)
+{
+    cupkee_stream_t stream;
+    cupkee_event_emitter_t emitter;
+
+    implement_consume_cnt = 0;
+    implement_send_trigger_cnt = 0;
+
+    CU_ASSERT(0 <= cupkee_event_emitter_init(&emitter, event_handle));
+    CU_ASSERT(0 == cupkee_stream_init_writable(&stream, &emitter, 16, write_implement_trigger));
+    CU_ASSERT(16 == cupkee_stream_writable(&stream));
+
+    // trigger send, when first write to writable
+    CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(1 == implement_send_trigger_cnt);
+
+    CU_ASSERT(6 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(1 == implement_send_trigger_cnt);
+    CU_ASSERT(0 == cupkee_stream_writable(&stream));
+    CU_ASSERT(0 == cupkee_stream_write(&stream, 10, "0123456789"));
+
+    write_implement_consume(&stream, 5);
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DRAIN));
+
+    // post 'drain' once
+    write_implement_consume(&stream, 5);
+    CU_ASSERT(0 == TU_emitter_event_dispatch());
+    CU_ASSERT(!event_match(CUPKEE_EVENT_STREAM_DRAIN));
+
+    CU_ASSERT(10 == cupkee_stream_writable(&stream));
+    CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
+    CU_ASSERT(0 == cupkee_stream_writable(&stream));
+
+    // not 'drain' post, if write block not block
+    write_implement_consume(&stream, 5);
+    CU_ASSERT(0 == TU_emitter_event_dispatch());
+    CU_ASSERT(!event_match(CUPKEE_EVENT_STREAM_DRAIN));
+
+    CU_ASSERT(5 == cupkee_stream_write(&stream, 10, "0123456789"));
+    write_implement_consume(&stream, 1);
+    CU_ASSERT(1 == TU_emitter_event_dispatch());
+    CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DRAIN));
 }
 
 CU_pSuite test_sys_stream(void)
@@ -424,6 +478,8 @@ CU_pSuite test_sys_stream(void)
         CU_add_test(suite, "r&w loop         ", test_rw_loop);
 
         CU_add_test(suite, "event error      ", test_event_error);
+        CU_add_test(suite, "event data       ", test_event_data);
+        CU_add_test(suite, "event drain      ", test_event_drain);
     }
 
     return suite;
