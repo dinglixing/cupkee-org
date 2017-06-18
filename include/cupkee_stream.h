@@ -31,6 +31,7 @@ enum {
     CUPKEE_STREAM_FL_READABLE = 0x01,
     CUPKEE_STREAM_FL_WRITABLE = 0x02,
     CUPKEE_STREAM_FL_TRANSFORM = 0x04,
+    CUPKEE_STREAM_FL_PIPE     = 0x08,
 
     CUPKEE_STREAM_FL_RX_SHUTDOWN = 0x10,
     CUPKEE_STREAM_FL_TX_SHUTDOWN = 0x20,
@@ -60,8 +61,6 @@ typedef struct cupkee_stream_t cupkee_stream_t;
 struct cupkee_stream_t {
     cupkee_event_emitter_t *emitter;
 
-    void *ex_data;
-
     uint8_t flags;
     uint8_t rx_state;
     uint8_t event_offset;
@@ -75,6 +74,9 @@ struct cupkee_stream_t {
 
     void (*_read) (cupkee_stream_t *s, size_t n);
     void (*_write)(cupkee_stream_t *s);
+
+    cupkee_stream_t *consumer;
+    cupkee_stream_t *producer;
 };
 
 int cupkee_stream_rx_cache_space(cupkee_stream_t *s);
@@ -120,7 +122,7 @@ int cupkee_stream_unshift(cupkee_stream_t *s, uint8_t data);
 void cupkee_stream_set_error(cupkee_stream_t *s, uint8_t err);
 int cupkee_stream_get_error(cupkee_stream_t *s);
 
-int cupkee_stream_pipe(cupkee_stream_t *s, cupkee_stream_t *reader);
+int cupkee_stream_pipe(cupkee_stream_t *s, cupkee_stream_t *consumer);
 int cupkee_stream_unpipe(cupkee_stream_t *s);
 
 int cupkee_stream_push_buf(cupkee_stream_t *s, void *data);

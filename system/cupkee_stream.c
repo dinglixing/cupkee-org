@@ -59,6 +59,8 @@ static void stream_init(cupkee_stream_t *s, cupkee_event_emitter_t *emitter, uin
 
     s->_read = NULL;
     s->_write = NULL;
+
+    s->consumer = NULL;
 }
 
 static void stream_event_emit(cupkee_stream_t *s, uint8_t code)
@@ -66,6 +68,32 @@ static void stream_event_emit(cupkee_stream_t *s, uint8_t code)
     if (s->emitter) {
         cupkee_event_emitter_emit(s->emitter, s->event_offset + code);
     }
+}
+
+static void stream_finish(cupkee_stream_t *s)
+{
+    if (s->tx_buf) {
+        if (cupkee_buffer_is_empty(s->tx_buf)) {
+            cupkee_buffer_release(s->tx_buf);
+            s->tx_buf = NULL;
+        } else {
+            return;
+        }
+    }
+    stream_event_emit(s, CUPKEE_EVENT_STREAM_FINISH);
+}
+
+static void stream_end(cupkee_stream_t *s)
+{
+    if (s->rx_buf) {
+        if (cupkee_buffer_is_empty(s->rx_buf)) {
+            cupkee_buffer_release(s->rx_buf);
+            s->rx_buf = NULL;
+        } else {
+            return;
+        }
+    }
+    stream_event_emit(s, CUPKEE_EVENT_STREAM_END);
 }
 
 int cupkee_stream_init_readable(
@@ -152,25 +180,11 @@ void cupkee_stream_shutdown(cupkee_stream_t *s, uint8_t flags)
 {
     if (stream_is_readable(s) && flags & CUPKEE_STREAM_FL_READABLE) {
         s->flags |= CUPKEE_STREAM_FL_RX_SHUTDOWN;
-        if (!s->rx_buf) {
-            stream_event_emit(s, CUPKEE_EVENT_STREAM_END);
-        } else
-        if (0 == cupkee_buffer_length(s->rx_buf)) {
-            stream_event_emit(s, CUPKEE_EVENT_STREAM_END);
-            cupkee_buffer_release(s->rx_buf);
-            s->rx_buf = NULL;
-        }
+        stream_end(s);
     }
     if (stream_is_writable(s) && flags & CUPKEE_STREAM_FL_WRITABLE) {
         s->flags |= CUPKEE_STREAM_FL_TX_SHUTDOWN;
-        if (!s->tx_buf) {
-            stream_event_emit(s, CUPKEE_EVENT_STREAM_FINISH);
-        } else
-        if (0 == cupkee_buffer_length(s->tx_buf)) {
-            stream_event_emit(s, CUPKEE_EVENT_STREAM_FINISH);
-            cupkee_buffer_release(s->tx_buf);
-            s->tx_buf = NULL;
-        }
+        stream_finish(s);
     }
 }
 
@@ -251,11 +265,7 @@ int cupkee_stream_pull(cupkee_stream_t *s, size_t n, void *data)
         int cnt = cupkee_buffer_take(s->tx_buf, n, data);
 
         if (s->flags & CUPKEE_STREAM_FL_TX_SHUTDOWN) {
-            if (cupkee_buffer_is_empty(s->tx_buf)) {
-                stream_event_emit(s, CUPKEE_EVENT_STREAM_FINISH);
-                cupkee_buffer_release(s->tx_buf);
-                s->tx_buf = NULL;
-            }
+            stream_finish(s);
         } else
         if (cnt > 0 && (s->flags & CUPKEE_STREAM_FL_TX_BLOCKED)) {
             s->flags &= ~CUPKEE_STREAM_FL_TX_BLOCKED;
@@ -322,11 +332,7 @@ int cupkee_stream_read(cupkee_stream_t *s, size_t n, void *buf)
 
     cnt = cupkee_buffer_take(s->rx_buf, n, buf);
     if (s->flags & CUPKEE_STREAM_FL_RX_SHUTDOWN) {
-        if (cupkee_buffer_is_empty(s->rx_buf)) {
-            stream_event_emit(s, CUPKEE_EVENT_STREAM_END);
-            cupkee_buffer_release(s->rx_buf);
-            s->rx_buf = NULL;
-        }
+        stream_end(s);
     } else
     if (cnt >0 && s->flags & CUPKEE_STREAM_FL_RX_BLOCKED) {
         s->flags &= ~CUPKEE_STREAM_FL_RX_BLOCKED;
@@ -337,6 +343,7 @@ int cupkee_stream_read(cupkee_stream_t *s, size_t n, void *buf)
 
 int cupkee_stream_write(cupkee_stream_t *s, size_t n, const void *data)
 {
+    void *cache;
     int should_trigger = 0;
     int cached;
 
@@ -348,25 +355,53 @@ int cupkee_stream_write(cupkee_stream_t *s, size_t n, const void *data)
         return 0;
     }
 
-    if (!s->tx_buf) {
-        if (NULL == (s->tx_buf = cupkee_buffer_alloc(s->tx_size_max))) {
-            return -CUPKEE_ENOMEM;
-        }
-        should_trigger = 1;
-    } else
-    if (cupkee_buffer_is_empty(s->tx_buf)) {
+    if (!s->tx_buf && (NULL == (s->tx_buf = cupkee_buffer_alloc(s->tx_size_max)))) {
+        return -CUPKEE_ENOMEM;
+    }
+
+    cache = s->tx_buf;
+    if (cupkee_buffer_is_empty(cache)) {
         should_trigger = 1;
     }
 
-    cached = cupkee_buffer_give(s->tx_buf, n, data);
+    cached = cupkee_buffer_give(cache, n, data);
     if (cached != (int) n) {
         s->flags |= CUPKEE_STREAM_FL_TX_BLOCKED;
     }
 
-    if (should_trigger) {
+    if (cached > 0 && should_trigger) {
         stream_tx_request(s);
     }
 
     return cached;
 }
 
+int cupkee_stream_pipe(cupkee_stream_t *s, cupkee_stream_t *consumer)
+{
+    if (!stream_is_readable(s) || !stream_is_writable(consumer)) {
+        return -CUPKEE_EINVAL;
+    }
+
+    if (s->flags & CUPKEE_STREAM_FL_PIPE) {
+        return -CUPKEE_EINVAL;
+    }
+
+    s->flags |= CUPKEE_STREAM_FL_PIPE;
+    s->rx_state = CUPKEE_STREAM_STATE_FLOWING;
+    s->consumer = consumer;
+
+    return 0;
+}
+
+int cupkee_stream_unpipe(cupkee_stream_t *s)
+{
+    if (!stream_is_readable(s) || !(s->flags & CUPKEE_STREAM_FL_PIPE)) {
+        return -CUPKEE_EINVAL;
+    }
+
+    s->flags &= ~CUPKEE_STREAM_FL_PIPE;
+    s->rx_state = CUPKEE_STREAM_STATE_PAUSED;
+    s->consumer = NULL;
+
+    return 0;
+}
