@@ -30,19 +30,15 @@ SOFTWARE.
 #include "test.h"
 #include <cupkee.h>
 
-void *hw_malloc(size_t size, size_t align)
-{
-    (void) align;
-    return malloc(size);
-}
-
 static int test_setup(void)
 {
+    TU_pre_init();
     return 0;
 }
 
 static int test_clean(void)
 {
+    TU_pre_deinit();
     return 0;
 }
 

@@ -32,25 +32,17 @@ SOFTWARE.
 
 /* */
 
-void hw_enter_critical(uint32_t *state)
-{
-    (void) state;
-}
-
-void hw_exit_critical(uint32_t state)
-{
-    (void) state;
-}
-
 /* */
 
 static int test_setup(void)
 {
+    TU_pre_init();
     return 0;
 }
 
 static int test_clean(void)
 {
+    TU_pre_deinit();
     return 0;
 }
 
@@ -96,13 +88,6 @@ static void emitter2_event_handle(cupkee_event_emitter_t *emitter, uint8_t e)
     (void) emitter;
     emitter2_storage = e;
 }
-static void dispatch(void)
-{
-    cupkee_event_t e;
-    if (cupkee_event_take(&e) && e.type == EVENT_EMITTER) {
-        cupkee_event_emitter_dispatch(e.which, e.code);
-    }
-}
 
 static void test_emitter(void)
 {
@@ -116,15 +101,15 @@ static void test_emitter(void)
     CU_ASSERT(cupkee_event_emitter_init(&emitter2, emitter2_event_handle) >= 0);
 
     cupkee_event_post(EVENT_EMITTER, 3, emitter1.id);
-    dispatch();
+    TU_emitter_event_dispatch();
     CU_ASSERT(emitter1_storage == 3);
 
     cupkee_event_post(EVENT_EMITTER, 2, emitter1.id);
-    dispatch();
+    TU_emitter_event_dispatch();
     CU_ASSERT(emitter1_storage == 2);
 
     cupkee_event_post(EVENT_EMITTER, 3, emitter2.id);
-    dispatch();
+    TU_emitter_event_dispatch();
     CU_ASSERT(emitter2_storage == 3);
 
     CU_ASSERT(cupkee_event_emitter_deinit(&emitter1) == CUPKEE_OK);
@@ -146,8 +131,8 @@ static void test_emitter_emit(void)
 
     cupkee_event_emitter_emit(&emitter1, 3);
     cupkee_event_emitter_emit(&emitter2, 7);
-    dispatch();
-    dispatch();
+    TU_emitter_event_dispatch();
+    TU_emitter_event_dispatch();
     CU_ASSERT(emitter1_storage == 3);
     CU_ASSERT(emitter2_storage == 7);
 
@@ -157,8 +142,8 @@ static void test_emitter_emit(void)
     /* Do nothing when emitter had deinited */
     cupkee_event_emitter_emit(&emitter1, 5);
     cupkee_event_emitter_emit(&emitter2, 5);
-    dispatch();
-    dispatch();
+    TU_emitter_event_dispatch();
+    TU_emitter_event_dispatch();
     CU_ASSERT(emitter1_storage == 3);
     CU_ASSERT(emitter2_storage == 7);
 

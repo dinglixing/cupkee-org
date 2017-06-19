@@ -24,26 +24,45 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __TEST_INC__
-#define __TEST_INC__
+#include "test.h"
 
-#include "CUnit.h"
-#include "CUnit_Basic.h"
+typedef struct mock_mblock_t {
+    struct mock_mblock_t *next;
+    size_t size;
+    char mem[0];
+} mock_mblock_t;
 
-#include <hardware.h>
-#include <cupkee.h>
+static mock_mblock_t *mem_chain = NULL;
 
-void hw_mock_memory_reset(void);
+void hw_enter_critical(uint32_t *state)
+{
+    (void) state;
+}
 
-void TU_pre_init(void);
-void TU_pre_deinit(void);
-int TU_emitter_event_dispatch(void);
+void hw_exit_critical(uint32_t state)
+{
+    (void) state;
+}
 
-CU_pSuite test_hello(void);
-CU_pSuite test_sys_event(void);
-CU_pSuite test_sys_memory(void);
-CU_pSuite test_sys_timer(void);
-CU_pSuite test_sys_stream(void);
+void *hw_malloc(size_t size, size_t align)
+{
+    mock_mblock_t *mb = malloc(sizeof(mock_mblock_t) + size);
 
-#endif /* __TEST_INC__ */
+    (void) align;
+
+    if (mb) {
+        mb->size = size;
+        mb->next = mem_chain;
+        mem_chain = mb;
+
+        memset(mb->mem, 0x55, size);
+
+        return mb->mem;
+    }
+    return NULL;
+}
+
+void hw_mock_memory_reset(void)
+{
+}
 

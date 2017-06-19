@@ -24,26 +24,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __TEST_INC__
-#define __TEST_INC__
+#include "test.h"
 
-#include "CUnit.h"
-#include "CUnit_Basic.h"
+void TU_pre_init(void)
+{
+    hw_mock_memory_reset();
+}
 
-#include <hardware.h>
-#include <cupkee.h>
+void TU_pre_deinit(void)
+{
+    hw_mock_memory_reset();
+}
 
-void hw_mock_memory_reset(void);
-
-void TU_pre_init(void);
-void TU_pre_deinit(void);
-int TU_emitter_event_dispatch(void);
-
-CU_pSuite test_hello(void);
-CU_pSuite test_sys_event(void);
-CU_pSuite test_sys_memory(void);
-CU_pSuite test_sys_timer(void);
-CU_pSuite test_sys_stream(void);
-
-#endif /* __TEST_INC__ */
+int TU_emitter_event_dispatch(void)
+{
+    cupkee_event_t e;
+    if (cupkee_event_take(&e) && e.type == EVENT_EMITTER) {
+        cupkee_event_emitter_dispatch(e.which, e.code);
+        return 1;
+    } else {
+        return 0;
+    }
+}
 

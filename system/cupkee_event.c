@@ -49,7 +49,7 @@ void cupkee_event_reset(void)
 
 int cupkee_event_emitter_init(cupkee_event_emitter_t *emitter, cupkee_event_emitter_handle_t handle)
 {
-    if (!emitter || !handle) {
+    if (!emitter) {
         return -CUPKEE_EINVAL;
     }
 
