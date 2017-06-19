@@ -31,7 +31,6 @@ enum {
     CUPKEE_STREAM_FL_READABLE = 0x01,
     CUPKEE_STREAM_FL_WRITABLE = 0x02,
     CUPKEE_STREAM_FL_TRANSFORM = 0x04,
-    CUPKEE_STREAM_FL_PIPE     = 0x08,
 
     CUPKEE_STREAM_FL_RX_SHUTDOWN = 0x10,
     CUPKEE_STREAM_FL_TX_SHUTDOWN = 0x20,
@@ -106,6 +105,7 @@ int cupkee_stream_init_duplex(
    void (*_read)(cupkee_stream_t *s, size_t n),
    void (*_write)(cupkee_stream_t *s)
 );
+int cupkee_stream_deinit(cupkee_stream_t *s);
 
 void cupkee_stream_resume(cupkee_stream_t *s);
 void cupkee_stream_pause(cupkee_stream_t *s);

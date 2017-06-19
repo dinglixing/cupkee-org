@@ -83,10 +83,10 @@ static void rw_implement_loop(cupkee_stream_t *s)
     }
 }
 
-static int read_implement_load(cupkee_stream_t *s)
+static int read_implement_load(cupkee_stream_t *s, int n)
 {
     int count = 0;
-    while (implement_load_trigger_cnt) {
+    while (implement_load_trigger_cnt && count < n) {
         if (1 != cupkee_stream_push(s, 1, &implement_data)) {
             implement_load_trigger_cnt = 0;
             break;
@@ -156,6 +156,7 @@ static void write_implement_loop(cupkee_stream_t *s)
 
 static void event_handle(cupkee_event_emitter_t *emitter, uint8_t code)
 {
+    (void) emitter;
     implement_event = code;
 }
 
@@ -176,6 +177,7 @@ static void test_readable_init(void)
     CU_ASSERT(0 == cupkee_stream_init_readable(&stream, &emitter, 32, read_implement_idle));
 
     cupkee_event_emitter_deinit(&emitter);
+    cupkee_stream_deinit(&stream);
 }
 
 static void test_writable_init(void)
@@ -194,6 +196,7 @@ static void test_writable_init(void)
     // init with emitter
     CU_ASSERT(0 == cupkee_stream_init_writable(&stream, &emitter, 32, write_implement_immediately));
 
+    cupkee_stream_deinit(&stream);
     cupkee_event_emitter_deinit(&emitter);
 }
 
@@ -213,6 +216,7 @@ static void test_duplex_init(void)
     // init with emitter
     CU_ASSERT(0 == cupkee_stream_init_writable(&stream, &emitter, 32, write_implement_immediately));
 
+    cupkee_stream_deinit(&stream);
     cupkee_event_emitter_deinit(&emitter);
 }
 
@@ -245,6 +249,8 @@ static void test_read_immediately(void)
     CU_ASSERT(buf[0] == 1 && buf[9] == 1);
     CU_ASSERT(buf[10] == 2 && buf[19] == 2);
     CU_ASSERT(buf[20] == 3 && buf[29] == 3);
+
+    cupkee_stream_deinit(&stream);
 }
 
 static void test_read_trigger(void)
@@ -261,7 +267,7 @@ static void test_read_trigger(void)
 
     // full stream rx buffer with 1
     implement_data = 1;
-    CU_ASSERT(32 == read_implement_load(&stream));
+    CU_ASSERT(32 == read_implement_load(&stream, 999));
     CU_ASSERT(0 == implement_load_trigger_cnt);
 
     memset(buf, 0, 32);
@@ -284,13 +290,15 @@ static void test_read_trigger(void)
     // load should not be trigger
     CU_ASSERT(1 == implement_load_trigger_cnt);
 
-    CU_ASSERT(32 == read_implement_load(&stream));
+    CU_ASSERT(32 == read_implement_load(&stream, 999));
     CU_ASSERT(0 == implement_load_trigger_cnt);
 
     // Cached equal want
     CU_ASSERT(32 == cupkee_stream_read(&stream, 32, buf));
 
-    CU_ASSERT(32 == read_implement_load(&stream));
+    CU_ASSERT(32 == read_implement_load(&stream, 999));
+
+    cupkee_stream_deinit(&stream);
 }
 
 static void test_write_immediately(void)
@@ -306,6 +314,8 @@ static void test_write_immediately(void)
     CU_ASSERT(3 == implement_consume_cnt);
     CU_ASSERT(9 == cupkee_stream_write(&stream, 9, "test code"));
     CU_ASSERT(12 == implement_consume_cnt);
+
+    cupkee_stream_deinit(&stream);
 }
 
 static void test_write_trigger(void)
@@ -344,6 +354,8 @@ static void test_write_trigger(void)
     CU_ASSERT(10 == cupkee_stream_write(&stream, 10, "0123456789"));
     CU_ASSERT(10 == write_implement_consume(&stream, 20));
     CU_ASSERT(3 == implement_send_trigger_cnt);
+
+    cupkee_stream_deinit(&stream);
 }
 
 static void test_rw_loop(void)
@@ -379,6 +391,8 @@ static void test_rw_loop(void)
 
     CU_ASSERT(16 == cupkee_stream_read(&stream, 16, buf));
     CU_ASSERT(16 == cupkee_stream_read(&stream, 16, buf));
+
+    cupkee_stream_deinit(&stream);
 }
 
 static void test_event_error(void)
@@ -395,6 +409,7 @@ static void test_event_error(void)
     CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_ERROR));
     CU_ASSERT(-1 == cupkee_stream_get_error(&stream));
 
+    cupkee_stream_deinit(&stream);
     cupkee_event_emitter_deinit(&emitter);
 }
 
@@ -412,7 +427,7 @@ static void test_event_data(void)
 
     cupkee_stream_resume(&stream);
 
-    read_implement_load(&stream);
+    read_implement_load(&stream, 999);
     CU_ASSERT(1 == TU_emitter_event_dispatch());
     CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DATA));
     // event post once
@@ -421,18 +436,19 @@ static void test_event_data(void)
     // event should not post, rx_buf not be read clean
     CU_ASSERT(10 == cupkee_stream_read(&stream, 10, buf));
     CU_ASSERT(20 == cupkee_stream_readable(&stream));
-    read_implement_load(&stream);
+    read_implement_load(&stream, 999);
     CU_ASSERT(30 == cupkee_stream_readable(&stream));
     CU_ASSERT(0 == TU_emitter_event_dispatch());
 
     // event should post, rx_buf be read clean
     CU_ASSERT(30 == cupkee_stream_read(&stream, 30, buf));
     CU_ASSERT(0 == cupkee_stream_readable(&stream));
-    read_implement_load(&stream);
+    read_implement_load(&stream, 999);
     CU_ASSERT(30 == cupkee_stream_readable(&stream));
     CU_ASSERT(1 == TU_emitter_event_dispatch());
     CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DATA));
 
+    cupkee_stream_deinit(&stream);
     cupkee_event_emitter_deinit(&emitter);
 }
 
@@ -480,6 +496,7 @@ static void test_event_drain(void)
     CU_ASSERT(1 == TU_emitter_event_dispatch());
     CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DRAIN));
 
+    cupkee_stream_deinit(&stream);
     cupkee_event_emitter_deinit(&emitter);
 }
 
@@ -516,6 +533,7 @@ static void test_shutdown_writable(void)
     CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_FINISH));
     CU_ASSERT(0 == TU_emitter_event_dispatch());
 
+    cupkee_stream_deinit(&stream);
     cupkee_event_emitter_deinit(&emitter);
 }
 
@@ -535,7 +553,7 @@ static void test_shutdown_readable(void)
     CU_ASSERT(0 == cupkee_stream_init_readable(&stream, &emitter, 30, read_implement_trigger));
 
     cupkee_stream_resume(&stream);
-    read_implement_load(&stream);
+    read_implement_load(&stream, 999);
 
     CU_ASSERT(30 == cupkee_stream_readable(&stream));
     CU_ASSERT(10 == cupkee_stream_read(&stream, 10, buf));
@@ -544,7 +562,7 @@ static void test_shutdown_readable(void)
     CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_DATA));
 
     cupkee_stream_shutdown(&stream, CUPKEE_STREAM_FL_READABLE);
-    CU_ASSERT(0 == read_implement_load(&stream));
+    CU_ASSERT(0 == read_implement_load(&stream, 999));
     CU_ASSERT(20 == cupkee_stream_readable(&stream));
 
     CU_ASSERT(10 == cupkee_stream_read(&stream, 10, buf));
@@ -554,20 +572,106 @@ static void test_shutdown_readable(void)
     CU_ASSERT(1 == TU_emitter_event_dispatch());
     CU_ASSERT(event_match(CUPKEE_EVENT_STREAM_END));
 
-    CU_ASSERT(0 == read_implement_load(&stream));
+    CU_ASSERT(0 == read_implement_load(&stream, 999));
 
+    cupkee_stream_deinit(&stream);
     cupkee_event_emitter_deinit(&emitter);
 }
 
 static void test_pipe(void)
 {
     cupkee_stream_t reader, writer;
-    uint8_t buf[30];
+
+    implement_load_trigger_cnt = 0;
+    implement_send_trigger_cnt = 0;
 
     CU_ASSERT(0 == cupkee_stream_init_readable(&reader, NULL, 30, read_implement_trigger));
     CU_ASSERT(0 == cupkee_stream_init_writable(&writer, NULL, 30, write_implement_trigger));
 
+    CU_ASSERT(implement_send_trigger_cnt == 0);
+    CU_ASSERT(implement_load_trigger_cnt == 0);
+
     CU_ASSERT(0 == cupkee_stream_pipe(&reader, &writer));
+
+    CU_ASSERT(implement_load_trigger_cnt == 1);
+    CU_ASSERT(implement_send_trigger_cnt == 0);
+
+    // push data, not full
+    CU_ASSERT(15 == read_implement_load(&reader, 15));
+
+    CU_ASSERT(implement_load_trigger_cnt == 1);
+    CU_ASSERT(implement_send_trigger_cnt == 1);
+
+    // pull data, not empty
+    CU_ASSERT(14 == write_implement_consume(&writer, 14));
+
+    CU_ASSERT(implement_load_trigger_cnt == 1);
+    CU_ASSERT(implement_send_trigger_cnt == 1);
+
+    // pull data, empty
+    CU_ASSERT(1 == write_implement_consume(&writer, 14));
+
+    CU_ASSERT(implement_load_trigger_cnt == 1);
+    CU_ASSERT(implement_send_trigger_cnt == 1);
+
+    // push data, full
+    CU_ASSERT(30 == read_implement_load(&reader, 999));
+
+    CU_ASSERT(implement_load_trigger_cnt == 0);
+    CU_ASSERT(implement_send_trigger_cnt == 2);
+
+    // pull data, empty
+    CU_ASSERT(30 == write_implement_consume(&writer, 30));
+    CU_ASSERT(implement_load_trigger_cnt == 1);
+    CU_ASSERT(implement_send_trigger_cnt == 2);
+
+    // push data, not full
+    CU_ASSERT(15 == read_implement_load(&reader, 15));
+
+    CU_ASSERT(implement_load_trigger_cnt == 1);
+    CU_ASSERT(implement_send_trigger_cnt == 3);
+
+    CU_ASSERT(15 == write_implement_consume(&writer, 999));
+
+    CU_ASSERT(implement_load_trigger_cnt == 1);
+    CU_ASSERT(implement_send_trigger_cnt == 3);
+
+    cupkee_stream_deinit(&reader);
+    cupkee_stream_deinit(&writer);
+}
+
+static void test_unpipe(void)
+{
+    cupkee_stream_t reader, writer;
+    char buf[30];
+
+    implement_load_trigger_cnt = 0;
+    implement_send_trigger_cnt = 0;
+
+    CU_ASSERT(0 == cupkee_stream_init_readable(&reader, NULL, 30, read_implement_trigger));
+    CU_ASSERT(0 == cupkee_stream_init_writable(&writer, NULL, 30, write_implement_trigger));
+
+    CU_ASSERT(implement_send_trigger_cnt == 0);
+    CU_ASSERT(implement_load_trigger_cnt == 0);
+
+    CU_ASSERT(0 == cupkee_stream_pipe(&reader, &writer));
+
+    CU_ASSERT(implement_load_trigger_cnt == 1);
+    CU_ASSERT(implement_send_trigger_cnt == 0);
+
+    CU_ASSERT(30 == read_implement_load(&reader, 999));
+    CU_ASSERT(30 == write_implement_consume(&writer, 999));
+
+    CU_ASSERT(0 == cupkee_stream_unpipe(&reader));
+
+    CU_ASSERT(30 == cupkee_stream_write(&writer, 30, buf));
+    CU_ASSERT(30 == write_implement_consume(&writer, 999));
+
+    CU_ASSERT(0 == cupkee_stream_read(&reader, 30, buf));
+    CU_ASSERT(30 == read_implement_load(&reader, 999));
+
+    cupkee_stream_deinit(&reader);
+    cupkee_stream_deinit(&writer);
 }
 
 CU_pSuite test_sys_stream(void)
@@ -594,6 +698,7 @@ CU_pSuite test_sys_stream(void)
         CU_add_test(suite, "shutdown writable", test_shutdown_writable);
 
         CU_add_test(suite, "pipe             ", test_pipe);
+        CU_add_test(suite, "unpipe           ", test_unpipe);
     }
 
     return suite;
