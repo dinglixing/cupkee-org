@@ -24,36 +24,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __CUPKEE_TIMER_INC__
-#define __CUPKEE_TIMER_INC__
+#ifndef __CUPKEE_TIMEOUT_INC__
+#define __CUPKEE_TIMEOUT_INC__
 
 extern volatile uint32_t _cupkee_systicks;
 
-typedef void (*cupkee_timer_handle_t)(int drop, void *param);
-typedef struct cupkee_timer_t {
-    struct cupkee_timer_t *next;
-    cupkee_timer_handle_t handle;
+typedef void (*cupkee_timeout_handle_t)(int drop, void *param);
+typedef struct cupkee_timeout_t {
+    struct cupkee_timeout_t *next;
+    cupkee_timeout_handle_t handle;
     int      id;
     int      flags;
     uint32_t wait;
     uint32_t from;
     void    *param;
-} cupkee_timer_t;
+} cupkee_timeout_t;
 
-void cupkee_timer_init(void);
-void cupkee_timer_sync(uint32_t ticks);
+void cupkee_timeout_init(void);
+void cupkee_timeout_sync(uint32_t ticks);
 
-cupkee_timer_t *cupkee_timer_register(uint32_t wait, int repeat, cupkee_timer_handle_t handle, void *param);
-void cupkee_timer_unregister(cupkee_timer_t *t);
+cupkee_timeout_t *cupkee_timeout_register(uint32_t wait, int repeat, cupkee_timeout_handle_t handle, void *param);
+void cupkee_timeout_unregister(cupkee_timeout_t *t);
 
-int cupkee_timer_clear_all(void);
-int cupkee_timer_clear_with_flags(uint32_t flags);
-int cupkee_timer_clear_with_id(uint32_t id);
+int cupkee_timeout_clear_all(void);
+int cupkee_timeout_clear_with_flags(uint32_t flags);
+int cupkee_timeout_clear_with_id(uint32_t id);
 
 static inline uint32_t cupkee_systicks(void) {
     return _cupkee_systicks;
 }
 
 
-#endif /* __CUPKEE_TIMER_INC__ */
+#endif /* __CUPKEE_TIMEOUT_INC__ */
 
