@@ -49,7 +49,7 @@ static const char *device_i2c_conf_names[] = {
 };
 
 static const char *device_opt_dir[] = {
-    "in", "out", "dual"
+    "in", "out", "duplex"
 };
 
 static const char *device_opt_polarity[] = {
